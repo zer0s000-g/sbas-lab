@@ -72,6 +72,39 @@ correction to everyone, plus "don't trust the east bell" when one is broken.
 - Do not state the performance or coverage of any real system over a real country.
   Point to official sources instead.
 
+## L1 SBAS and DFMC SBAS in this region (Doc 9849)
+- In the fictional equatorial region, **L1 SBAS** gives integrity for departure, en
+  route, terminal and non-precision approach (§4.3.1.5). Ionospheric effects barely
+  touch those operations (§5.2.1.1).
+- L1 SBAS vertical guidance (LPV) is not practical near the equator (§5.2.1.5). The grid
+  cannot follow the steep daytime gradients and the post-sunset bubbles, so GIVE grows
+  and VPL > VAL.
+- The fictional SBAS also offers a **DFMC (L1/L5)** service. The ionosphere-free
+  combination removes the delay itself (§4.3.1.4.1), so LPV is available (§6.8.2). The
+  cost is noise amplified about 2.6× (§5.2.1.6).
+- Scintillation is not removed by two frequencies. It knocks out a few satellites at a
+  time (§5.2.1.3).
+- Honesty: DFMC services are planned, not operational yet (§4.3.4.5). The page says the
+  DFMC service is part of the fictional SBAS.
+
+## What SBAS gives in each phase (the "SBAS benefit" card)
+Each phase shows:
+- the operation, its HAL/VAL and its time to alert (Doc 9849 Table 2-1);
+- GPS alone versus SBAS, on the same satellites.
+
+| Phase | Operation (Table 2-1) | What the learner sees |
+|---|---|---|
+| Gate | none | SBAS availability prediction and NOTAM check (§4.3.3.4.1) |
+| Taxi/Takeoff | departure | The GPS-only fix and the SBAS fix, next to the truth |
+| Climb | terminal: HAL 1.85 km, TTA 15 s | Four satellites, DOP, integrity |
+| Errors → Broadcast | none (slow motion) | The SBAS chain, satellite by satellite |
+| Cruise | continental en route: HAL 3.7 km, TTA 5 min | The PL far inside HAL; a trustworthy ADS-B position (§1.4.3) |
+| Descent | NPA: HAL 556 m, TTA 10 s | FAS data block and CRC, channel, two GEOs, "LPV" arms |
+| Final | APV-I: HAL 40 m, VAL 50 m, TTA 10 s | HPL/VPL inside HAL/VAL; L1-only would fall back to LNAV |
+| Landing | none | No ILS or airport ground equipment needed (§4.3.3.1) |
+
+The claim-by-claim references are in `docs/SOURCES.md`.
+
 ## Systems of the world (Go deeper only)
 WAAS, EGNOS, MSAS, GAGAN, SDCM, KASS, BDSBAS, SouthPAN, and others planned.
 Name them only with facts from official sources; otherwise add TODO(expert-review).
