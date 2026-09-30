@@ -1,20 +1,55 @@
 # Expert review list
 
-Every technical value SBAS Lab shows or computes, with its source, for a qualified
-GNSS/CNS engineer to check against ICAO Annex 10 Volume I and RTCA DO-229
-(prompt pack §8). Each `// TODO(expert-review): ...` in the code is listed here too.
-Stage 5 regenerates this file from the code.
+Every technical value SBAS Lab shows or computes that a qualified GNSS/CNS engineer
+should check against ICAO Annex 10 Volume I, RTCA DO-229 and EUROCAE ED-259
+(prompt pack §8). Values taken from ICAO Doc 9849 are listed in `docs/SOURCES.md` with
+their section. Every `// TODO(expert-review): ...` in the code is listed here with its
+file and line, from `grep -rn "TODO(expert-review)" src`.
 
-## Stage 0 (foundation)
+## Constants (`src/core/units.ts`)
 
-| Value | Where | Source | Status |
-|---|---|---|---|
-| c = 299 792 458 m/s | `src/core/units.ts` | SI definition of the metre | exact |
-| WGS-84 a = 6 378 137.0 m, f = 1/298.257223563 | `src/core/units.ts` | NIMA TR8350.2 | to confirm |
-| WGS-84 ωe = 7.292115 × 10⁻⁵ rad/s (IS-GPS-200 uses 7.2921151467 × 10⁻⁵ for orbits) | `src/core/units.ts` | NIMA TR8350.2, IS-GPS-200 | to confirm which one Stage 1 uses |
-| GPS μ = 3.986005 × 10¹⁴ m³/s² | `src/core/units.ts` | IS-GPS-200 | to confirm |
-| GPS L1 1575.42 MHz, L5 1176.45 MHz | `src/core/units.ts` | IS-GPS-200, IS-GPS-705 | to confirm |
-| LPV (APV-I): HAL 40 m, VAL 50 m; LPV-200: HAL 40 m, VAL 35 m | kit preview demo (`src/preview`) | ICAO Annex 10 Vol I, Table 3.7.2.4-1 | to confirm |
-| Time-lapse steps 1, 2, 4, 8, 16, 30, 60 | `src/core/clock.ts` | design choice (master prompt) | not a specification |
+| Value | Source | Status |
+|---|---|---|
+| c = 299 792 458 m/s | SI definition | exact |
+| WGS-84 a = 6 378 137.0 m, f = 1/298.257223563 | NIMA TR8350.2 | to confirm |
+| ωe = 7.292115 × 10⁻⁵ rad/s (IS-GPS-200 uses 7.2921151467 × 10⁻⁵) | NIMA TR8350.2 | to confirm which one the orbits use |
+| GPS μ = 3.986005 × 10¹⁴ m³/s² | IS-GPS-200 | to confirm |
+| GPS L1 1575.42 MHz, L5 1176.45 MHz | Doc 9849 §3.2.4 | sourced |
 
-No `TODO(expert-review)` markers yet.
+## Values marked TODO(expert-review) in the code
+
+| Where | What to confirm |
+|---|---|
+| `src/core/orbits.ts:47` | Real GPS slot phasing is uneven (SPS PS almanac). The model uses an even Walker 24/6/1 pattern. |
+| `src/core/orbits.ts:60` | Not every GPS satellite broadcasts L5 today. The model assumes all do. |
+| `src/core/region.ts:73` | The magnetic equator is modelled as a parallel at a fixed geographic latitude (6°N). The real dip equator is curved. |
+| `src/core/iono.ts:22` | 350 km thin-shell height and pierce-point formulas (DO-229 Appendix A). |
+| `src/core/iono.ts:152` | 5° × 5° IGP spacing at low and mid latitudes (DO-229 IGP bands). |
+| `src/core/iono.ts:169` | GIVEI table: GIVE values in metres; index 15 = not monitored (DO-229). |
+| `src/core/iono.ts:181` | σ_GIVE = GIVE / 3.29 (DO-229 tabulates σ²_GIVE per GIVEI). |
+| `src/core/iono.ts:229` | Threat-model sizes (daytime band margin and post-sunset threat) are illustrative. They reproduce Doc 9849 §5.2.1.5 qualitatively: L1-only APV unavailable near the equator. |
+| `src/core/errors.ts:40` | Illustrative 1σ GPS broadcast clock (1.1 m) and orbit (0.8 m) errors along the line of sight. |
+| `src/core/errors.ts:45` | Tropospheric model m(E) = 1.001 / √(0.002001 + sin²E), σ_tvu = 0.12 m (DO-229). |
+| `src/core/errors.ts:55` | Airborne multipath σ_mp = 0.13 + 0.53·e^(−θ/10°) m and receiver noise 0.36 m (DO-229, AAD-A-like). |
+| `src/core/groundSegment.ts:17` | 5° elevation mask for aircraft and reference receivers. |
+| `src/core/groundSegment.ts:20` | UDREI table (DO-229): UDRE in metres; 14 = Not Monitored, 15 = Do Not Use. |
+| `src/core/groundSegment.ts:32` | σ_UDRE = UDRE / 3.29 (DO-229 tabulates σ²_UDRE). |
+| `src/core/sbasWorld.ts:87` | ABAS single-frequency ionospheric σ: τ_vert = 9 m at low magnetic latitude (DO-229 Klobuchar variance). |
+| `src/core/sbasWorld.ts:169` | DFRE modelled with the same bound as UDRE. The DFREI table (ED-259) differs. |
+| `src/core/receiver.ts:37` | K factors: K_H,PA = 6.0, K_H,NPA = 6.18, K_V,PA = 5.33 (DO-229 / Annex 10 Appendix B). |
+| `src/core/receiver.ts:98` | RAIM/FDE χ² thresholds (Pfa ≈ 10⁻⁵) and pbias values are illustrative. |
+| `src/core/messages.ts:25` | Message type numbers and names other than Types 0, 27, 28 (L1) and 32 (DFMC), which Doc 9849 names. |
+| `src/core/messages.ts:57` | 250 bit/s, 500 symbols/s after FEC, 8 + 6 + 212 + 24 bit layout. |
+| `src/core/messages.ts:86` | Message time-outs (DO-229 Table A-25; ED-259 for DFMC): fast corrections 12 s PA / 18 s NPA, and so on. |
+| `src/core/messages.ts:94` | Detection and alarm latencies (2.5 s + 1.2 s) are illustrative. The requirement is the time to alert. |
+| `src/core/operations.ts:34` | SBAS LNAV/VNAV alert limits (HAL 556 m, VAL 50 m) follow DO-229, not Doc 9849 Table 2-1. |
+| `src/core/approach.ts:32` | FAS data block field set and the 105 m course width at threshold. |
+| `src/core/approach.ts:55` | SBAS approach channel number range (40 000–99 999). |
+| `src/core/approach.ts:59` | FAS data block CRC: CRC-32Q, polynomial 0x814141AB (DO-229). |
+| `src/core/approach.ts:102` | LPV lateral splay and vertical full-scale definitions. |
+| `src/core/approach.ts:130` | 250 ft decision height of the made-up procedure (SBAS CAT I can reach 200 ft, Doc 9849 §4.3.3.3). |
+
+## Open questions for the reviewer
+
+- **Two GEOs for LPV.** Doc 9849 §4.3.2.10 requires the avionics to track two available SBAS satellites for LNAV/VNAV, LP and LPV. The model shows the count of GEOs tracked. It keeps LPV available with one GEO, and loses LPV only when both are lost (after the fast-correction time-out). Confirm that is the right reading.
+- **DFMC services.** DFMC SBAS services are planned rather than operational today (Doc 9849 §4.3.4.5: WAAS around 2026, EGNOS from 2028). The fictional SBAS offers one, and the page must say so.
