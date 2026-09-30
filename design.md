@@ -127,25 +127,41 @@ phase, and a short fade covers each switch.
 
 | View | What it shows | Used for |
 |---|---|---|
-| `orbit` | A procedural Earth (no textures) with the GPS constellation, two GEO satellites, the ionosphere shell and the ground segment dots | Satellites, errors, the uplink and the broadcast |
-| `network` | A 2D region map (theme-following `--sim-*` colours): reference stations, master station, uplink station, the ionospheric grid (IGPs), the service area and a live LPV-availability contour | Reference stations, master station, the storm |
-| `approach` | A 3D terrain table with the runway, the final approach segment, and the aircraft inside its HPL/VPL cylinder and the HAL/VAL wireframe | En route, the approach, landing |
+| `space` | A procedural Earth shader (no textures): day and night side, a 15° graticule, the model magnetic equator in brass. Around it: the GPS constellation and its orbit rings, two GEO satellites, the ionosphere shell and the ground-station dots. Signals go to LAB201: a solid cyan wire from each GPS satellite it tracks, a dashed brass wire from each GEO. | Climb, errors, the uplink and the broadcast |
+| `network` | A 2D region map (theme-following `--sim-*` colours): the made-up islands, reference stations, master station, uplink station, the ionospheric grid (IGPs, circle size = vertical delay, × = not monitored), the model magnetic equator and a live LPV-availability area | Reference stations, master station, the storm |
+| `flight` | A chase camera on LAB201 at true scale (1 unit = 100 m) over the sea and the made-up islands and runways. It shows the aircraft inside its HPL/VPL cylinder and the HAL/VAL wireframe of the current operation (Doc 9849 Table 2-1). Signal rays point the true way to each tracked satellite and end at a sky dome. Truth is a cross, GPS alone a hollow ring and SBAS a filled dot. The camera distance fits the alert limit: km out en route, metres on final. | Gate, takeoff, cruise, descent, final, landing |
+
+A **sky-plot inset** sits on every view, top right. It shows satellites by azimuth and
+elevation: used = filled, tracked = hollow, lost or excluded = crossed, GEO = diamond.
+There is one WebGL canvas: the space and flight scenes swap inside it, and the network map
+covers it while the stage pauses. The camera snaps when the scale changes and eases within a view.
 
 **Chrome:**
-- **Top bar:** the SBAS LAB wordmark, the phase name, the approach mode annunciator, the
-  journey clock, play/pause, the theme toggle and a panels toggle.
-- **Bottom:** a twelve-phase `PhaseTimeline` (click to jump) and the camera buttons: follow,
-  overview, zoom and reset.
+- **Top bar:** the SBAS LAB wordmark and the phase name, plus a badge. Before the descent the
+  badge says what LAB201 navigates with (GPS ALONE / SBAS). From the descent it is the
+  approach mode annunciator (LPV ARMED, LPV, LNAV/VNAV, LNAV, NO APPR). Then the journey
+  clock, play/pause and the theme toggle.
+- **Bottom of the view:** the honesty label and the view choice (Auto, Space, Flight,
+  Map). Then the camera buttons (follow, overview, zoom, reset) and the twelve-phase
+  `PhaseTimeline` (click to jump; ←/→, Home, End). At 390 px the timeline sits under the
+  view in two rows of six, so every tick is a 40 px target.
 - **Panels at 1440 and 1024 px:** two glass columns over the view (340 px wide, or 300 px
   below 1440).
-  - Left column: the flight card, "What's happening" (narration for the phase) and the
-    message log.
-  - Right column: the SBAS status panel (satellites used, DOP, HPL/VPL/HAL/VAL, mode), the
-    cockpit (CDI and ProtectionBars), the Stanford chart, time-lapse and view controls,
-    and "Break something".
+  - Left column: the flight card, and "What's happening" (narration for the phase, with its
+    Doc 9849 sources). It also shows the phase's detail: the error breakdown, station counts,
+    the master-station summary, the message layout, the FAS data block with its CRC, or the
+    decision height.
+  - Right column:
+    - "SBAS in this phase": the operation's HAL/VAL and time to alert, and GPS alone next to
+      SBAS (plus L1 only on the descent and final);
+    - SBAS status;
+    - the cockpit (CDI and ProtectionBars);
+    - Signals (message log and Stanford chart);
+    - Time (time-lapse, guided stops, fly again);
+    - "Break something" (Stage 4).
 - **At 768 px:** the panels move below the view in two columns.
 - **At 390 px:** the view is a 56svh sticky strip, and the panels sit below it in tabs
-  (Now, Cockpit, Signals, Break it).
+  (Now, Cockpit, Signals; Break it arrives in Stage 4).
 - **Scrims:** HUD text on the view sits over top and bottom scrims.
 - **No sideways scroll** at any width. Touch targets are at least 40px.
 
@@ -181,10 +197,16 @@ Sheet with every term.
 ## 6. Honesty labels
 
 Every view says what is not to scale:
-- orbit: "Earth to scale · satellites drawn 400× larger · orbits to scale · time ×N";
-- approach: "Table 20 NM across · heights ×3 · protection cylinders to scale with the
-  runway";
-- network: "Region map · fictional stations · to scale".
+- space: "Earth and orbits to scale · satellites drawn far larger than life · time ×N"
+  (or "world frozen");
+- flight: "Terrain, aircraft and protection cylinders to scale · signal directions true,
+  distances not · position errors drawn ×10";
+- network: "Region map · stations made up for this fictional region · to scale".
+
+Story device: until the first correction arrives (end of the broadcast phase) the page
+shows LAB201 navigating with GPS alone, and says that a real SBAS receiver uses SBAS from
+the gate. The DFMC service belongs to the fictional SBAS, and the page says that real DFMC
+services are planned, not yet operating (Doc 9849 §4.3.4.5).
 
 Slow-motion moments show "Slowed down so you can see it" and freeze the world. Stations,
 airports and frequencies are "made up for this fictional region". The Break panel says the

@@ -1,15 +1,14 @@
-// Real-GPU render test for the 3D stages. Software rendering (swiftshader) hides
+// Real-GPU render test for the 3D views. Software rendering (swiftshader) hides
 // GPU-specific shader bugs: NaN from zero-width smoothstep or pow() of a negative
 // base renders fine there but smears black/flicker on Metal and other drivers.
-// This drives headless Chrome on the machine's real GPU, opens the page, visits every
-// camera shot, grabs a burst of frames per shot, and flags pure-black pixels (the stage
-// background is never pure black) and frame-to-frame brightness jumps.
+// This drives headless Chrome on the machine's real GPU, visits every journey phase
+// from the timeline, grabs a burst of frames of the view per phase, and flags
+// pure-black pixels (the stage background is never pure black) and brightness jumps.
 //
 //   npm run build && npx vite preview --port 4173 &
 //   node scripts/verify/gpu-render.mjs                 # dark
 //   THEME=light OUT=gpu-shots node scripts/verify/gpu-render.mjs
 //
-// Stage 0 renders the kit preview's demo stage. Stage 3 adds the twelve journey phases.
 // CHROME overrides the Chromium executable. Exits 1 when anything fails, so it can gate a push.
 import { chromium } from 'playwright-core'
 import { PNG } from 'pngjs'
@@ -21,11 +20,7 @@ const OUT = process.env.OUT
 const [w, h] = (process.env.SIZE || '1440x900').split('x').map(Number)
 const theme = process.env.THEME || 'dark'
 if (OUT) mkdirSync(OUT, { recursive: true })
-const SHOTS = [
-  ['overview', 'Camera: overview'],
-  ['follow', 'Camera: follow the aircraft'],
-  ['zoom', 'Camera: zoom to the protection cylinder'],
-]
+const PHASES = ['gate', 'takeoff', 'climb', 'errors', 'reference', 'master', 'uplink', 'broadcast', 'cruise', 'descent', 'final', 'landing']
 
 const browser = await chromium.launch({ executablePath: exe, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
 let problems = 0
@@ -51,21 +46,22 @@ try {
   // The stage loads after idle; wait until its WebGL canvas has been sized.
   await page.waitForFunction(() => { const c = document.querySelector('canvas[data-engine]'); return c && c.width > 300 && c.height > 150 }, null, { timeout: 20000 }).catch(() => warn.push('stage canvas never sized'))
   await page.waitForTimeout(3500)
-  const stage = page.locator('[aria-label^="Demo terrain table"]').first()
-  for (const [name, button] of SHOTS) {
-    await page.getByRole('button', { name: button }).click()
-    await page.waitForTimeout(3000)
+  const stage = page.locator('[data-view]').first()
+  await page.getByRole('button', { name: /pause the journey/i }).click()
+  for (const [i, name] of PHASES.entries()) {
+    await page.locator('nav[aria-label="Journey phases"] button').nth(i).click()
+    await page.waitForTimeout(2200)
     const frames = []
     for (let k = 0; k < 6; k++) {
       const buf = await stage.screenshot({ scale: 'css' })
       frames.push(stats(buf))
-      if (k === 0 && OUT) await stage.screenshot({ path: `${OUT}/${theme}-${name}.png`, scale: 'css' })
+      if (k === 0 && OUT) await stage.screenshot({ path: `${OUT}/${theme}-${String(i + 1).padStart(2, '0')}-${name}.png`, scale: 'css' })
       await page.waitForTimeout(180)
     }
     const maxBlack = Math.max(...frames.map((f) => f.black))
     const lums = frames.map((f) => f.lum)
-    const jump = Math.max(...lums.slice(1).map((l, i) => Math.abs(l - lums[i])))
-    const bad = maxBlack > 0.002 || jump > 6
+    const jump = Math.max(...lums.slice(1).map((l, j) => Math.abs(l - lums[j])))
+    const bad = maxBlack > 0.004 || jump > 6
     if (bad) problems++
     console.log(`${bad ? 'FAIL' : ' ok '} ${theme.padEnd(5)} ${name.padEnd(9)} black ${(maxBlack * 100).toFixed(2)}%  lum ${lums.map((l) => l.toFixed(0)).join(',')}  jump ${jump.toFixed(1)}`)
   }

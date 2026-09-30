@@ -56,6 +56,7 @@ export function Stage({
   interactive = false,
   fog = [26, 90],
   far = 400,
+  paused = false,
 }: {
   children: (t: ThemeTokens, quality: Quality) => ReactNode
   shot: Shot
@@ -70,6 +71,8 @@ export function Stage({
   fog?: [number, number]
   /** Camera far plane, scene units. */
   far?: number
+  /** Stop rendering (another view covers the stage); the WebGL context stays. */
+  paused?: boolean
 }) {
   const t = useThemeTokens()
   const reduced = useReducedMotion()
@@ -116,9 +119,9 @@ export function Stage({
         </div>
       ) : ok ? (
         <StageLabelsContext.Provider value={labels as RefObject<HTMLElement>}>
-          <div ref={labels} className="pointer-events-none absolute inset-0 z-[1] overflow-hidden" />
+          <div ref={labels} className={cn('pointer-events-none absolute inset-0 z-[1] overflow-hidden', paused && 'invisible')} />
           <Canvas
-            frameloop={onScreen ? 'always' : 'never'}
+            frameloop={onScreen && !paused ? 'always' : 'never'}
             dpr={dpr}
             gl={{ antialias: false, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
             camera={{ position: shot.position, fov: shot.fov ?? 30, near: 0.1, far }}

@@ -2,9 +2,8 @@ import { useEffect } from 'react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { PageBoundary } from '@/components/RouteError'
 import { SiteFooter } from '@/components/SiteFooter'
-import { SiteHeader } from '@/components/SiteHeader'
 import { applyTheme, usePrefs } from '@/stores/prefs'
-import KitPreview from '@/preview/KitPreview'
+import JourneyPage from '@/page/JourneyPage'
 
 function useThemeSync() {
   const theme = usePrefs((s) => s.theme)
@@ -18,7 +17,7 @@ function useThemeSync() {
   }, [theme])
 }
 
-/** The one page ("/"). Stage 0 shows the kit preview; Stage 3 replaces it with the journey. */
+/** The one page ("/"): LAB201's journey. */
 export default function App() {
   useThemeSync()
   return (
@@ -30,17 +29,9 @@ export default function App() {
         Skip to content
       </a>
       <div className="flex min-h-dvh flex-col">
-        <SiteHeader>
-          <span className="hud-label hidden text-muted-foreground sm:inline" aria-hidden>
-            //
-          </span>
-          <span className="hud-label truncate text-foreground/85">Kit preview</span>
-        </SiteHeader>
-        <main id="main" className="flex-1">
-          <PageBoundary>
-            <KitPreview />
-          </PageBoundary>
-        </main>
+        <PageBoundary>
+          <JourneyPage />
+        </PageBoundary>
         <SiteFooter />
       </div>
     </TooltipProvider>

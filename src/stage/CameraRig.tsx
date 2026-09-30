@@ -68,26 +68,44 @@ export function CameraRig({ shot, drift, reduced }: { shot: Shot; drift: boolean
   const target = useRef(new THREE.Vector3(...shot.target))
   const pos = useRef(new THREE.Vector3(...shot.position))
   const first = useRef(true)
+  const snapKey = useRef(shot.snapKey)
+  /** 0..1 blend from where the camera was onto a tracking shot. */
+  const blend = useRef(1)
   const look = useLookAround(shot)
   const yawNow = useRef(0)
   const pitchNow = useRef(0)
   useLayoutEffect(() => {
-    if (first.current || reduced) {
-      camera.position.set(...shot.position)
-      target.current.set(...shot.target)
-      pos.current.set(...shot.position)
-      camera.lookAt(target.current)
-      first.current = false
+    const cam = camera as THREE.PerspectiveCamera
+    if (shot.near !== undefined || shot.far !== undefined) {
+      cam.near = shot.near ?? cam.near
+      cam.far = shot.far ?? cam.far
+      cam.updateProjectionMatrix()
     }
+    const live = shot.track?.() ?? shot
+    const snap = first.current || reduced || snapKey.current !== shot.snapKey
+    snapKey.current = shot.snapKey
+    if (snap) {
+      camera.position.set(...live.position)
+      target.current.set(...live.target)
+      pos.current.set(...live.position)
+      camera.lookAt(target.current)
+      if (shot.fov) {
+        cam.fov = shot.fov
+        cam.updateProjectionMatrix()
+      }
+      first.current = false
+      blend.current = 1
+    } else blend.current = 0
   }, [camera, shot, reduced])
   useFrame((state, dt) => {
     const k = reduced ? 1 : 1 - Math.exp(-dt / 0.55)
     const kLook = reduced ? 1 : 1 - Math.exp(-dt / 0.12)
     yawNow.current += (look.current.yaw - yawNow.current) * kLook
     pitchNow.current += (look.current.pitch - pitchNow.current) * kLook
-    const tgt = new THREE.Vector3(...shot.target)
-    const off = new THREE.Vector3(...shot.position).sub(tgt)
-    if (drift && !reduced) {
+    const live = shot.track?.() ?? shot
+    const tgt = new THREE.Vector3(...live.target)
+    const off = new THREE.Vector3(...live.position).sub(tgt)
+    if (drift && !reduced && !shot.track) {
       // A slow, small orbit around the target keeps the scene alive.
       const a = state.clock.elapsedTime * 0.05
       off.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.sin(a) * 0.08)
@@ -99,8 +117,16 @@ export function CameraRig({ shot, drift, reduced }: { shot: Shot; drift: boolean
       if (right.lengthSq() > 0) off.applyAxisAngle(right, pitchNow.current)
     }
     const want = tgt.clone().add(off)
-    pos.current.lerp(want, k)
-    target.current.lerp(tgt, k)
+    if (shot.track) {
+      // Ease onto the moving shot once, then stay locked to it (a fast aircraft must not trail away).
+      blend.current = reduced ? 1 : Math.min(1, blend.current + dt / 0.9)
+      const b = blend.current * blend.current * (3 - 2 * blend.current)
+      pos.current.lerp(want, b)
+      target.current.lerp(tgt, b)
+    } else {
+      pos.current.lerp(want, k)
+      target.current.lerp(tgt, k)
+    }
     camera.position.copy(pos.current)
     const cam = camera as THREE.PerspectiveCamera
     const fov = shot.fov ?? 30

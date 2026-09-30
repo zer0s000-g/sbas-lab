@@ -67,7 +67,7 @@ export function HudPanel({
         <header className="flex items-center justify-between gap-3 border-b border-hud-line px-4 py-2.5">
           <div className="flex min-w-0 items-center gap-3">
             {index && <span className="hud-label text-signal">{index}</span>}
-            {title && <h3 className="hud-title truncate text-[11px] text-foreground">{title}</h3>}
+            {title && <h2 className="hud-title truncate text-[11px] text-foreground">{title}</h2>}
           </div>
           {actions}
         </header>
