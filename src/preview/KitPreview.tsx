@@ -2,10 +2,8 @@ import { useEffect } from 'react'
 import { TitleBlock } from '@/hud/HudFrame'
 import { useSimClock } from '@/hooks/useSimClock'
 import { useSimulationLoop } from '@/hooks/useSimulationLoop'
-import { KitPanels } from './KitPanels'
-import { KitPrimitives } from './KitPrimitives'
+import { KitStatusPanel } from './KitPanels'
 import { KitStage } from './KitStage'
-import { KitTokens } from './KitTokens'
 import { resetDemo, stepDemo } from './demoState'
 
 function Section({ id, kicker, title, children }: { id: string; kicker: string; title: string; children: React.ReactNode }) {
@@ -18,8 +16,8 @@ function Section({ id, kicker, title, children }: { id: string; kicker: string; 
 }
 
 /**
- * Stage 0 kit preview: every HUD component and a demo stage with a pen-plotted
- * terrain table, for the design review. It is removed in Stage 3, when the
+ * Stage 0 kit preview: a demo stage with a pen-plotted terrain table and the
+ * SBAS status panel, for the design review. It is removed in Stage 3, when the
  * journey page takes over "/".
  */
 export default function KitPreview() {
@@ -31,19 +29,13 @@ export default function KitPreview() {
       <TitleBlock
         kicker="Stage 0 · Design kit"
         title="Flight Deck kit preview"
-        sub="Every HUD component and a demo stage · removed in Stage 3"
+        sub="A demo stage and the SBAS status panel · removed in Stage 3"
       />
       <Section id="kit-stage" kicker="Stage kit" title="Demo stage">
         <KitStage clock={clock} />
       </Section>
-      <Section id="kit-hud" kicker="HUD kit" title="Panels, telemetry and controls">
-        <KitPanels clock={clock} />
-      </Section>
-      <Section id="kit-ui" kicker="shadcn/ui" title="Restyled primitives">
-        <KitPrimitives />
-      </Section>
-      <Section id="kit-tokens" kicker="Tokens" title="Meanings, type and canvas">
-        <KitTokens />
+      <Section id="kit-status" kicker="HUD kit" title="SBAS status">
+        <KitStatusPanel />
       </Section>
     </div>
   )

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Crosshair, Maximize2, RotateCcw, ZoomIn } from 'lucide-react'
+import { Crosshair, Maximize2, Pause, Play, RotateCcw, ZoomIn } from 'lucide-react'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useSampled } from '@/hooks/useSampled'
 import { CornerBrackets } from '@/hud/HudFrame'
@@ -84,10 +84,15 @@ export function KitStage({ clock }: { clock: SimClock }) {
               <span className="inline-block size-1.5 bg-brass" aria-hidden />
               Approach view · demo
             </p>
-            <p className="hud-title truncate text-[14px] text-foreground md:text-[18px]">LAB201 · Final</p>
+            <p className="hud-title text-[12px] leading-4 text-foreground sm:text-[14px] md:text-[18px] md:leading-6">LAB201 · Final</p>
             {frozen && <p className="hud-label text-brass">Slowed down so you can see it</p>}
           </div>
-          <MissionClock getTimeS={() => demo.timeS} speed={speed} frozen={frozen} running={running} />
+          <div className="pointer-events-auto flex items-start gap-3">
+            <MissionClock getTimeS={() => demo.timeS} speed={speed} frozen={frozen} running={running} />
+            <HudButton onClick={() => clock.getState().toggle()} aria-label={running ? 'Pause' : 'Play'}>
+              {running ? <Pause aria-hidden /> : <Play aria-hidden />}
+            </HudButton>
+          </div>
         </div>
         {/* Bottom scrim: honesty label, camera buttons, the phase timeline. */}
         <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col gap-2 bg-gradient-to-t from-stage-bg/95 via-stage-bg/70 to-transparent px-3 pt-10 pb-3 md:px-6 md:pt-12">

@@ -129,8 +129,7 @@ try {
       seen.add(info.label)
       if (!info.ring) ringMissing.push(info.label)
     }
-    // Segmented controls are one Tab stop each (arrow keys move inside), so any time-lapse item counts.
-    const needed = ['Display and sound settings', 'Camera: follow the aircraft', 'Camera: reset the view', 'Phase 1: Gate', 'Phase 12: Landing', 'Pause', 'Time-lapse', 'Guided stops', 'Demo dial']
+    const needed = ['Display and sound settings', 'Pause', 'Camera: follow the aircraft', 'Camera: reset the view', 'Phase 1: Gate', 'Phase 12: Landing']
     const missing = needed.filter((n) => ![...seen].some((s) => s.startsWith(n)))
     check(missing.length === 0, `Tab reaches the controls (${seen.size} stops)${missing.length ? '; missing ' + missing.join(', ') : ''}`)
     ringMissing = [...new Set(ringMissing)]
@@ -143,12 +142,6 @@ try {
     check(cur === 'Phase 12: Landing' && focused === cur, `→ moves the timeline to the next phase and keeps focus (${cur})`)
     await page.keyboard.press('Home')
     check((await page.getAttribute('[aria-current="step"]', 'aria-label')) === 'Phase 1: Gate', 'Home jumps to the first phase')
-    // The dial: arrow keys change its value.
-    const dial = page.getByRole('slider', { name: 'Demo dial' })
-    await dial.focus()
-    const before = Number(await dial.getAttribute('aria-valuenow'))
-    await page.keyboard.press('ArrowUp')
-    check(Number(await dial.getAttribute('aria-valuenow')) === before + 1, 'the dial answers the arrow keys')
     check(errors.length === 0, `keyboard: no console errors${errors.length ? ': ' + [...new Set(errors)].slice(0, 3).join(' | ') : ''}`)
     await ctx.close()
   }
