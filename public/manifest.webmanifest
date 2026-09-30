@@ -1,0 +1,11 @@
+{
+  "name": "SBAS Lab: how satellite augmentation guides an aircraft to the runway",
+  "short_name": "SBAS Lab",
+  "description": "One flight, gate to gate, showing how a Satellite-Based Augmentation System works. For educational use only.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#0b0e13",
+  "theme_color": "#0b0e13",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

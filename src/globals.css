@@ -1,0 +1,464 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/inter-tight";
+@import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource/michroma";
+
+/*
+ * CNS Lab design tokens — the single place where colour values live.
+ * Components and canvases read these variables; never hardcode a colour.
+ * See design.md for the rules behind each token.
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "Inter Tight Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+  /* Wide display face for titles, chapter names and HUD headings (always uppercase). */
+  --font-display: "Michroma", "Inter Tight Variable", ui-sans-serif, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", monospace;
+
+  /* 13px UI text, 12px meta, 15px reading prose */
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-prose: 0.9375rem;
+  --text-prose--line-height: 1.6rem;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Simulation surfaces (usable as bg-sim-bg, text-scope-text, ...) */
+  --color-sim-bg: var(--sim-bg);
+  --color-sim-grid: var(--sim-grid);
+  --color-sim-ink: var(--sim-ink);
+  --color-sim-muted: var(--sim-muted);
+  --color-sim-signal: var(--sim-signal);
+  --color-sim-signal-2: var(--sim-signal-2);
+  --color-sim-neutral: var(--sim-neutral);
+  --color-sim-grid-strong: var(--sim-grid-strong);
+  --color-sim-terrain: var(--sim-terrain);
+  --color-sim-terrain-high: var(--sim-terrain-high);
+  --color-sim-coverage: var(--sim-coverage);
+  --color-sim-sky: var(--sim-sky);
+  --color-sim-fog: var(--sim-fog);
+  --color-sim-land: var(--sim-land);
+  --color-sim-water: var(--sim-water);
+  --color-sim-warning: var(--sim-warning);
+  --color-sim-alert: var(--sim-alert);
+  --color-sim-ok: var(--sim-ok);
+  --color-scope-bg: var(--scope-bg);
+  --color-scope-text: var(--scope-text);
+  --color-scope-dim: var(--scope-dim);
+  --color-scope-trace: var(--scope-trace);
+  --color-scope-trace-2: var(--scope-trace-2);
+  --color-scope-blip: var(--scope-blip);
+  --color-scope-warning: var(--scope-warning);
+  --color-scope-alert: var(--scope-alert);
+  --color-scope-grid: var(--scope-grid);
+  --color-instrument-face: var(--instrument-face);
+  --color-instrument-bezel: var(--instrument-bezel);
+  --color-instrument-marking: var(--instrument-marking);
+  --color-instrument-dim: var(--instrument-dim);
+  --color-instrument-accent: var(--instrument-accent);
+  --color-instrument-flag: var(--instrument-flag);
+  --color-brass: var(--brass);
+  --color-signal: var(--signal);
+  --color-hud-line: var(--hud-line);
+  --color-hud-panel: var(--hud-panel);
+  --color-stage-bg: var(--stage-bg);
+  --color-lobe-90: var(--lobe-90);
+  --color-lobe-150: var(--lobe-150);
+  --color-marker-outer: var(--marker-outer);
+  --color-marker-middle: var(--marker-middle);
+  --color-marker-inner: var(--marker-inner);
+
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
+}
+
+:root {
+  --radius: 0.375rem; /* 6px panels; md ≈ 4.5px controls: crisp, instrument-like */
+
+  /* Flight Deck core (light) */
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(222 47% 11%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(222 47% 11%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(222 47% 11%);
+  --primary: hsl(192 90% 31%); /* signal cyan, darkened for 5:1 with white text */
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(210 40% 96%);
+  --secondary-foreground: hsl(222 47% 11%);
+  --muted: hsl(210 40% 96%);
+  --muted-foreground: hsl(215 16% 42%); /* ≥ 5.1:1 on white and the tinted surfaces */
+  --accent: hsl(190 60% 95%);
+  --accent-foreground: hsl(192 90% 24%);
+  --destructive: hsl(0 72% 51%);
+  --success: hsl(142 72% 29%);
+  --warning: hsl(32 95% 33%); /* 5:1 on white */
+  --border: hsl(214 32% 91%);
+  --input: hsl(214 32% 84%);
+  --ring: hsl(192 90% 31%);
+
+  /* Data series: signal, brass, then quieter hues */
+  --chart-1: hsl(192 90% 31%);
+  --chart-2: hsl(32 75% 38%);
+  --chart-3: hsl(205 70% 40%);
+  --chart-4: hsl(170 60% 30%);
+  --chart-5: hsl(214 12% 45%);
+
+  /* Maps and diagrams (follow the theme) */
+  --sim-bg: hsl(210 40% 98%);
+  --sim-land: hsl(210 25% 95%);
+  --sim-water: hsl(208 85% 90%);
+  --sim-terrain: hsl(215 14% 62%);
+  --sim-terrain-high: hsl(215 19% 40%);
+  --sim-grid: hsl(214 32% 86%);
+  --sim-grid-strong: hsl(215 20% 72%);
+  --sim-ink: hsl(222 47% 11%);
+  --sim-muted: hsl(215 16% 42%);
+  --sim-signal: hsl(192 90% 31%);
+  --sim-signal-2: hsl(32 75% 38%);
+  --sim-neutral: hsl(215 20% 55%);
+  --sim-coverage: hsl(192 90% 31% / 0.12);
+  --sim-shadow-zone: hsl(222 47% 11% / 0.08);
+  --sim-warning: hsl(32 95% 44%);
+  --sim-alert: hsl(0 72% 51%);
+  --sim-ok: hsl(142 72% 29%);
+  --sim-sky: hsl(210 60% 96%);
+  --sim-fog: hsl(210 20% 92%);
+
+  /* Instrument screens and radar scopes are dark in both themes, like the real thing */
+  --scope-bg: hsl(220 30% 3.5%);
+  --scope-grid: hsl(188 60% 80% / 0.12);
+  --scope-grid-strong: hsl(188 60% 80% / 0.26);
+  --scope-trace: hsl(188 95% 60%);
+  --scope-trace-2: hsl(36 80% 62%);
+  --scope-blip: hsl(186 100% 76%);
+  --scope-text: hsl(190 30% 92%);
+  --scope-dim: hsl(200 14% 58%);
+  --scope-clutter: hsl(200 12% 52%);
+  --scope-warning: hsl(38 92% 60%);
+  --scope-alert: hsl(356 90% 64%);
+  --instrument-face: hsl(220 18% 5%);
+  --instrument-bezel: hsl(218 10% 17%);
+  --instrument-marking: hsl(40 20% 94%);
+  --instrument-dim: hsl(214 10% 58%);
+  --instrument-needle: hsl(40 30% 96%);
+  --instrument-accent: hsl(188 95% 60%);
+  --instrument-flag: hsl(356 88% 60%);
+
+  /* ILS lobes: always paired with a label and a hatch pattern */
+  --lobe-90: hsl(192 90% 31%);
+  --lobe-150: hsl(32 75% 38%);
+
+  /* Marker beacon lamps (real cockpit colours), always labelled O / M / I */
+  --marker-outer: hsl(217 91% 60%);
+  --marker-middle: hsl(38 92% 50%);
+  --marker-inner: hsl(0 0% 100%);
+
+  /* Flight Deck accents (light variant) */
+  --brass: hsl(32 75% 35%); /* 5.2:1 on white */
+  --signal: hsl(192 90% 31%); /* 5.0:1 on white */
+  --hud-line: hsl(215 25% 20% / 0.22);
+  --hud-panel: hsl(0 0% 100% / 0.82);
+  /* The 3D stage is a night scene in both themes, like a lit studio. */
+  --stage-bg: hsl(220 22% 5%);
+  --stage-floor: hsl(218 16% 9%);
+  --stage-fog: hsl(220 20% 6%);
+  --stage-line: hsl(205 30% 88% / 0.75);
+  --stage-metal: hsl(215 10% 34%);
+  --stage-metal-dark: hsl(220 10% 14%);
+  --stage-paint: hsl(210 8% 78%);
+  --stage-terrain: hsl(212 9% 36%);
+  --stage-terrain-high: hsl(36 14% 76%);
+  --stage-water: hsl(206 42% 15%);
+  --stage-signal: hsl(188 95% 60%);
+  --stage-brass: hsl(36 80% 56%);
+  --stage-alert: hsl(356 90% 60%);
+  --stage-glass: hsl(195 60% 80%);
+  /* Airfield lights on the night stage: the real lamp colours (the same in both
+     themes). Only for runway, taxiway, stop-bar, PAPI and aircraft lights; they
+     are not the semantic alarm and OK colours. */
+  --lamp-red: hsl(0 100% 60%);
+  --lamp-green: hsl(140 85% 55%);
+  --lamp-white: hsl(45 70% 94%);
+  --lamp-blue: hsl(218 95% 66%);
+  --lamp-amber: hsl(38 100% 60%);
+}
+
+/*
+ * Flight Deck: the primary, dark-first palette. Graphite stage, hairline
+ * HUD lines, electric cyan for radio energy and live data, warm brass for
+ * hardware, one red for alarms only.
+ */
+.dark {
+  --background: hsl(220 22% 5%);
+  --foreground: hsl(210 22% 92%);
+  --card: hsl(220 18% 8%);
+  --card-foreground: hsl(210 22% 92%);
+  --popover: hsl(220 18% 9%);
+  --popover-foreground: hsl(210 22% 92%);
+  --primary: hsl(188 92% 58%);
+  --primary-foreground: hsl(220 30% 6%);
+  --secondary: hsl(218 14% 13%);
+  --secondary-foreground: hsl(210 22% 92%);
+  --muted: hsl(218 14% 11%);
+  --muted-foreground: hsl(214 12% 62%);
+  --accent: hsl(190 55% 14%);
+  --accent-foreground: hsl(188 92% 72%);
+  --destructive: hsl(356 88% 62%);
+  --success: hsl(152 58% 52%);
+  --warning: hsl(38 92% 58%);
+  --border: hsl(210 20% 100% / 0.1);
+  --input: hsl(210 20% 100% / 0.16);
+  --ring: hsl(188 92% 58%);
+
+  --chart-1: hsl(188 92% 58%);
+  --chart-2: hsl(36 80% 58%);
+  --chart-3: hsl(205 80% 66%);
+  --chart-4: hsl(170 60% 52%);
+  --chart-5: hsl(214 12% 50%);
+
+  --sim-bg: hsl(220 22% 6%);
+  --sim-land: hsl(218 16% 10%);
+  --sim-water: hsl(208 40% 11%);
+  --sim-terrain: hsl(212 10% 24%);
+  --sim-terrain-high: hsl(206 10% 46%);
+  --sim-grid: hsl(210 20% 100% / 0.07);
+  --sim-grid-strong: hsl(210 20% 100% / 0.18);
+  --sim-ink: hsl(210 22% 92%);
+  --sim-muted: hsl(214 12% 62%);
+  --sim-signal: hsl(188 92% 58%);
+  --sim-signal-2: hsl(36 80% 58%);
+  --sim-neutral: hsl(214 10% 56%);
+  --sim-coverage: hsl(188 92% 58% / 0.1);
+  --sim-shadow-zone: hsl(0 0% 0% / 0.35);
+  --sim-warning: hsl(38 92% 58%);
+  --sim-alert: hsl(356 88% 62%);
+  --sim-ok: hsl(152 58% 52%);
+  --sim-sky: hsl(220 20% 8%);
+  --sim-fog: hsl(214 12% 30%);
+
+  --scope-bg: hsl(220 30% 3.5%);
+  --scope-grid: hsl(188 60% 80% / 0.12);
+  --scope-grid-strong: hsl(188 60% 80% / 0.26);
+  --scope-trace: hsl(188 95% 60%);
+  --scope-trace-2: hsl(36 80% 62%);
+  --scope-blip: hsl(186 100% 76%);
+  --scope-text: hsl(190 30% 92%);
+  --scope-dim: hsl(200 14% 58%);
+  --scope-clutter: hsl(200 12% 52%);
+  --scope-warning: hsl(38 92% 60%);
+  --scope-alert: hsl(356 90% 64%);
+  --instrument-face: hsl(220 18% 5%);
+  --instrument-bezel: hsl(218 10% 17%);
+  --instrument-marking: hsl(40 20% 94%);
+  --instrument-dim: hsl(214 10% 58%);
+  --instrument-needle: hsl(40 30% 96%);
+  --instrument-accent: hsl(188 95% 60%);
+  --instrument-flag: hsl(356 88% 60%);
+
+  --lobe-90: hsl(188 92% 58%);
+  --lobe-150: hsl(36 80% 58%);
+
+  --brass: hsl(36 80% 58%);
+  --signal: hsl(188 92% 58%);
+  --hud-line: hsl(205 30% 90% / 0.22);
+  --hud-panel: hsl(220 22% 6% / 0.72);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground text-sm antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  canvas:focus-visible {
+    outline-offset: -2px;
+  }
+}
+
+@layer utilities {
+  /* HUD typography */
+  .hud-title {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .hud-label {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    line-height: 14px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+  .hud-value {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+  .hud-panel {
+    background: var(--hud-panel);
+    border: 1px solid var(--hud-line);
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  }
+  /* Film grain over the whole page (an SVG noise filter, no colour values). */
+  .grain::after {
+    content: "";
+    position: fixed;
+    inset: -50%;
+    pointer-events: none;
+    z-index: 60;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    mix-blend-mode: overlay;
+  }
+  .prose-lab {
+    font-size: var(--text-prose);
+    line-height: var(--text-prose--line-height);
+    color: var(--foreground);
+    max-width: 68ch;
+  }
+  .prose-lab p + p {
+    margin-top: 0.75rem;
+  }
+  .prose-lab ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+    margin-top: 0.5rem;
+  }
+  .prose-lab ol {
+    list-style: decimal;
+    padding-left: 1.25rem;
+    margin-top: 0.5rem;
+  }
+  .prose-lab li + li {
+    margin-top: 0.25rem;
+  }
+  .prose-lab h3 {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    margin-top: 1.25rem;
+    margin-bottom: 0.25rem;
+  }
+  .prose-lab h4 {
+    font-weight: 600;
+    margin-top: 1rem;
+  }
+  .prose-lab code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--muted);
+    border-radius: var(--radius-sm);
+    padding: 0.05rem 0.3rem;
+  }
+  .prose-lab table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.75rem;
+    font-size: var(--text-sm);
+  }
+  .prose-lab th,
+  .prose-lab td {
+    border-bottom: 1px solid var(--border);
+    padding: 0.5rem 0.5rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  .prose-lab th {
+    font-weight: 600;
+    color: var(--muted-foreground);
+  }
+  .prose-lab strong {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+  .prose-lab a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .formula {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--foreground);
+    background: color-mix(in oklab, var(--signal) 4%, transparent);
+    border-left: 2px solid var(--brass);
+    padding: 0.6rem 0.9rem;
+    margin: 0.75rem 0;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .spec-sheet h3 {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--signal);
+    margin-top: 1.75rem;
+    margin-bottom: 0.4rem;
+  }
+  .spec-sheet h3:first-child {
+    margin-top: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
