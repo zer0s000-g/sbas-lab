@@ -129,11 +129,20 @@ export function CameraRig({ shot, drift, reduced }: { shot: Shot; drift: boolean
     }
     camera.position.copy(pos.current)
     const cam = camera as THREE.PerspectiveCamera
+    let project = false
+    if (shot.nearFrac) {
+      const near = Math.max(shot.near ?? 0.01, pos.current.distanceTo(target.current) * shot.nearFrac)
+      if (Number.isFinite(near) && Math.abs(near - cam.near) > cam.near * 0.02) {
+        cam.near = near
+        project = true
+      }
+    }
     const fov = shot.fov ?? 30
     if (Math.abs(cam.fov - fov) > 0.01) {
       cam.fov += (fov - cam.fov) * k
-      cam.updateProjectionMatrix()
+      project = true
     }
+    if (project) cam.updateProjectionMatrix()
     camera.lookAt(target.current)
   })
   return null

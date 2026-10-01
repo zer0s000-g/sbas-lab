@@ -73,7 +73,10 @@ function spaceShot(e: JourneyEngine, intent: CameraIntent): Shot {
 }
 
 function flightShot(e: JourneyEngine, intent: CameraIntent | CameraButton): Shot {
-  const base = { snapKey: 'flight', near: 0.02, far: 3500, fov: 34 }
+  // Near plane at a quarter of the camera's distance to its target (at least 5 m): every
+  // shot keeps the aircraft and its cylinders well beyond it, and the depth buffer
+  // keeps land, sea and runway apart out to the far plane.
+  const base = { snapKey: 'flight', near: 0.05, nearFrac: 0.25, far: 3500, fov: 34 }
   if (intent === 'overview') {
     // Over the airport the aircraft is at (the departure one until halfway).
     const a = e.aircraft.eastNm < 0 ? DEPARTURE : DESTINATION

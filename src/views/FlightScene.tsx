@@ -145,7 +145,7 @@ function useUnitWireCylinder() {
   return geo
 }
 
-export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Quality }) {
+export default function FlightScene({ t }: { t: ThemeTokens; quality: Quality }) {
   const engine = getJourney()
   const phase = useJourneyState(engine, (s) => s.phase)
   const c = useMemo(
@@ -250,13 +250,16 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
     }
   })
 
-  const segs = quality === 'low' ? 48 : 84
+  // A fixed mesh size: rebuilding the terrain when the quality tier drops would leave the
+  // pen-plot outlines on the old shape. About 200 m per cell on the airport islands.
+  const segs = 128
   return (
     <group>
       {/* The sea. */}
       <mesh rotation-x={-Math.PI / 2} position={[0, -0.05, 0]}>
         <planeGeometry args={[6000, 6000]} />
-        <meshStandardMaterial color={c.water} roughness={0.75} metalness={0} />
+        {/* Pushed back in depth so the coast and the airport aprons always draw over it. */}
+        <meshStandardMaterial color={c.water} roughness={0.75} metalness={0} polygonOffset polygonOffsetFactor={2} polygonOffsetUnits={2} />
       </mesh>
       <PenPlot color={c.signal} durationS={2.4}>
         {ISLANDS.map((isl) => (

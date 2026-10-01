@@ -13,6 +13,12 @@ export interface Shot {
   /** Clip planes for this shot's scene scale. */
   near?: number
   far?: number
+  /**
+   * The near plane follows the camera: this fraction of its distance to the target,
+   * never below `near`. A fixed near plane far below the camera's working distance
+   * wastes the depth buffer, and close surfaces (land and sea, runway and apron) fight.
+   */
+  nearFrac?: number
 }
 
 export type Quality = 'high' | 'medium' | 'low'
