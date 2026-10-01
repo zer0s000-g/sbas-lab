@@ -12,6 +12,11 @@ simulation is the hero. The chrome is precise and quiet around it.
 
 - **Dark first.** The default theme is dark (graphite). The light theme is fully supported.
   Stages, scopes and cockpit instruments stay night-scene in both themes.
+  **The flight view is the exception: it is the real world.** It shows the sea, the islands,
+  both airports and the sky at the journey's own local time (daylight at the 10:00
+  departure, a lit night airport on the evening flight), the same in both themes. A
+  learner must always recognise where LAB201 is: at the gate, on a taxiway, over the open
+  sea, on final to a runway.
 - **One accent pair.**
   - Cyan `--signal` means live signal, focus and the primary action. In SBAS Lab, cyan is
     the GPS ranging signal and the protection level.
@@ -36,7 +41,7 @@ simulation is the hero. The chrome is precise and quiet around it.
 
   All numbers use tabular figures.
 - **Motion teaches.**
-  - The camera moves between shots, and pen-plot edges reveal the miniatures.
+  - The camera moves between shots, and pen-plot edges reveal the space-view miniatures.
   - Signals travel along wires, messages scroll into the log, and protection-level
     cylinders grow and shrink, so the learner sees what the physics does.
   - Everything respects reduced motion: the camera snaps and decorative motion stops.
@@ -59,6 +64,7 @@ Every colour is a CSS variable, and Tailwind classes reference the variables.
 | Semantic | `--destructive --success --warning` | Meaning only |
 | Stage (3D) | `--stage-bg --stage-floor --stage-fog --stage-line --stage-metal --stage-metal-dark --stage-paint --stage-terrain --stage-terrain-high --stage-water --stage-signal --stage-brass --stage-alert --stage-glass` | Night scene in both themes |
 | Airfield lamps | `--lamp-red --lamp-green --lamp-white --lamp-blue --lamp-amber` | Real runway, approach, PAPI and aircraft light colours, the same in both themes. Only for lamps |
+| World (flight view) | `--world-sky-zenith --world-sky-horizon --world-sky-night-zenith --world-sky-night-horizon --world-sky-dusk --world-sun --world-sea-deep --world-sea-shallow --world-foam --world-sand --world-grass --world-forest --world-rock --world-asphalt --world-concrete --world-marking --world-taxi-line --world-building --world-glazing --world-roof --world-cloud --world-cloud-shade` | The flight view's scenery, the same in both themes. Day and night skies blend with the sun's elevation (`core/sun`). Only for scenery |
 | Maps | `--sim-*` | Follow the theme |
 | Scopes and charts on instrument screens | `--scope-*` | Dark in both themes |
 | Cockpit instruments | `--instrument-*` | Dark in both themes |
@@ -129,7 +135,7 @@ phase, and a short fade covers each switch.
 |---|---|---|
 | `space` | A procedural Earth shader (no textures): day and night side, a 15° graticule, the model magnetic equator in brass. Around it: the GPS constellation and its orbit rings, two GEO satellites, the ionosphere shell and the ground-station dots. Signals go to LAB201: a solid cyan wire from each GPS satellite it tracks, a dashed brass wire from each GEO. | Climb, errors, the uplink and the broadcast |
 | `network` | A 2D region map (theme-following `--sim-*` colours): the made-up islands, reference stations, master station, uplink station, the ionospheric grid (IGPs, circle size = vertical delay, × = not monitored), the model magnetic equator and a live LPV-availability area | Reference stations, master station, the storm |
-| `flight` | A chase camera on LAB201 at true scale (1 unit = 100 m) over the sea and the made-up islands and runways. It shows the aircraft inside its HPL/VPL cylinder and the HAL/VAL wireframe of the current operation (Doc 9849 Table 2-1). Signal rays point the true way to each tracked satellite and end at a sky dome. Truth is a cross, GPS alone a hollow ring and SBAS a filled dot. The camera distance fits the alert limit: km out en route, metres on final. | Gate, takeoff, cruise, descent, final, landing |
+| `flight` | LAB201 at true scale (1 unit = 100 m) in a real-looking world at the journey's local time: sky and sun, the sea with shallows and surf, the made-up islands (beaches, grass, forest, rock), both airports (`views/airports.ts`: runway with Annex 14 markings and numbers, taxiways along LAB201's own ground track with yellow centrelines, apron, terminal with piers and jet bridges, parked airliners, tower, hangars; runway, threshold, end, taxiway and approach lights and a working PAPI) and fair-weather cumulus below cruise level. Around the aircraft: its HPL/VPL cylinder and the HAL/VAL wireframe of the current operation (Doc 9849 Table 2-1). Signal rays point the true way to each tracked satellite. Truth is a cross, GPS alone a hollow ring and SBAS a filled dot. **Cameras show the place:** the gate and landing shots look along the apron at the aircraft, the terminal and the runway; the follow shot is a low chase on the ground rising to a high chase over the sea; the zoom shot frames the protection cylinder on final with the runway ahead; Overview in the air backs out to the whole alert-limit ring. | Gate, takeoff, cruise, descent, final, landing |
 
 A **sky-plot inset** sits on every view, top right. It shows satellites by azimuth and
 elevation: used = filled, tracked = hollow, lost or excluded = crossed, GEO = diamond.
@@ -199,8 +205,8 @@ Sheet with every term.
 Every view says what is not to scale:
 - space: "Earth and orbits to scale · satellites drawn far larger than life · time ×N"
   (or "world frozen");
-- flight: "Terrain, aircraft and protection cylinders to scale · signal directions true,
-  distances not · position errors drawn ×10";
+- flight: "Islands, airports, aircraft and protection cylinders to scale · signal directions
+  true, distances not · position errors drawn ×10";
 - network: "Region map · stations made up for this fictional region · to scale".
 
 Story device: until the first correction arrives (end of the broadcast phase) the page
@@ -220,7 +226,18 @@ controller would do.
   procedural geometry, not a texture file.
 - There are no image, model or HDR files in the app. The only raster files are the app
   icons and a small social card.
-- 3D is lit with drei `Lightformer`s and uses small `CanvasTexture`s only.
+- The space view is lit with drei `Lightformer`s. The flight view brings its own sun
+  (direction from `core/sun`), sky and fog (`Stage scenery="world"`: no studio lights,
+  bloom only on lamps and the sun, light grain).
+- The flight world is all code: a sky shader, a sea shader reading a small height map of
+  the islands (a `DataTexture` built from `views/islands`), vertex-coloured terrain,
+  instanced trees and cloud puffs, merged airport geometry, lamps as screen-sized
+  points. The only textures are tiny canvas runway numbers and alpha masks.
+- Ground layers (apron, taxiways, runway, markings, the aircraft's shadow) sit a few
+  centimetres above the levelled airfield and are drawn in a fixed order without writing
+  depth, so they never fight each other. The flight camera's near plane follows its
+  distance to the aircraft (`Shot.nearFrac`). Shader detail (waves, surf) fades out
+  before it gets smaller than a pixel, so nothing shimmers. Uses small `CanvasTexture`s only.
 
 **Code splitting.**
 - three.js, drei and postprocessing live in their own chunk. `LazyStage` loads it after

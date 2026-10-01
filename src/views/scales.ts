@@ -39,5 +39,5 @@ export const ERROR_MARKER_SCALE = 10
 /** Signal rays point the true way to each satellite but stop at this distance, units (the satellites are 20 000 km away). */
 export const SKY_DOME_U = 60
 
-export const FLIGHT_HONESTY = `Terrain, aircraft and protection cylinders to scale · signal directions true, distances not · position errors drawn ×${ERROR_MARKER_SCALE}`
+export const FLIGHT_HONESTY = `Islands, airports, aircraft and protection cylinders to scale · signal directions true, distances not · position errors drawn ×${ERROR_MARKER_SCALE}`
 export const NETWORK_HONESTY = 'Region map · stations made up for this fictional region · to scale'

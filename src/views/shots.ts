@@ -6,13 +6,17 @@
 import { geodeticToEcef, localToGeodetic } from '@/core/geo'
 import { OPERATIONS } from '@/core/operations'
 import { satEcef, GEO_SATS, ALL_SATS } from '@/core/orbits'
-import { DEPARTURE, DESTINATION, REGION, STATIONS } from '@/core/region'
-import { DEG, M_PER_FT } from '@/core/units'
+import { REGION, STATIONS } from '@/core/region'
+import { DEG, M_PER_FT, M_PER_NM } from '@/core/units'
 import type { JourneyEngine } from '@/journey/engine'
 import { directionFor, type CameraIntent, type ViewId } from '@/journey/director'
 import { operationFor } from '@/core/operations'
 import type { Shot } from '@/stage/types'
-import { ecefToSpace, mToFlight, toFlight, type V3 } from './scales'
+import { ecefToSpace, FLIGHT_UNIT_M, mToFlight, toFlight, type V3 } from './scales'
+import { CORAL_ISLE, NORTH_ISLE, airportToLocalNm, localNmToAirport } from './airports'
+import { terrainFtAt } from './islands'
+
+const U_PER_NM = M_PER_NM / FLIGHT_UNIT_M
 
 export type CameraButton = 'follow' | 'overview' | 'zoom'
 
@@ -72,30 +76,67 @@ function spaceShot(e: JourneyEngine, intent: CameraIntent): Shot {
   return { ...base, ...track(), track }
 }
 
+/** Keep a camera point at least `clearM` above the ground or the sea (scene units in and out). */
+function aboveGround(p: V3, clearM: number): V3 {
+  const groundFt = Math.max(0, terrainFtAt(p[0] / U_PER_NM, -p[2] / U_PER_NM))
+  return [p[0], Math.max(p[1], mToFlight(groundFt * M_PER_FT + clearM)), p[2]]
+}
+
+const smooth = (k: number) => {
+  const x = Math.min(1, Math.max(0, k))
+  return x * x * (3 - 2 * x)
+}
+
 function flightShot(e: JourneyEngine, intent: CameraIntent | CameraButton): Shot {
   // Near plane at a quarter of the camera's distance to its target (at least 5 m): every
   // shot keeps the aircraft and its cylinders well beyond it, and the depth buffer
   // keeps land, sea and runway apart out to the far plane.
   const base = { snapKey: 'flight', near: 0.05, nearFrac: 0.25, far: 3500, fov: 34 }
-  if (intent === 'overview') {
-    // Over the airport the aircraft is at (the departure one until halfway).
-    const a = e.aircraft.eastNm < 0 ? DEPARTURE : DESTINATION
-    const rwyMid = toFlight(a.thresholdEastNm + a.runwayLengthM / 1852 / 2, a.thresholdNorthNm, a.elevationFt)
-    return { ...base, position: add(rwyMid, [-22, 26, 44]), target: add(rwyMid, [0, 0, 2]) }
-  }
+  const m = mToFlight
   const track = (): { position: V3; target: V3 } => {
+    const a = e.aircraft
     const ac = aircraftFlight(e)
-    const h = e.aircraft.headingDeg * DEG
+    const h = a.headingDeg * DEG
     const fwd: V3 = [Math.sin(h), 0, -Math.cos(h)]
     const side: V3 = [Math.cos(h), 0, Math.sin(h)]
-    if (intent === 'zoom') {
-      // Close on the protection cylinder: slightly behind, to the right, a little above.
-      const r = Math.max(mToFlight(alRadiusM(e)), 0.4)
-      return { position: add(ac, add(add(scl(fwd, -3.4 * r), scl(side, 2 * r)), [0, 1.1 * r, 0])), target: ac }
+    const l = a.eastNm < 0 ? NORTH_ISLE : CORAL_ISLE
+    const [ra, rr] = localNmToAirport(l.airport, a.eastNm, a.northNm)
+    const nearField = Math.abs(rr) < 2500 && ra > -3000 && ra < l.lengthM + 3000
+    const aglFt = a.altFt - l.airport.elevationFt
+    if (intent === 'overview' && (a.onGround || (nearField && aglFt < 800))) {
+      // The airport: from the runway side, along the apron, with LAB201 in front of the
+      // terminal, the parked airliners and the tower, and the runway on the other side.
+      // Tracks the aircraft as it taxis or rolls out.
+      const terminal = Math.sign(l.stands[0]?.r ?? 1)
+      const at = (da: number, dr: number, hM: number): V3 => {
+        const [en, nn] = airportToLocalNm(l.airport, ra + da, rr + dr)
+        return toFlight(en, nn, l.airport.elevationFt + hM / M_PER_FT)
+      }
+      return { position: aboveGround(at(-400, -terminal * 170, 135), 40), target: at(90, terminal * 45, 0) }
     }
-    // Follow: far enough back to fit the alert-limit ring, never nearer than 150 m.
-    const d = Math.min(Math.max(2.6 * mToFlight(alRadiusM(e)), 1.5), 95)
-    return { position: add(ac, add(add(scl(fwd, -d), scl(side, d * 0.35)), [0, d * 0.42, 0])), target: add(ac, scl(fwd, d * 0.25)) }
+    if (intent === 'overview') {
+      // In the air: far enough out to see the whole alert-limit ring.
+      const d = Math.min(Math.max(2.6 * m(alRadiusM(e)), 1.5), 95)
+      return { position: aboveGround(add(ac, add(add(scl(fwd, -d), scl(side, d * 0.35)), [0, d * 0.42, 0])), 30), target: add(ac, scl(fwd, d * 0.25)) }
+    }
+    if (intent === 'zoom') {
+      // Close on the protection cylinder: slightly behind, to the right, a little above,
+      // looking a little ahead so the runway stays in view on final.
+      const r = Math.max(m(alRadiusM(e)), 0.4)
+      return { position: aboveGround(add(ac, add(add(scl(fwd, -3.4 * r), scl(side, 2 * r)), [0, 1.1 * r, 0])), 8), target: add(ac, scl(fwd, r * 0.8)) }
+    }
+    // Follow: a low chase camera on the ground, rising to a high chase in the air that
+    // shows the sea, the clouds and the coast ahead.
+    const k = smooth(aglFt / 1500)
+    const back = m(95 + k * 230)
+    const right = m(26 + k * 95)
+    const up = m(24 + k * 95)
+    const ahead = m(70 + k * 150)
+    const down = m(-4 + k * 40)
+    return {
+      position: aboveGround(add(ac, add(add(scl(fwd, -back), scl(side, right)), [0, up, 0])), 12),
+      target: add(add(ac, scl(fwd, ahead)), [0, -down, 0]),
+    }
   }
   return { ...base, ...track(), track }
 }

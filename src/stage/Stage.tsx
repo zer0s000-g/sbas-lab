@@ -11,8 +11,8 @@ import { StageLabelsContext } from './labels'
 import { col } from './col'
 import { StudioLights } from './StudioLights'
 
-import type { Quality, Shot } from './types'
-export type { Quality, Shot } from './types'
+import type { Quality, Scenery, Shot } from './types'
+export type { Quality, Scenery, Shot } from './types'
 export { col } from './col'
 export { CameraRig } from './CameraRig'
 export { StudioLights } from './StudioLights'
@@ -27,14 +27,17 @@ export function webglAvailable(): boolean {
   }
 }
 
-function Effects({ quality, reduced }: { quality: Quality; reduced: boolean }) {
+function Effects({ quality, reduced, scenery }: { quality: Quality; reduced: boolean; scenery: Scenery }) {
   if (quality === 'low') return null
+  // The studio look: strong bloom, grain and vignette. The world look (a daylight scene)
+  // blooms only lamps and the sun, with light grain and a soft vignette.
+  const world = scenery === 'world'
   return (
     <EffectComposer multisampling={quality === 'high' ? 4 : 0} enableNormalPass={false}>
-      <Bloom mipmapBlur intensity={0.85} luminanceThreshold={0.62} luminanceSmoothing={0.2} radius={0.72} />
+      <Bloom mipmapBlur intensity={world ? 0.55 : 0.85} luminanceThreshold={world ? 0.92 : 0.62} luminanceSmoothing={0.2} radius={world ? 0.6 : 0.72} />
       {/* Moving grain is decorative motion: it stops with reduced motion. */}
-      <Noise premultiply opacity={reduced ? 0 : 0.35} />
-      <Vignette eskil={false} offset={0.22} darkness={0.78} />
+      <Noise premultiply opacity={reduced ? 0 : world ? 0.12 : 0.35} />
+      <Vignette eskil={false} offset={world ? 0.3 : 0.22} darkness={world ? 0.42 : 0.78} />
     </EffectComposer>
   )
 }
@@ -57,6 +60,7 @@ export function Stage({
   fog = [26, 90],
   far = 400,
   paused = false,
+  scenery = 'studio',
 }: {
   children: (t: ThemeTokens, quality: Quality) => ReactNode
   shot: Shot
@@ -73,6 +77,8 @@ export function Stage({
   far?: number
   /** Stop rendering (another view covers the stage); the WebGL context stays. */
   paused?: boolean
+  /** 'studio': the lit-miniature lights and effects. 'world': the scene brings its own sun and sky. */
+  scenery?: Scenery
 }) {
   const t = useThemeTokens()
   const reduced = useReducedMotion()
@@ -129,14 +135,15 @@ export function Stage({
             onCreated={() => onCreated?.()}
           >
             <color attach="background" args={[col(t, 'stage-bg')]} />
-            <fog attach="fog" args={[col(t, 'stage-fog'), fog[0], fog[1]]} />
+            {/* A world scene brings its own fog, coloured like its sky's horizon. */}
+            {scenery === 'studio' && <fog attach="fog" args={[col(t, 'stage-fog'), fog[0], fog[1]]} />}
             <PerformanceMonitor onDecline={() => setQuality((q) => (q === 'high' ? 'medium' : 'low'))}>
               <Suspense fallback={null}>
-                <StudioLights t={t} />
+                {scenery === 'studio' && <StudioLights t={t} />}
                 {children(t, quality)}
               </Suspense>
               <CameraRig shot={shot} drift={drift} reduced={reduced} />
-              <Effects quality={reduced ? 'medium' : quality} reduced={reduced} />
+              <Effects quality={reduced ? 'medium' : quality} reduced={reduced} scenery={scenery} />
             </PerformanceMonitor>
           </Canvas>
         </StageLabelsContext.Provider>

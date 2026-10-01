@@ -22,3 +22,6 @@ export interface Shot {
 }
 
 export type Quality = 'high' | 'medium' | 'low'
+
+/** How a stage is lit: the studio miniature, or a world scene with its own sun and sky. */
+export type Scenery = 'studio' | 'world'

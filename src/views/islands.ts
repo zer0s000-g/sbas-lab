@@ -38,13 +38,31 @@ export function islandHeightFt(isl: Island, eastNm: number, northNm: number): nu
   let h = -80 + mask * (80 + isl.peakFt * n * mask)
   const a = isl.airport
   if (a) {
-    // A flat apron around the runway, a little above the sea.
-    const along = eastNm - (a.thresholdEastNm + runwayHalfNm(a))
-    const across = northNm - a.thresholdNorthNm
-    const flat = Math.max(Math.abs(across) / 0.6, (Math.abs(along) - runwayHalfNm(a)) / 0.5)
-    if (flat < 1) h = a.elevationFt - 10 + (h - (a.elevationFt - 10)) * flat * flat
+    // The airfield is levelled to the field elevation: hills are cut down over the whole
+    // airfield, and low ground is filled only around the pavement (the approach lights
+    // beyond the coast stand on a pier). Flat inside, blending out at the edges.
+    const along = Math.abs(eastNm - (a.thresholdEastNm + runwayHalfNm(a))) - runwayHalfNm(a)
+    const across = Math.abs(northNm - a.thresholdNorthNm)
+    const blend = (f: number, start: number) => {
+      const k = Math.min(1, Math.max(0, (f - start) / (1 - start)))
+      return k * k * (3 - 2 * k)
+    }
+    if (h > a.elevationFt) h = a.elevationFt + (h - a.elevationFt) * blend(airfieldFlat(isl, eastNm, northNm), 0.7)
+    else h = a.elevationFt + (h - a.elevationFt) * blend(Math.max(across / 0.6, along / 0.25), 0.75)
   }
   return h
+}
+
+/**
+ * Where the levelled airfield is: below 0.7 fully flat, blending out to 1, natural
+ * ground beyond. The runway strip, the apron, the terminal and its landside lie inside.
+ */
+export function airfieldFlat(isl: Island, eastNm: number, northNm: number): number {
+  const a = isl.airport
+  if (!a) return Infinity
+  const along = eastNm - (a.thresholdEastNm + runwayHalfNm(a))
+  const across = northNm - a.thresholdNorthNm
+  return Math.max(Math.abs(across) / 0.75, (Math.abs(along) - runwayHalfNm(a)) / 0.75)
 }
 
 /** Terrain height anywhere in the region, ft (the sea is −80 ft deep here). */

@@ -215,6 +215,31 @@
   --lamp-white: hsl(45 70% 94%);
   --lamp-blue: hsl(218 95% 66%);
   --lamp-amber: hsl(38 100% 60%);
+  /* The flight view's world: sky, sea, islands and airports at the journey's local
+     time (the same in both themes). The day and night skies blend with the sun's
+     elevation. Only for the flight view's scenery. */
+  --world-sky-zenith: hsl(212 58% 40%);
+  --world-sky-horizon: hsl(203 38% 76%);
+  --world-sky-night-zenith: hsl(226 42% 5%);
+  --world-sky-night-horizon: hsl(222 30% 13%);
+  --world-sky-dusk: hsl(22 72% 56%);
+  --world-sun: hsl(44 100% 93%);
+  --world-sea-deep: hsl(204 72% 17%);
+  --world-sea-shallow: hsl(180 58% 40%);
+  --world-foam: hsl(190 30% 95%);
+  --world-sand: hsl(42 42% 70%);
+  --world-grass: hsl(92 30% 38%);
+  --world-forest: hsl(125 32% 20%);
+  --world-rock: hsl(28 9% 44%);
+  --world-asphalt: hsl(220 7% 21%);
+  --world-concrete: hsl(40 6% 60%);
+  --world-marking: hsl(0 0% 95%);
+  --world-taxi-line: hsl(48 95% 54%);
+  --world-building: hsl(210 10% 80%);
+  --world-glazing: hsl(205 32% 26%);
+  --world-roof: hsl(215 8% 46%);
+  --world-cloud: hsl(0 0% 100%);
+  --world-cloud-shade: hsl(214 20% 70%);
 }
 
 /*
@@ -295,7 +320,7 @@
   --brass: hsl(36 80% 58%);
   --signal: hsl(188 92% 58%);
   --hud-line: hsl(205 30% 90% / 0.22);
-  --hud-panel: hsl(220 22% 6% / 0.72);
+  --hud-panel: hsl(220 22% 6% / 0.8);
 }
 
 @layer base {

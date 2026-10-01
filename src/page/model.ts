@@ -9,7 +9,7 @@ import { approachMode, navStatus, type Snapshot } from '@/core/sbasWorld'
 import type { ApproachMode, Fix } from '@/core/receiver'
 import { scheduledMessage, messageType, type SbasSignal } from '@/core/messages'
 import { GEO_SATS } from '@/core/orbits'
-import { DESTINATION, localSolarHour, REGION } from '@/core/region'
+import { DEPARTURE, DESTINATION, localSolarHour, REGION } from '@/core/region'
 import { directionFor } from '@/journey/director'
 import type { JourneyEngine } from '@/journey/engine'
 import { phaseDef, PHASE_INDEX, type PhaseId } from '@/journey/phases'
@@ -222,6 +222,16 @@ export function describe(m: ViewModel, view: 'space' | 'flight' | 'network'): st
   const lim = m.op ? `${m.op.name} limits HAL ${formatMetres(m.op.halM)}${m.op.valM !== null ? `, VAL ${formatMetres(m.op.valM)}` : ''}, ${m.withinLimits ? 'within limits' : 'outside limits'}` : ''
   const where = `LAB201 ${m.altFt < 100 ? 'on the ground' : `at ${Math.round(m.altFt / 100) * 100} ft`}, ${m.distToGoNm.toFixed(1)} NM from ${DESTINATION.name}`
   const sky = `${m.gpsTracked} GPS satellites tracked, ${m.geosTracked} of 2 SBAS GEOs received`
-  const lead = view === 'space' ? 'Space view: the Earth, the GPS constellation and the SBAS GEOs.' : view === 'network' ? 'Network map: SBAS reference stations, master station and ionospheric grid.' : 'Flight view.'
+  // Where the flight view is looking: an airport, the coast or the open sea.
+  const routeNm = Math.hypot(DESTINATION.thresholdEastNm - DEPARTURE.thresholdEastNm, DESTINATION.thresholdNorthNm - DEPARTURE.thresholdNorthNm)
+  const place =
+    m.altFt < 100
+      ? `at ${m.distToGoNm > routeNm / 2 ? DEPARTURE.name : DESTINATION.name} airport, with its runway, taxiways and terminal`
+      : m.distToGoNm < 12
+        ? `approaching ${DESTINATION.name} over the sea, the island and its runway ahead`
+        : m.distToGoNm > routeNm - 12
+          ? `climbing out over the sea from ${DEPARTURE.name}`
+          : 'over the open sea, above scattered clouds'
+  const lead = view === 'space' ? 'Space view: the Earth, the GPS constellation and the SBAS GEOs.' : view === 'network' ? 'Network map: SBAS reference stations, master station and ionospheric grid.' : `Flight view: LAB201 ${place}.`
   return [lead, where, sky, `Using ${m.navSource === 'sbas' ? 'SBAS' : m.navSource === 'abas' ? 'GPS alone' : 'nothing'}: ${pl}`, lim, `Approach mode ${m.mode}`].filter(Boolean).join('. ') + '.'
 }

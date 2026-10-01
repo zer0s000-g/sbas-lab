@@ -1,5 +1,8 @@
 /**
- * The Flight view: LAB201 at true scale over the made-up archipelago, inside its
+ * The Flight view: LAB201 at true scale in a real-looking world, at the journey's local
+ * time of day: the sky and sun, the sea with its shallows and surf, the made-up islands
+ * with beaches and forest, both airports with their runways, taxiways, terminals and
+ * lights, and fair-weather clouds over the open sea. Around the aircraft: its
  * protection-level cylinder (glass, cyan) and the alert-limit wireframe (brass) of the
  * current operation. Signal rays point the true way to every satellite it tracks: solid
  * cyan for GPS, dashed brass for the SBAS GEOs. Truth is a cross, GPS alone a hollow
@@ -9,124 +12,38 @@ import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { ThemeTokens } from '@/hooks/useThemeTokens'
-import { DEPARTURE, DESTINATION, type Airport } from '@/core/region'
+import { DEPARTURE, DESTINATION } from '@/core/region'
 import { DEG, M_PER_FT } from '@/core/units'
 import { operationFor } from '@/core/operations'
 import { navStatus, approachMode } from '@/core/sbasWorld'
 import { directionFor } from '@/journey/director'
 import { getJourney, useJourneyState } from '@/journey/store'
+import { useReducedMotion } from '@/stores/prefs'
 import { Callout3D } from '@/stage/Callout3D'
-import { PenPlot } from '@/stage/PenPlot'
 import { Wire3D, type WireHandle } from '@/stage/Wire3D'
 import { col } from '@/stage/col'
 import type { Quality } from '@/stage/types'
-import { ERROR_MARKER_SCALE, mToFlight, SKY_DOME_U, toFlight } from './scales'
+import { CORAL_ISLE, NORTH_ISLE } from './airports'
+import { ERROR_MARKER_SCALE, mToFlight, SKY_DOME_U } from './scales'
 import { aircraftFlight } from './shots'
-import { ISLANDS, islandHeightFt, type Island } from './islands'
+import { AirportModel } from './world/AirportModel'
+import { Airliner, type AirlinerHandle } from './world/Airliner'
+import { Clouds } from './world/Clouds'
+import { GroundShadow } from './world/GroundShadow'
+import { Ocean } from './world/Ocean'
+import { Sky } from './world/Sky'
+import { Terrain } from './world/Terrain'
+import { newSkyState, raToWorld, skyPalette, updateSky } from './world/skyState'
 
 const MAX_RAYS = 14
-
-function IslandMesh({ isl, t, segs }: { isl: Island; t: ThemeTokens; segs: number }) {
-  const geo = useMemo(() => {
-    const wNm = isl.rxNm * 2.4
-    const hNm = isl.ryNm * 2.4
-    const g = new THREE.PlaneGeometry(1, 1, segs, segs)
-    g.rotateX(-Math.PI / 2)
-    const pos = g.getAttribute('position') as THREE.BufferAttribute
-    for (let i = 0; i < pos.count; i++) {
-      const e = isl.eastNm + pos.getX(i) * wNm
-      const n = isl.northNm - pos.getZ(i) * hNm
-      const [x, y, z] = toFlight(e, n, Math.max(islandHeightFt(isl, e, n), -60))
-      pos.setXYZ(i, x, y, z)
-    }
-    g.computeVertexNormals()
-    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(pos.count * 3), 3))
-    return g
-  }, [isl, segs])
-  useLayoutEffect(() => {
-    const low = col(t, 'stage-terrain')
-    const high = col(t, 'stage-terrain-high')
-    const pos = geo.getAttribute('position') as THREE.BufferAttribute
-    const colr = geo.getAttribute('color') as THREE.BufferAttribute
-    const top = (isl.peakFt * M_PER_FT) / 100
-    const tmp = new THREE.Color()
-    for (let i = 0; i < pos.count; i++) {
-      const k = Math.min(1, Math.max(0, pos.getY(i) / Math.max(top, 1e-3)))
-      tmp.copy(low).lerp(high, Math.pow(k, 0.8))
-      colr.setXYZ(i, tmp.r, tmp.g, tmp.b)
-    }
-    colr.needsUpdate = true
-  }, [geo, t, isl.peakFt])
-  useLayoutEffect(() => () => geo.dispose(), [geo])
-  return (
-    <mesh geometry={geo}>
-      <meshStandardMaterial vertexColors roughness={0.95} metalness={0} flatShading />
-    </mesh>
-  )
-}
-
-function Runway({ a, c, approachLights }: { a: Airport; c: Record<string, THREE.Color>; approachLights: boolean }) {
-  const lenU = mToFlight(a.runwayLengthM)
-  const wU = mToFlight(45)
-  const thr = toFlight(a.thresholdEastNm, a.thresholdNorthNm, a.elevationFt)
-  const y = thr[1] + 0.02
-  const lamp = (x: number, z: number, color: THREE.Color, key: string) => (
-    <mesh key={key} position={[x, y + 0.01, z]}>
-      <sphereGeometry args={[0.03, 6, 6]} />
-      <meshBasicMaterial color={color} toneMapped={false} />
-    </mesh>
-  )
-  return (
-    <group>
-      <mesh position={[thr[0] + lenU / 2, y, thr[2]]}>
-        <boxGeometry args={[lenU, 0.02, wU]} />
-        <meshStandardMaterial color={c.metal} roughness={0.8} />
-      </mesh>
-      {Array.from({ length: 5 }, (_, i) => lamp(thr[0], thr[2] + (i - 2) * (wU / 4), c.green, `g${i}`))}
-      {Array.from({ length: 5 }, (_, i) => lamp(thr[0] + lenU, thr[2] + (i - 2) * (wU / 4), c.red, `r${i}`))}
-      {approachLights && Array.from({ length: 9 }, (_, i) => lamp(thr[0] - 0.3 - i * 0.3, thr[2], c.white, `w${i}`))}
-    </group>
-  )
-}
-
-/** A simple airliner at true scale: 37 m long, 35 m span. */
-function Airliner({ c }: { c: Record<string, THREE.Color> }) {
-  return (
-    <group>
-      <mesh rotation-z={Math.PI / 2}>
-        <cylinderGeometry args={[0.02, 0.018, 0.37, 12]} />
-        <meshStandardMaterial color={c.paint} roughness={0.4} metalness={0.2} />
-      </mesh>
-      <mesh position={[0.02, -0.005, 0]}>
-        <boxGeometry args={[0.06, 0.006, 0.35]} />
-        <meshStandardMaterial color={c.paint} roughness={0.4} metalness={0.2} />
-      </mesh>
-      <mesh position={[-0.16, 0.004, 0]}>
-        <boxGeometry args={[0.035, 0.004, 0.13]} />
-        <meshStandardMaterial color={c.paint} roughness={0.4} />
-      </mesh>
-      <mesh position={[-0.16, 0.035, 0]}>
-        <boxGeometry args={[0.045, 0.06, 0.004]} />
-        <meshStandardMaterial color={c.paint} roughness={0.4} />
-      </mesh>
-      {/* Navigation lights: red left, green right (real lamp colours). */}
-      <mesh position={[0.02, 0, -0.175]}>
-        <sphereGeometry args={[0.006, 6, 6]} />
-        <meshBasicMaterial color={c.red} toneMapped={false} />
-      </mesh>
-      <mesh position={[0.02, 0, 0.175]}>
-        <sphereGeometry args={[0.006, 6, 6]} />
-        <meshBasicMaterial color={c.green} toneMapped={false} />
-      </mesh>
-    </group>
-  )
-}
+/** Camera far plane in this view (shots.ts), scene units: the sky dome sits just inside it. */
+const FAR_U = 3500
 
 /** A wire cylinder: two rims and eight verticals (the alert limit). Unit size, scaled per frame. */
 function useUnitWireCylinder() {
   const geo = useMemo(() => {
     const pts: number[] = []
-    const n = 64
+    const n = 96
     for (const y of [-1, 1])
       for (let i = 0; i < n; i++) {
         const a0 = (i / n) * Math.PI * 2
@@ -145,23 +62,27 @@ function useUnitWireCylinder() {
   return geo
 }
 
-export default function FlightScene({ t }: { t: ThemeTokens; quality: Quality }) {
+export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Quality }) {
   const engine = getJourney()
   const phase = useJourneyState(engine, (s) => s.phase)
+  const reduced = useReducedMotion()
   const c = useMemo(
     () => ({
-      water: col(t, 'stage-water'),
-      metal: col(t, 'stage-metal'),
       paint: col(t, 'stage-paint'),
       signal: col(t, 'stage-signal'),
       brass: col(t, 'stage-brass'),
       muted: col(t, 'stage-line'),
-      green: col(t, 'lamp-green'),
-      red: col(t, 'lamp-red'),
-      white: col(t, 'lamp-white'),
+      groundTint: col(t, 'world-grass').lerp(col(t, 'world-sea-deep'), 0.5),
+      night: col(t, 'world-sky-night-horizon').lerp(col(t, 'world-sky-horizon'), 0.35),
     }),
     [t],
   )
+  const palette = useMemo(() => skyPalette(t), [t])
+  const sky = useMemo(newSkyState, [])
+  const night = useMemo(() => ({ value: 0 }), [])
+  const lab201 = useMemo<AirlinerHandle>(() => ({ gear: true, landing: false, beacon: true }), [])
+  const lastTick = useRef(-1)
+
   const wireCyl = useUnitWireCylinder()
   const acGroup = useRef<THREE.Group>(null)
   const plane = useRef<THREE.Group>(null)
@@ -174,7 +95,35 @@ export default function FlightScene({ t }: { t: ThemeTokens; quality: Quality })
   const geoRays = useRef<(WireHandle | null)[]>([])
   const geoTips = useRef<(THREE.Group | null)[]>([])
   const alLabel = useRef<THREE.Group>(null)
+  const fog = useRef<THREE.Fog>(null)
+  const sun = useRef<THREE.DirectionalLight>(null)
+  const hemi = useRef<THREE.HemisphereLight>(null)
+  const sunTarget = useMemo(() => new THREE.Object3D(), [])
   const op = operationFor(directionFor(phase).stage)
+
+  // The sky first, so everything drawn this frame sees the same time of day.
+  useFrame((_s, dt) => {
+    updateSky(sky, palette, engine.worldS, engine.conditions().startLocalHour)
+    // Waves and blinking lights move only while the world does.
+    if (engine.tick !== lastTick.current && !reduced) sky.motionS += Math.min(dt, 0.1)
+    lastTick.current = engine.tick
+    night.value = 1 - sky.day
+    fog.current?.color.copy(sky.horizon)
+    const ac = aircraftFlight(engine)
+    sunTarget.position.set(...ac)
+    sunTarget.updateMatrixWorld()
+    if (sun.current) {
+      sun.current.position.set(ac[0] + sky.sun.x * 50, ac[1] + sky.sun.y * 50, ac[2] + sky.sun.z * 50)
+      sun.current.color.copy(sky.sunColor)
+      sun.current.intensity = 2.6 * sky.day * Math.min(1, Math.max(0, sky.sun.y * 4))
+    }
+    if (hemi.current) {
+      // Daylight from the sky; at night a dim, cool moonlight-level fill so the land stays readable.
+      hemi.current.color.copy(c.night).lerp(sky.zenith.clone().lerp(sky.horizon, 0.5), sky.day)
+      hemi.current.groundColor.copy(c.groundTint)
+      hemi.current.intensity = 0.5 + 0.75 * sky.day
+    }
+  }, -1)
 
   useFrame((state) => {
     const a = engine.aircraft
@@ -187,6 +136,10 @@ export default function FlightScene({ t }: { t: ThemeTokens; quality: Quality })
       const pitch = Math.atan2((a.vsFpm * M_PER_FT) / 60, Math.max((a.gsKt * 1852) / 3600, 1))
       plane.current.rotateZ(pitch)
     }
+    const fieldFt = a.eastNm < 0 ? DEPARTURE.elevationFt : DESTINATION.elevationFt
+    const agl = a.altFt - fieldFt
+    lab201.gear = a.onGround || agl < (a.vsFpm < 0 ? 2500 : 400)
+    lab201.landing = a.altFt < 10000 && (!a.onGround || a.gsKt > 30)
     // The fix the story shows: GPS alone until the first correction, then SBAS.
     const stage = directionFor(engine.state.phase).stage
     const op = operationFor(stage)
@@ -208,9 +161,10 @@ export default function FlightScene({ t }: { t: ThemeTokens; quality: Quality })
       }
     }
     if (alLabel.current && op) alLabel.current.position.set(mToFlight(op.halM), op.valM !== null ? mToFlight(op.valM) : 0, 0)
-    // A glow on the aircraft so it can be found when the camera is far out (en route).
+    // A glow on the aircraft so it can be found when the camera is far out.
     if (beacon.current) {
       const d = state.camera.position.distanceTo(new THREE.Vector3(...ac))
+      beacon.current.visible = d > 12
       beacon.current.scale.setScalar(Math.max(d / 140, 0.02))
     }
     const place = (m: THREE.Mesh | null, f: typeof fix, show: boolean) => {
@@ -240,7 +194,7 @@ export default function FlightScene({ t }: { t: ThemeTokens; quality: Quality })
         const w = rays.current[k++]
         w?.set(ac, end)
         w?.setVisible(true)
-        w?.setOpacity(used.has(s.id) ? 0.75 : 0.2)
+        w?.setOpacity(used.has(s.id) ? 0.8 : 0.25)
       }
     }
     for (; k < MAX_RAYS; k++) rays.current[k]?.setVisible(false)
@@ -250,37 +204,35 @@ export default function FlightScene({ t }: { t: ThemeTokens; quality: Quality })
     }
   })
 
-  // A fixed mesh size: rebuilding the terrain when the quality tier drops would leave the
-  // pen-plot outlines on the old shape. About 200 m per cell on the airport islands.
-  const segs = 128
+  const blink = !reduced
+  const coralThr = raToWorld(CORAL_ISLE, 0, 0, 0)
+  const northThr = raToWorld(NORTH_ISLE, 0, 0, 0)
   return (
     <group>
-      {/* The sea. */}
-      <mesh rotation-x={-Math.PI / 2} position={[0, -0.05, 0]}>
-        <planeGeometry args={[6000, 6000]} />
-        {/* Pushed back in depth so the coast and the airport aprons always draw over it. */}
-        <meshStandardMaterial color={c.water} roughness={0.75} metalness={0} polygonOffset polygonOffsetFactor={2} polygonOffsetUnits={2} />
-      </mesh>
-      <PenPlot color={c.signal} durationS={2.4}>
-        {ISLANDS.map((isl) => (
-          <IslandMesh key={isl.id} isl={isl} t={t} segs={isl.airport ? segs : Math.round(segs / 2)} />
-        ))}
-      </PenPlot>
-      <Runway a={DEPARTURE} c={c} approachLights={false} />
-      <Runway a={DESTINATION} c={c} approachLights />
+      <fog ref={fog} attach="fog" args={[sky.horizon, 40, 750]} />
+      <hemisphereLight ref={hemi} />
+      <directionalLight ref={sun} target={sunTarget} />
+      <primitive object={sunTarget} />
+      <Sky sky={sky} radius={FAR_U * 0.86} />
+      <Ocean t={t} sky={sky} size={FAR_U * 2.2} />
+      <Terrain t={t} lowDetail={quality === 'low'} />
+      <AirportModel l={NORTH_ISLE} t={t} sky={sky} engine={engine} blink={blink} />
+      <AirportModel l={CORAL_ISLE} t={t} sky={sky} engine={engine} blink={blink} />
+      <Clouds t={t} sky={sky} />
+      <GroundShadow t={t} sky={sky} engine={engine} />
       <group ref={acGroup}>
         <group ref={plane}>
-          <Airliner c={c} />
+          <Airliner t={t} state={lab201} blink={blink} night={night} />
         </group>
         <mesh ref={beacon}>
           <sphereGeometry args={[1, 12, 12]} />
           <meshBasicMaterial color={c.signal} transparent opacity={0.35} depthWrite={false} toneMapped={false} />
         </mesh>
-        <mesh ref={pl}>
-          <cylinderGeometry args={[1, 1, 2, 48, 1, true]} />
-          <meshBasicMaterial color={c.signal} transparent opacity={0.28} depthWrite={false} side={THREE.DoubleSide} toneMapped={false} />
+        <mesh ref={pl} renderOrder={9}>
+          <cylinderGeometry args={[1, 1, 2, 64, 1, true]} />
+          <meshBasicMaterial color={c.signal} transparent opacity={0.24} depthWrite={false} side={THREE.DoubleSide} toneMapped={false} />
         </mesh>
-        <lineSegments ref={al} geometry={wireCyl}>
+        <lineSegments ref={al} geometry={wireCyl} renderOrder={9}>
           <lineBasicMaterial color={c.brass} transparent opacity={0.95} toneMapped={false} />
         </lineSegments>
         {/* Truth: a small cross at the aircraft. */}
@@ -301,7 +253,7 @@ export default function FlightScene({ t }: { t: ThemeTokens; quality: Quality })
           <sphereGeometry args={[0.03, 12, 12]} />
           <meshBasicMaterial color={c.signal} toneMapped={false} />
         </mesh>
-        <Callout3D position={[0, 0.06, 0]} tone="signal">
+        <Callout3D position={[0, 0.12, 0]} tone="signal">
           LAB201 · HPL/VPL
         </Callout3D>
         {op && (
@@ -314,11 +266,11 @@ export default function FlightScene({ t }: { t: ThemeTokens; quality: Quality })
         )}
       </group>
       {Array.from({ length: MAX_RAYS }, (_, i) => (
-        <Wire3D key={i} ref={(h) => void (rays.current[i] = h)} color={c.signal} px={1.2} opacity={0.7} />
+        <Wire3D key={i} ref={(h) => void (rays.current[i] = h)} color={c.signal} px={1.4} opacity={0.8} />
       ))}
       {[0, 1].map((i) => (
         <group key={i}>
-          <Wire3D ref={(h) => void (geoRays.current[i] = h)} color={c.brass} px={1.6} dash={1.5} opacity={0.95} />
+          <Wire3D ref={(h) => void (geoRays.current[i] = h)} color={c.brass} px={1.8} dash={1.5} opacity={0.95} />
           <group ref={(m) => void (geoTips.current[i] = m)} position={[0, -1e4, 0]}>
             <mesh>
               <octahedronGeometry args={[0.8]} />
@@ -330,10 +282,10 @@ export default function FlightScene({ t }: { t: ThemeTokens; quality: Quality })
           </group>
         </group>
       ))}
-      <Callout3D position={toFlight(DESTINATION.thresholdEastNm, DESTINATION.thresholdNorthNm, DESTINATION.elevationFt)} side="left">
+      <Callout3D position={coralThr} side="left">
         RWY {DESTINATION.runway} · {DESTINATION.name}
       </Callout3D>
-      <Callout3D position={toFlight(DEPARTURE.thresholdEastNm, DEPARTURE.thresholdNorthNm, DEPARTURE.elevationFt)} side="left">
+      <Callout3D position={northThr} side="left">
         {DEPARTURE.name}
       </Callout3D>
     </group>

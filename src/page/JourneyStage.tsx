@@ -87,7 +87,8 @@ export function JourneyStage({
           shot={shot}
           label={label}
           className="absolute inset-0"
-          fog={threeView === 'space' ? [40, 120] : [260, 2200]}
+          fog={[40, 120]}
+          scenery={threeView === 'space' ? 'studio' : 'world'}
           paused={view === 'network'}
           drift={threeView === 'space'}
         >
