@@ -21,7 +21,7 @@ const TRIP: Sample[] = (() => {
   let t = 0
   const out: Sample[] = []
   let k = 0
-  while (!s.parked && t < 4000) {
+  while (!s.parked && t < 9000) {
     s = stepFlight(s, 0.1)
     t = Math.round((t + 0.1) * 10) / 10
     if (++k % 50 === 0) out.push({ t, s })

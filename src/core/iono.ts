@@ -1,12 +1,13 @@
 /**
- * The ionosphere over the fictional equatorial region.
+ * The ionosphere over Indonesia, on and south of the magnetic equator.
  *
  * What the model shows (Doc 9849 §5.2.1):
  * - the delay depends on the density of ionised particles, which follows the sun
  *   (§5.2.1.1–5.2.1.2), so it peaks in the early afternoon;
  * - near the equator, bands of dense ionisation form about 15° north and south of the
  *   magnetic equator, and narrow depleted "bubbles" grow in them after local sunset
- *   and last into the night (§5.2.1.5);
+ *   and last into the night (§5.2.1.5). The magnetic equator runs north of Indonesia,
+ *   so Java and Bali lie under the southern band;
  * - scintillation occurs in patches, affects only a few satellites at a time, and
  *   affects every GNSS frequency (§5.2.1.3–5.2.1.4).
  * The numbers (TEC levels, band widths, bubble sizes) are illustrative, chosen so the
@@ -17,7 +18,7 @@
  */
 import { DEG, GPS_L1_HZ, WGS84_A_M, clamp } from './units'
 import { hash2, valueNoise } from './random'
-import { MAG_EQUATOR_LAT_DEG, localSolarHour } from './region'
+import { START_LOCAL_HOUR, localSolarHour, magLatDeg } from './region'
 
 // TODO(expert-review): 350 km thin-shell height and the pierce-point formulas follow RTCA DO-229 (Appendix A); confirm the edition.
 export const IONO_SHELL_HEIGHT_M = 350e3
@@ -35,7 +36,7 @@ export interface IonoConditions {
   scintillation: boolean
 }
 
-export const QUIET: Omit<IonoConditions, 'tS'> = { startLocalHour: 10, storm: 0, scintillation: false }
+export const QUIET: Omit<IonoConditions, 'tS'> = { startLocalHour: START_LOCAL_HOUR, storm: 0, scintillation: false }
 
 export interface PiercePoint {
   latDeg: number
@@ -77,7 +78,7 @@ function bubbleSeason(localHour: number): number {
  */
 export function bubbleDepletion(latDeg: number, lonDeg: number, tS: number, strength: number): number {
   if (!(strength > 0)) return 0
-  const magLat = latDeg - MAG_EQUATOR_LAT_DEG
+  const magLat = magLatDeg(latDeg, lonDeg)
   // Confined to the low-latitude bands.
   const latShape = Math.exp(-((Math.abs(magLat) - 8) ** 2) / (2 * 7 ** 2))
   // Bubbles repeat every ~3.5° of longitude, drift ~0.05° per minute, each ~0.6° wide.
@@ -98,7 +99,7 @@ export function verticalTec(latDeg: number, lonDeg: number, c: IonoConditions): 
   const h = localSolarHour(c.tS, lonDeg, c.startLocalHour)
   // Day side: rises after sunrise, peaks near 14:00, stays raised into the evening.
   const day = Math.max(0, Math.cos((Math.PI * (h - 14)) / 13))
-  const magLat = latDeg - MAG_EQUATOR_LAT_DEG
+  const magLat = magLatDeg(latDeg, lonDeg)
   // The equatorial anomaly: dense bands ~15° either side of the magnetic equator, a trough over it.
   const band = (m: number) => Math.exp(-((magLat - m) ** 2) / (2 * 4.5 ** 2))
   const evening = h >= 17 && h <= 23.5 ? 1.35 : 1
@@ -157,10 +158,11 @@ export interface Igp {
   lonDeg: number
 }
 
-/** The IGPs over the fictional service area. */
+/** The IGPs over the hypothetical service area: Indonesia, 90–145°E, 20°S–15°N. */
+export const IGP_BOX = { lat0: -20, lat1: 15, lon0: 90, lon1: 145 } as const
 export const IGPS: readonly Igp[] = (() => {
   const out: Igp[] = []
-  for (let lat = -20; lat <= 15; lat += IGP_SPACING_DEG) for (let lon = 75; lon <= 110; lon += IGP_SPACING_DEG) out.push({ latDeg: lat, lonDeg: lon })
+  for (let lat = IGP_BOX.lat0; lat <= IGP_BOX.lat1; lat += IGP_SPACING_DEG) for (let lon = IGP_BOX.lon0; lon <= IGP_BOX.lon1; lon += IGP_SPACING_DEG) out.push({ latDeg: lat, lonDeg: lon })
   return out
 })()
 
@@ -222,7 +224,7 @@ export function estimateIgps(obs: readonly IonoObservation[], c: IonoConditions)
     const mean = dSum / wSum
     const spread = Math.sqrt(near.reduce((s, n) => s + n.w * (n.d - mean) ** 2, 0) / wSum)
     const h = localSolarHour(c.tS, igp.lonDeg, c.startLocalHour)
-    const magLat = Math.abs(igp.latDeg - MAG_EQUATOR_LAT_DEG)
+    const magLat = Math.abs(magLatDeg(igp.latDeg, igp.lonDeg))
     // After sunset in the equatorial bands, bubbles smaller than the station spacing can hide
     // between the measurements: the threat term makes the grid too uncertain for vertical
     // guidance (Doc 9849 §5.2.1.5).

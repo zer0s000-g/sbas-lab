@@ -1,8 +1,8 @@
 /**
  * The Flight view: LAB201 at true scale in a real-looking world, at the journey's local
- * time of day: the sky and sun, the sea with its shallows and surf, the made-up islands
- * with beaches and forest, both airports with their runways, taxiways, terminals and
- * lights, and fair-weather clouds over the open sea. Around the aircraft: its
+ * time of day: the sky and sun, the sea with its shallows and surf, Java, Madura and Bali
+ * with their coastline, plains and volcanoes, both airports with their runways,
+ * taxiways, terminals and lights, and fair-weather clouds. Around the aircraft: its
  * protection-level cylinder (glass, cyan) and the alert-limit wireframe (brass) of the
  * current operation. Signal rays point the true way to every satellite it tracks: solid
  * cyan for GPS, dashed brass for the SBAS GEOs. Truth is a cross, GPS alone a hollow
@@ -12,7 +12,8 @@ import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { ThemeTokens } from '@/hooks/useThemeTokens'
-import { DEPARTURE, DESTINATION } from '@/core/region'
+import { DEPARTURE, DESTINATION, nearestAirport } from '@/core/region'
+import { GEO_SATS, geoLabel } from '@/core/orbits'
 import { DEG, M_PER_FT } from '@/core/units'
 import { operationFor } from '@/core/operations'
 import { navStatus, approachMode } from '@/core/sbasWorld'
@@ -23,7 +24,7 @@ import { Callout3D } from '@/stage/Callout3D'
 import { Wire3D, type WireHandle } from '@/stage/Wire3D'
 import { col } from '@/stage/col'
 import type { Quality } from '@/stage/types'
-import { CORAL_ISLE, NORTH_ISLE } from './airports'
+import { BALI, JAKARTA } from './airports'
 import { ERROR_MARKER_SCALE, mToFlight, SKY_DOME_U } from './scales'
 import { aircraftFlight } from './shots'
 import { AirportModel } from './world/AirportModel'
@@ -108,8 +109,13 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
     if (engine.tick !== lastTick.current && !reduced) sky.motionS += Math.min(dt, 0.1)
     lastTick.current = engine.tick
     night.value = 1 - sky.day
-    fog.current?.color.copy(sky.horizon)
     const ac = aircraftFlight(engine)
+    if (fog.current) {
+      // The air is clearer from above: the haze reaches further the higher the aircraft (FL330: about 250 km).
+      fog.current.color.copy(sky.horizon)
+      fog.current.near = 40 + Math.max(0, ac[1]) * 4
+      fog.current.far = 750 + Math.max(0, ac[1]) * 17
+    }
     sunTarget.position.set(...ac)
     sunTarget.updateMatrixWorld()
     if (sun.current) {
@@ -136,7 +142,7 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
       const pitch = Math.atan2((a.vsFpm * M_PER_FT) / 60, Math.max((a.gsKt * 1852) / 3600, 1))
       plane.current.rotateZ(pitch)
     }
-    const fieldFt = a.eastNm < 0 ? DEPARTURE.elevationFt : DESTINATION.elevationFt
+    const fieldFt = nearestAirport(a.eastNm, a.northNm).elevationFt
     const agl = a.altFt - fieldFt
     lab201.gear = a.onGround || agl < (a.vsFpm < 0 ? 2500 : 400)
     lab201.landing = a.altFt < 10000 && (!a.onGround || a.gsKt > 30)
@@ -177,7 +183,7 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
     // Signal rays toward the satellites (true directions).
     const used = new Set(fix?.used ?? [])
     let k = 0
-    let g = 0
+    const geoSeen = new Set<number>()
     for (const s of snap.sats) {
       if (!s.tracked) continue
       const el = s.elDeg * DEG
@@ -185,11 +191,13 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
       const dir: [number, number, number] = [Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el)]
       const end: [number, number, number] = [ac[0] + dir[0] * SKY_DOME_U, ac[1] + dir[1] * SKY_DOME_U, ac[2] + dir[2] * SKY_DOME_U]
       if (s.kind === 'geo') {
+        // Each GEO keeps its own ray and label.
+        const g = GEO_SATS.findIndex((x) => x.id === s.id)
         const w = geoRays.current[g]
         w?.set(ac, end)
         w?.setVisible(true)
         geoTips.current[g]?.position.set(...end)
-        g++
+        geoSeen.add(g)
       } else if (k < MAX_RAYS) {
         const w = rays.current[k++]
         w?.set(ac, end)
@@ -198,15 +206,16 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
       }
     }
     for (; k < MAX_RAYS; k++) rays.current[k]?.setVisible(false)
-    for (; g < 2; g++) {
+    for (let g = 0; g < GEO_SATS.length; g++) {
+      if (geoSeen.has(g)) continue
       geoRays.current[g]?.setVisible(false)
       geoTips.current[g]?.position.set(0, -1e4, 0)
     }
   })
 
   const blink = !reduced
-  const coralThr = raToWorld(CORAL_ISLE, 0, 0, 0)
-  const northThr = raToWorld(NORTH_ISLE, 0, 0, 0)
+  const arrThr = raToWorld(BALI, 0, 0, 0)
+  const depThr = raToWorld(JAKARTA, 0, 0, 0)
   return (
     <group>
       <fog ref={fog} attach="fog" args={[sky.horizon, 40, 750]} />
@@ -216,8 +225,8 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
       <Sky sky={sky} radius={FAR_U * 0.86} />
       <Ocean t={t} sky={sky} size={FAR_U * 2.2} />
       <Terrain t={t} lowDetail={quality === 'low'} />
-      <AirportModel l={NORTH_ISLE} t={t} sky={sky} engine={engine} blink={blink} />
-      <AirportModel l={CORAL_ISLE} t={t} sky={sky} engine={engine} blink={blink} />
+      <AirportModel l={JAKARTA} t={t} sky={sky} engine={engine} blink={blink} />
+      <AirportModel l={BALI} t={t} sky={sky} engine={engine} blink={blink} />
       <Clouds t={t} sky={sky} />
       <GroundShadow t={t} sky={sky} engine={engine} />
       <group ref={acGroup}>
@@ -268,8 +277,8 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
       {Array.from({ length: MAX_RAYS }, (_, i) => (
         <Wire3D key={i} ref={(h) => void (rays.current[i] = h)} color={c.signal} px={1.4} opacity={0.8} />
       ))}
-      {[0, 1].map((i) => (
-        <group key={i}>
+      {GEO_SATS.map((geo, i) => (
+        <group key={geo.id}>
           <Wire3D ref={(h) => void (geoRays.current[i] = h)} color={c.brass} px={1.8} dash={1.5} opacity={0.95} />
           <group ref={(m) => void (geoTips.current[i] = m)} position={[0, -1e4, 0]}>
             <mesh>
@@ -277,16 +286,16 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
               <meshBasicMaterial color={c.brass} toneMapped={false} />
             </mesh>
             <Callout3D position={[0, 0, 0]} tone="brass" side={i === 0 ? 'left' : 'right'}>
-              {i === 0 ? 'GEO-A' : 'GEO-B'} · SBAS
+              {geoLabel(geo)} · SBAS
             </Callout3D>
           </group>
         </group>
       ))}
-      <Callout3D position={coralThr} side="left">
-        RWY {DESTINATION.runway} · {DESTINATION.name}
+      <Callout3D position={arrThr} side="left">
+        RWY {DESTINATION.runway} · {DESTINATION.city} {DESTINATION.id}
       </Callout3D>
-      <Callout3D position={northThr} side="left">
-        {DEPARTURE.name}
+      <Callout3D position={depThr} side="left">
+        RWY {DEPARTURE.runway} · {DEPARTURE.city} {DEPARTURE.id}
       </Callout3D>
     </group>
   )

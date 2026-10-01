@@ -8,6 +8,18 @@ Chapter 3, Table 3.7.2.4-1.
 Entries are paraphrased, not quoted. Values that need a specification beyond Doc 9849
 (RTCA DO-229, EUROCAE ED-259, Annex 10 Appendix B) are in `docs/EXPERT_REVIEW.md`.
 
+## The scenario (Indonesia, iteration 2)
+
+| Claim | Source | Code |
+|---|---|---|
+| MSAS V3: GEOs QZS-3 at 127°E (PRN 137, in operation), QZS-6 at 90.5°E (PRN 129, launched 2 Feb 2025, under test), QZS-7 at 175°W (PRN 139, planned); 2 MCS (Hitachi-ota, Kobe), 15 GMS, 13 IMS, 3 uplink stations (Hitachi-ota, Tanegashima, Miyakojima); LPV200 design goal | JCAB / JRANSA, "MSAS (Michibiki Satellite-based Augmentation Service)", EGNOS Workshop 2025, Berlin, slides 3–6 | `orbits.ts` `GEO_SATS`, `region.ts` ground segment layout |
+| Each QZS-3 PRN is uplinked from an independent station, for continuity if one uplink fails | ICAO APAC CNS SG/24 IP15 (Japan), 2020 | `region.ts` one GUS per GEO |
+| SBAS PRN assignments 129, 137, 139 to MSAS | GPS L1 C/A PRN code assignment list (gps.gov) | `orbits.ts` |
+| Regions near the magnetic equator challenge SBAS vertical guidance | JCAB EGNOS Workshop 2025, slide 7; Doc 9849 §5.2.1.5 | `iono.ts`, narration |
+| Runway thresholds, courses, lengths and elevations of WIII 07R/07L and WADD 09 | AIP Indonesia AD 2 (values from aviation databases; see EXPERT_REVIEW) | `region.ts` |
+| Coastlines | Natural Earth 1:10m, 1:50m and 1:110m land (public domain) | `views/geo/*.data.ts`, `scripts/geo/build-coast.mjs` |
+| Indonesian time zones WIB (UTC+7), WITA (UTC+8), WIT (UTC+9) | Indonesian standard time | `region.ts` `zoneTime` |
+
 ## GNSS and SBAS basics
 
 | Claim | Doc 9849 | Code |

@@ -1,6 +1,6 @@
 /**
- * The SBAS ground segment (Doc 9849 §4.3.1.1): reference stations at surveyed
- * positions watch the satellites; the master station works out, for each satellite,
+ * The SBAS ground segment (Doc 9849 §4.3.1.1): reference stations (RIMS, core/region) at
+ * surveyed positions watch the satellites; the master control centre works out, for each satellite,
  * the clock and orbit correction and a bound on what is left (UDRE for L1, DFRE for
  * DFMC), sets faulty satellites to "Do Not Use" and satellites it cannot watch to
  * "Not Monitored" (§4.3.1.3), and, for L1 SBAS, builds the ionospheric grid (§4.3.1.4).
@@ -9,7 +9,7 @@ import { geodeticToEcef, lookAngles } from './geo'
 import { estimateIgps, igpKey, piercePoint, verticalDelayL1, type IgpEstimate, type IonoConditions, type IonoObservation } from './iono'
 import { ALARM_LATENCY } from './messages'
 import { GPS_SATS, satEcef, type SatDef } from './orbits'
-import { REFERENCE_STATIONS, type Station } from './region'
+import { RIMS_STATIONS, type Station } from './region'
 import { satErrors, smoothGauss, satCode, type FaultInjection } from './errors'
 import { hash2 } from './random'
 
@@ -34,7 +34,7 @@ export const sigmaUdreM = (udrei: number) => (udrei >= UDREI_NOT_MONITORED ? Inf
 
 export interface GroundConditions extends IonoConditions {
   seed: number
-  /** Reference stations switched off (the "reference station offline" failure). */
+  /** RIMS switched off (the "stations offline" failure). */
   offline: readonly string[]
   fault: FaultInjection | null
 }
@@ -58,7 +58,7 @@ export interface GroundSnapshot {
   ionoObs: IonoObservation[]
 }
 
-export const activeStations = (offline: readonly string[]): Station[] => REFERENCE_STATIONS.filter((s) => !offline.includes(s.id))
+export const activeStations = (offline: readonly string[]): Station[] => RIMS_STATIONS.filter((s) => !offline.includes(s.id))
 
 /**
  * One master-station solution at time t. Its corrections estimate the true clock and

@@ -13,8 +13,8 @@ import { directionFor, type CameraIntent, type ViewId } from '@/journey/director
 import { operationFor } from '@/core/operations'
 import type { Shot } from '@/stage/types'
 import { ecefToSpace, FLIGHT_UNIT_M, mToFlight, toFlight, type V3 } from './scales'
-import { CORAL_ISLE, NORTH_ISLE, airportToLocalNm, localNmToAirport } from './airports'
-import { terrainFtAt } from './islands'
+import { airportToLocalNm, localNmToAirport, nearestLayout } from './airports'
+import { terrainFtAt } from './terrain'
 
 const U_PER_NM = M_PER_NM / FLIGHT_UNIT_M
 
@@ -69,6 +69,7 @@ function spaceShot(e: JourneyEngine, intent: CameraIntent): Shot {
       const sat = ALL_SATS.find((s) => s.id === focusSatId(e)) ?? ALL_SATS[0]
       return sideOn(ecefToSpace(satEcef(sat, t)), 1.25)
     }
+    // QZS-3, at 127°E, stands almost overhead the middle of Indonesia.
     if (intent === 'uplink' || intent === 'broadcast') return sideOn(ecefToSpace(satEcef(GEO_SATS[0], t)), 1.2)
     // The constellation: far out, the region in front, the whole GPS shell in frame.
     return { position: add(scl(up, 9.5), add(scl(east, 7), [0, 3.5, 0])), target: scl(up, 0.6) }
@@ -99,7 +100,7 @@ function flightShot(e: JourneyEngine, intent: CameraIntent | CameraButton): Shot
     const h = a.headingDeg * DEG
     const fwd: V3 = [Math.sin(h), 0, -Math.cos(h)]
     const side: V3 = [Math.cos(h), 0, Math.sin(h)]
-    const l = a.eastNm < 0 ? NORTH_ISLE : CORAL_ISLE
+    const l = nearestLayout(a.eastNm, a.northNm)
     const [ra, rr] = localNmToAirport(l.airport, a.eastNm, a.northNm)
     const nearField = Math.abs(rr) < 2500 && ra > -3000 && ra < l.lengthM + 3000
     const aglFt = a.altFt - l.airport.elevationFt

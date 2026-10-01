@@ -152,7 +152,7 @@ describe('reset and settings', () => {
     e.setSpeed(25)
     expect(e.speed).toBe(30)
     e.setSpeed('auto')
-    expect(e.speed).toBe(30)
+    expect(e.speed).toBe(DIRECTION.cruise.autoSpeed)
   })
   it('bad frame times are ignored', () => {
     const e = new JourneyEngine({ guidedStops: false })

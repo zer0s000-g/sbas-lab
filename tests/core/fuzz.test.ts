@@ -26,11 +26,11 @@ describe('fuzz', () => {
         scintillation: r() < 0.3,
         service: (['dfmc', 'l1', 'off'] as const)[Math.floor(r() * 3)],
         geoLostFromS: r() < 0.3 ? r() * 1000 : null,
-        offlineStations: r() < 0.3 ? ['REF-1', 'REF-4', 'REF-6'] : [],
+        offlineStations: r() < 0.3 ? ['RIMS-BTJ', 'RIMS-JKT', 'RIMS-UPG'] : [],
         fault: r() < 0.3 ? { satId: `G${String(1 + Math.floor(r() * 24)).padStart(2, '0')}`, startS: r() * 1000, jumpM: r() * 100 } : null,
         jammed: r() < 0.1,
       }
-      const pos = { latDeg: -30 + r() * 60, lonDeg: 60 + r() * 60, hM: r() * 15000 }
+      const pos = { latDeg: -30 + r() * 60, lonDeg: 80 + r() * 70, hM: r() * 15000 }
       const s = snapshot(r() * 3000, pos, c)
       for (const f of [s.abas, s.l1sbas, s.l1sbasPa, s.dfmc]) finiteFix(f)
       for (const v of s.sats) expect(Number.isFinite(v.elDeg) && Number.isFinite(v.azDeg)).toBe(true)

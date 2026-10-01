@@ -125,6 +125,8 @@ try {
     const focused = await page.evaluate(() => document.activeElement?.textContent?.trim())
     check(focused === 'Continue', `focus moves to Continue (got "${focused}")`)
     const timer = page.locator('[role="timer"]').first()
+    // The timer label is sampled (about 10 Hz): let it catch up with the jump first.
+    await page.waitForTimeout(400)
     const t1 = await timer.getAttribute('aria-label')
     await page.waitForTimeout(1200)
     check((await timer.getAttribute('aria-label')) === t1, 'the journey waits at the stop')

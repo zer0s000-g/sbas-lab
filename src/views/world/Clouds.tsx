@@ -1,6 +1,8 @@
 /**
- * Fair-weather cumulus over the open sea: soft puffs at 2 800–4 200 ft, made up for
- * this fictional region and kept clear of both airports and the final approach. LAB201
+ * Fair-weather tropical cumulus along the route: soft puffs from about 2 800 ft (higher
+ * over the hills, so they sit on the volcano flanks rather than inside them), placed at
+ * random for the scene, not a weather forecast, and kept clear of both airports and the
+ * final approach. LAB201
  * cruises above them. One draw call: camera-facing puffs from an instanced quad. Puffs
  * fade out close to the camera so the view never whites out when it passes through one.
  */
@@ -9,7 +11,9 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { ThemeTokens } from '@/hooks/useThemeTokens'
 import { hash2 } from '@/core/random'
-import { DEPARTURE, DESTINATION } from '@/core/region'
+import { AIRPORT_LIST, DESTINATION, localNmToRunway } from '@/core/region'
+import { M_PER_NM } from '@/core/units'
+import { terrainFtAt } from '../terrain'
 import { col } from '@/stage/col'
 import { toFlight } from '../scales'
 import type { SkyState } from './skyState'
@@ -53,22 +57,22 @@ const fragment = `
     #include <fog_fragment>
   }`
 
-/** Puff centres (scene units), sizes and seeds: clusters on a jittered 9 NM grid. */
+/** Puff centres (scene units), sizes and seeds: clusters on a jittered 9 NM grid along the route. */
 function cloudField() {
   const pos: number[] = []
   const size: number[] = []
   const seed: number[] = []
-  const clear = [DEPARTURE, DESTINATION]
-  for (let gx = -9; gx <= 9; gx++)
-    for (let gy = -6; gy <= 6; gy++) {
-      if (hash2(gx, gy, 301) > 0.55) continue
+  for (let gx = -33; gx <= 33; gx++)
+    for (let gy = -13; gy <= 13; gy++) {
+      if (hash2(gx, gy, 301) > 0.5) continue
       const ce = gx * 9 + (hash2(gx, gy, 302) - 0.5) * 7
       const cn = gy * 9 + (hash2(gx, gy, 303) - 0.5) * 7
-      if (clear.some((a) => Math.hypot(ce - a.thresholdEastNm, cn - a.thresholdNorthNm) < 11)) continue
-      // Not on the final approach course into Coral Isle.
-      if (ce > DESTINATION.thresholdEastNm - 22 && ce < DESTINATION.thresholdEastNm && Math.abs(cn - DESTINATION.thresholdNorthNm) < 4) continue
+      if (AIRPORT_LIST.some((a) => Math.hypot(ce - a.thresholdEastNm, cn - a.thresholdNorthNm) < 11)) continue
+      // Not on the final approach course into Bali (22 NM out, 4 NM either side).
+      const [along, right] = localNmToRunway(DESTINATION, ce, cn)
+      if (along > -22 * M_PER_NM && along < 0 && Math.abs(right) < 4 * M_PER_NM) continue
       const n = 5 + Math.floor(hash2(gx, gy, 304) * 6)
-      const base = 2800 + hash2(gx, gy, 305) * 600
+      const base = Math.max(2800 + hash2(gx, gy, 305) * 600, terrainFtAt(ce, cn) + 1500)
       for (let k = 0; k < n; k++) {
         const e = ce + (hash2(gx * 31 + k, gy, 306) - 0.5) * 1.6
         const nn = cn + (hash2(gx, gy * 31 + k, 307) - 0.5) * 1.1

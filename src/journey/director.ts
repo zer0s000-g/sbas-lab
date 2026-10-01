@@ -30,8 +30,8 @@ export const DIRECTION: Readonly<Record<PhaseId, Direction>> = {
   master: { view: 'network', camera: 'ground', autoSpeed: 1, stage: 'terminal', sbasInUse: false },
   uplink: { view: 'space', camera: 'uplink', autoSpeed: 1, stage: 'terminal', sbasInUse: false },
   broadcast: { view: 'space', camera: 'broadcast', autoSpeed: 1, stage: 'terminal', sbasInUse: false },
-  cruise: { view: 'flight', camera: 'follow', autoSpeed: 30, stage: 'enroute', sbasInUse: true },
-  descent: { view: 'flight', camera: 'follow', autoSpeed: 16, stage: 'approach', sbasInUse: true },
+  cruise: { view: 'flight', camera: 'follow', autoSpeed: 60, stage: 'enroute', sbasInUse: true },
+  descent: { view: 'flight', camera: 'follow', autoSpeed: 30, stage: 'approach', sbasInUse: true },
   final: { view: 'flight', camera: 'zoom', autoSpeed: 2, stage: 'final', sbasInUse: true },
   landing: { view: 'flight', camera: 'overview', autoSpeed: 2, stage: 'landed', sbasInUse: true },
 }

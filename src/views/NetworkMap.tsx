@@ -2,14 +2,22 @@ import { useCallback, useRef } from 'react'
 import { Canvas2D, type DrawFn } from '@/components/Canvas2D'
 import { localToGeodetic } from '@/core/geo'
 import { GIVEI_NOT_MONITORED } from '@/core/iono'
-import { MAG_EQUATOR_LAT_DEG, REGION, STATIONS } from '@/core/region'
-import { approachMode, snapshot } from '@/core/sbasWorld'
+import { GEO_SATS, geoLabel } from '@/core/orbits'
+import { AIRPORT_LIST, dipEquatorLatDeg, MASTER, REGION, STATIONS } from '@/core/region'
+import { ROUTE } from '@/core/flight'
+import { approachMode, groundFor, snapshot } from '@/core/sbasWorld'
 import { OPERATIONS } from '@/core/operations'
 import { withAlpha } from '@/lib/color'
 import type { JourneyEngine } from '@/journey/engine'
-import { terrainFtAt } from './islands'
+import { decodeRings } from './geo/coast'
+import { indonesia } from './geo/indonesia.data'
 
-const BOX = { lat0: -19, lat1: 14, lon0: 76, lon1: 109 }
+/** The map box: the Indonesian archipelago and the magnetic equator north of it, 92–144°E, 16°S–12°N. */
+const BOX = { lat0: -16, lat1: 12, lon0: 92, lon1: 144 }
+/** Land outlines (Natural Earth 1:50m), decoded once. */
+const LAND = decodeRings(indonesia)
+/** The route LAB201 flies, as latitude/longitude. */
+const ROUTE_LL = ROUTE.map((w) => localToGeodetic(REGION, w.eastNm, w.northNm, 0))
 
 /** LPV availability over the region (VPL ≤ VAL), on a coarse grid; slow, so cached per minute of world time. */
 function useAvailability(e: JourneyEngine) {
@@ -19,9 +27,11 @@ function useAvailability(e: JourneyEngine) {
     if (cache.current?.key === key) return cache.current.cells
     const cells: { lat: number; lon: number; ok: boolean }[] = []
     const c = e.conditions()
-    for (let lat = BOX.lat0 + 1.5; lat < BOX.lat1; lat += 3)
-      for (let lon = BOX.lon0 + 1.5; lon < BOX.lon1; lon += 3) {
-        const s = snapshot(e.worldS, { latDeg: lat, lonDeg: lon, hM: 1000 }, c)
+    // One ground solution serves every cell: the network sends the same messages to everyone.
+    const ground = groundFor(e.worldS, c)
+    for (let lat = BOX.lat0 + 1; lat < BOX.lat1; lat += 2)
+      for (let lon = BOX.lon0 + 1; lon < BOX.lon1; lon += 2) {
+        const s = snapshot(e.worldS, { latDeg: lat, lonDeg: lon, hM: 1000 }, c, ground)
         cells.push({ lat, lon, ok: approachMode(s, OPERATIONS.apv1).mode === 'LPV' })
       }
     cache.current = { key, cells }
@@ -30,9 +40,12 @@ function useAvailability(e: JourneyEngine) {
 }
 
 /**
- * The region map: SBAS reference stations, the master and uplink stations (made up for
- * this fictional region), the ionospheric grid points with their delays, the magnetic
- * equator, the LPV-availability area and LAB201. Map colours follow the theme.
+ * The network map of Indonesia: the hypothetical SBAS ground segment at illustrative
+ * sites (RIMS reference stations, the primary and backup master control centres, the
+ * uplink stations and the links between them), where the Michibiki GEOs stand above
+ * the equator, the ionospheric grid points with their delays, the magnetic equator, the
+ * LPV-availability area, the route from Jakarta to Bali and LAB201. Map colours follow
+ * the theme.
  */
 export function NetworkMap({ engine, label, className }: { engine: JourneyEngine; label: string; className?: string }) {
   const availability = useAvailability(engine)
@@ -45,28 +58,44 @@ export function NetworkMap({ engine, label, className }: { engine: JourneyEngine
       const oy = (height - s * (BOX.lat1 - BOX.lat0)) / 2
       const X = (lon: number) => ox + (lon - BOX.lon0) * s
       const Y = (lat: number) => oy + (BOX.lat1 - lat) * s
+      const wide = width >= 520
       ctx.fillStyle = t['sim-bg']
       ctx.fillRect(0, 0, width, height)
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(X(BOX.lon0), Y(BOX.lat1), s * (BOX.lon1 - BOX.lon0), s * (BOX.lat1 - BOX.lat0))
+      ctx.clip()
       ctx.fillStyle = t['sim-water']
       ctx.fillRect(X(BOX.lon0), Y(BOX.lat1), s * (BOX.lon1 - BOX.lon0), s * (BOX.lat1 - BOX.lat0))
-      // LPV availability.
-      for (const c of availability()) {
-        if (!c.ok) continue
-        ctx.fillStyle = withAlpha(t['sim-coverage'], 0.55)
-        ctx.fillRect(X(c.lon - 1.5), Y(c.lat + 1.5), 3 * s, 3 * s)
+      // LPV availability, under the land so the coastline stays readable where it is available everywhere.
+      ctx.fillStyle = withAlpha(t['sim-coverage'], 0.4)
+      for (const c of availability()) if (c.ok) ctx.fillRect(X(c.lon - 1), Y(c.lat + 1), 2 * s, 2 * s)
+      // Land, with its coastline.
+      ctx.beginPath()
+      for (const r of LAND) {
+        for (let i = 0; i < r.length; i += 2) {
+          if (i === 0) ctx.moveTo(X(r[i]), Y(r[i + 1]))
+          else ctx.lineTo(X(r[i]), Y(r[i + 1]))
+        }
+        ctx.closePath()
       }
-      ctx.strokeStyle = t['sim-grid']
+      ctx.fillStyle = withAlpha(t['sim-terrain'], 0.55)
+      ctx.fill('evenodd')
+      ctx.strokeStyle = t['sim-grid-strong']
       ctx.lineWidth = 1
+      ctx.stroke()
+      // Graticule every 10° of longitude and 5° of latitude, from the box.
+      ctx.strokeStyle = t['sim-grid']
       ctx.font = `10px ${t.fontMono}`
       ctx.fillStyle = t['sim-muted']
-      for (let lon = 80; lon <= 105; lon += 5) {
+      for (let lon = Math.ceil(BOX.lon0 / 10) * 10; lon <= BOX.lon1; lon += 10) {
         ctx.beginPath()
         ctx.moveTo(X(lon), Y(BOX.lat1))
         ctx.lineTo(X(lon), Y(BOX.lat0))
         ctx.stroke()
         ctx.fillText(`${lon}°E`, X(lon) + 2, Y(BOX.lat0) - 3)
       }
-      for (let lat = -15; lat <= 10; lat += 5) {
+      for (let lat = Math.ceil(BOX.lat0 / 5) * 5; lat <= BOX.lat1; lat += 5) {
         ctx.beginPath()
         ctx.moveTo(X(BOX.lon0), Y(lat))
         ctx.lineTo(X(BOX.lon1), Y(lat))
@@ -75,25 +104,21 @@ export function NetworkMap({ engine, label, className }: { engine: JourneyEngine
       }
       // Magnetic equator (model).
       ctx.strokeStyle = t['sim-signal-2']
+      ctx.lineWidth = 1.2
       ctx.setLineDash([6, 4])
       ctx.beginPath()
-      ctx.moveTo(X(BOX.lon0), Y(MAG_EQUATOR_LAT_DEG))
-      ctx.lineTo(X(BOX.lon1), Y(MAG_EQUATOR_LAT_DEG))
+      for (let lon = BOX.lon0; lon <= BOX.lon1; lon += 1) {
+        if (lon === BOX.lon0) ctx.moveTo(X(lon), Y(dipEquatorLatDeg(lon)))
+        else ctx.lineTo(X(lon), Y(dipEquatorLatDeg(lon)))
+      }
       ctx.stroke()
       ctx.setLineDash([])
       ctx.fillStyle = t['sim-signal-2']
-      ctx.fillText('magnetic equator (model)', X(BOX.lon0) + 4, Y(MAG_EQUATOR_LAT_DEG) - 4)
-      // The made-up islands.
-      ctx.fillStyle = t['sim-land']
-      for (let e = -56; e <= 58; e += 1)
-        for (let n = -26; n <= 24; n += 1) {
-          if (terrainFtAt(e, n) <= 0) continue
-          const g = localToGeodetic(REGION, e, n, 0)
-          ctx.fillRect(X(g.lonDeg), Y(g.latDeg), Math.max(1.5, s / 60), Math.max(1.5, s / 60))
-        }
+      ctx.fillText('magnetic equator (model)', X(BOX.lon0) + 4, Y(dipEquatorLatDeg(BOX.lon0)) - 5)
       const snap = engine.snapshot()
       const phase = engine.state.phase
       // Ionospheric grid points: circle size = vertical delay; a cross when not monitored.
+      ctx.lineWidth = 1
       for (const igp of snap.ground.gridList) {
         const x = X(igp.lonDeg)
         const y = Y(igp.latDeg)
@@ -107,7 +132,7 @@ export function NetworkMap({ engine, label, className }: { engine: JourneyEngine
           ctx.stroke()
           continue
         }
-        const r = Math.min(s * 1.6, 2 + igp.delayM * 1.1)
+        const r = Math.min(s * 1.6, 2 + igp.delayM * 0.6)
         ctx.fillStyle = withAlpha(t['sim-signal'], 0.25)
         ctx.strokeStyle = t['sim-signal']
         ctx.beginPath()
@@ -121,40 +146,97 @@ export function NetworkMap({ engine, label, className }: { engine: JourneyEngine
           ctx.textAlign = 'left'
         }
       }
-      // Pierce points measured by the stations (reference phase).
+      // Pierce points measured by the RIMS (reference phase).
       if (phase === 'reference' || phase === 'master') {
         ctx.fillStyle = t['sim-signal']
         for (const o of snap.ground.ionoObs) ctx.fillRect(X(o.lonDeg) - 1, Y(o.latDeg) - 1, 2, 2)
       }
+      // The route, Jakarta to Bali.
+      ctx.strokeStyle = t['sim-ink']
+      ctx.lineWidth = 1.2
+      ctx.setLineDash([2, 3])
+      ctx.beginPath()
+      ROUTE_LL.forEach((g, i) => (i === 0 ? ctx.moveTo(X(g.lonDeg), Y(g.latDeg)) : ctx.lineTo(X(g.lonDeg), Y(g.latDeg))))
+      ctx.stroke()
+      ctx.setLineDash([])
+      for (const ap of AIRPORT_LIST) {
+        ctx.fillStyle = t['sim-ink']
+        ctx.fillRect(X(ap.threshold.lonDeg) - 2, Y(ap.threshold.latDeg) - 2, 4, 4)
+        if (wide) {
+          ctx.textAlign = 'right'
+          ctx.fillText(ap.id, X(ap.threshold.lonDeg) - 6, Y(ap.threshold.latDeg) + 14)
+          ctx.textAlign = 'left'
+        }
+      }
+      // The terrestrial network: every RIMS reports to the master control centre, which
+      // shares its work with the backup and sends the messages to the uplink stations.
       const offline = new Set(engine.conditions().offlineStations)
-      const master = STATIONS.find((st) => st.kind === 'master')!
+      const links = phase === 'reference' || phase === 'master'
+      ctx.strokeStyle = withAlpha(t['sim-signal-2'], links ? 0.9 : 0.35)
+      ctx.lineWidth = 1
+      ctx.setLineDash([4, 4])
+      ctx.beginPath()
+      for (const st of STATIONS) {
+        if (st.id === MASTER.id || (st.kind === 'rims' && offline.has(st.id))) continue
+        ctx.moveTo(X(st.pos.lonDeg), Y(st.pos.latDeg))
+        ctx.lineTo(X(MASTER.pos.lonDeg), Y(MASTER.pos.latDeg))
+      }
+      ctx.stroke()
+      ctx.setLineDash([])
+      // Where the GEOs stand: above the equator at their longitude (an arrow when off the map).
+      ctx.font = `10px ${t.fontMono}`
+      for (const g of GEO_SATS) {
+        const lon = g.lonDeg ?? 0
+        const inside = lon >= BOX.lon0 && lon <= BOX.lon1
+        const x = X(Math.min(Math.max(lon, BOX.lon0 + 0.6), BOX.lon1 - 0.6))
+        const y = Y(0)
+        ctx.fillStyle = t['sim-signal-2']
+        ctx.beginPath()
+        if (inside) {
+          ctx.moveTo(x, y - 6)
+          ctx.lineTo(x + 5, y)
+          ctx.lineTo(x, y + 6)
+          ctx.lineTo(x - 5, y)
+        } else {
+          const d = lon < BOX.lon0 ? -1 : 1
+          ctx.moveTo(x + d * 6, y)
+          ctx.lineTo(x - d * 2, y - 5)
+          ctx.lineTo(x - d * 2, y + 5)
+        }
+        ctx.closePath()
+        ctx.fill()
+        // Labelled clear of the station labels: below the diamond, or above the arrow at the map edge.
+        const text = `${geoLabel(g)}${inside ? '' : ` (${lon}°E)`}`
+        ctx.textAlign = !inside && lon < BOX.lon0 ? 'left' : 'center'
+        ctx.fillText(text, !inside && lon < BOX.lon0 ? x + 8 : x, inside ? y + 18 : y - 10)
+        ctx.textAlign = 'left'
+      }
+      // Ground sites.
       for (const st of STATIONS) {
         const x = X(st.pos.lonDeg)
         const y = Y(st.pos.latDeg)
+        const off = offline.has(st.id)
         ctx.strokeStyle = t['sim-signal-2']
         ctx.fillStyle = t['sim-signal-2']
         ctx.lineWidth = 1.5
-        if (phase === 'master' && st.kind === 'reference' && !offline.has(st.id)) {
-          ctx.setLineDash([4, 4])
-          ctx.beginPath()
-          ctx.moveTo(x, y)
-          ctx.lineTo(X(master.pos.lonDeg), Y(master.pos.latDeg))
-          ctx.stroke()
-          ctx.setLineDash([])
-        }
         ctx.beginPath()
-        if (st.kind === 'reference') {
+        if (st.kind === 'rims') {
           ctx.moveTo(x, y - 6)
           ctx.lineTo(x + 6, y + 5)
           ctx.lineTo(x - 6, y + 5)
           ctx.closePath()
-        } else if (st.kind === 'master') ctx.rect(x - 5, y - 5, 10, 10)
-        else ctx.arc(x, y, 5, Math.PI, 0)
-        if (offline.has(st.id)) ctx.stroke()
+        } else if (st.kind === 'mcc') ctx.rect(x - 5, y - 5, 10, 10)
+        else ctx.arc(x, y + 3, 6, Math.PI, 0)
+        if (off || (st.kind === 'mcc' && st.role === 'backup')) ctx.stroke()
         else ctx.fill()
         ctx.fillStyle = t['sim-ink']
-        ctx.textAlign = 'left'
-        if (st.kind !== 'uplink') ctx.fillText(offline.has(st.id) ? `${st.id} offline` : st.id, x + 8, y + 4)
+        if (st.kind === 'rims' && (wide || off)) ctx.fillText(off ? `${st.code} offline` : st.code, x + 8, y + 4)
+        if (st.kind === 'mcc' && wide) {
+          // To the left, clear of the RIMS label at the same city.
+          ctx.textAlign = 'right'
+          ctx.fillText(st.role === 'backup' ? 'MCC (backup)' : 'MCC', x - 8, y - 6)
+          ctx.textAlign = 'left'
+        }
       }
       // LAB201.
       const a = engine.aircraft
@@ -163,17 +245,20 @@ export function NetworkMap({ engine, label, className }: { engine: JourneyEngine
       ctx.beginPath()
       ctx.arc(X(g.lonDeg), Y(g.latDeg), 3.5, 0, Math.PI * 2)
       ctx.fill()
-      ctx.fillText('LAB201', X(g.lonDeg) + 7, Y(g.latDeg) + 14)
+      ctx.fillText('LAB201', X(g.lonDeg) + 7, Y(g.latDeg) - 10)
+      ctx.restore()
       // Legend (wide maps only; the phone map is too small for it).
-      if (width < 520) return
+      if (!wide) return
       ctx.font = `10px ${t.fontMono}`
-      const lx = X(BOX.lon0) + 8
-      let ly = Y(BOX.lat0) - 64
+      const lx = X(BOX.lon0) + 40
+      let ly = Y(BOX.lat0) - 77
       const legend: [string, string][] = [
-        ['sim-signal', '○ grid point: size = vertical delay, m'],
+        ['sim-signal', '○ grid point: size = vertical delay'],
         ['sim-muted', '× grid point not monitored'],
-        ['sim-signal-2', '▲ reference  ■ master  ◠ uplink'],
-        ['sim-coverage', '▦ LPV available'],
+        ['sim-signal-2', '▲ RIMS  ■ master centre  ◠ uplink station'],
+        ['sim-signal-2', '◆ GEO above the equator'],
+        ['sim-signal', '▦ LPV available (tinted area)'],
+        ['sim-ink', '┄ LAB201 route, Jakarta to Bali'],
       ]
       for (const [tok, text] of legend) {
         ctx.fillStyle = t[tok as 'sim-signal']

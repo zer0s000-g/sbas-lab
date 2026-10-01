@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { groundSolution, sigmaUdreM, udreIndex, UDREI_DO_NOT_USE, UDREI_NOT_MONITORED } from '@/core/groundSegment'
 import { ALARM_LATENCY } from '@/core/messages'
-import { REFERENCE_STATIONS } from '@/core/region'
+import { RIMS_STATIONS } from '@/core/region'
 import { QUIET } from '@/core/iono'
 
 const base = { ...QUIET, seed: 201, offline: [] as string[], fault: null, tS: 600 }
@@ -21,7 +21,7 @@ describe('SBAS ground segment (Doc 9849 §4.3.1)', () => {
   })
   it('switching stations off lowers how many see each satellite', () => {
     const all = groundSolution(base)
-    const few = groundSolution({ ...base, offline: REFERENCE_STATIONS.slice(0, 5).map((s) => s.id) })
+    const few = groundSolution({ ...base, offline: RIMS_STATIONS.slice(0, 8).map((s) => s.id) })
     const seen = (g: typeof all) => [...g.corrections.values()].reduce((s, c) => s + c.seenBy, 0)
     expect(seen(few)).toBeLessThan(seen(all))
   })

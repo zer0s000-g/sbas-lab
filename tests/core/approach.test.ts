@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { crc32q, deviations, fasCrc, fasValid, makeFasDataBlock, type FasDataBlock } from '@/core/approach'
-import { DESTINATION } from '@/core/region'
+import { DESTINATION, runwayToLocalNm } from '@/core/region'
 import { glidePathAltFt } from '@/core/flight'
 
 describe('FAS data block (Doc 9849 §4.3.2.7)', () => {
@@ -24,16 +24,16 @@ describe('FAS data block (Doc 9849 §4.3.2.7)', () => {
 describe('approach deviations', () => {
   const b = makeFasDataBlock()
   it('on the centreline and the glide path both deviations are zero', () => {
-    const d = deviations(b, DESTINATION.thresholdEastNm - 3, DESTINATION.thresholdNorthNm, glidePathAltFt(3))!
+    const d = deviations(b, ...runwayToLocalNm(DESTINATION, -3 * 1852, 0), glidePathAltFt(3))!
     expect(Math.abs(d.lateralFs)).toBeLessThan(1e-6)
     expect(Math.abs(d.verticalFs)).toBeLessThan(1e-3)
     expect(d.alongTrackM).toBeCloseTo(3 * 1852, 0)
   })
   it('right of course and high give positive deviations; full scale clamps at 1', () => {
-    const d = deviations(b, DESTINATION.thresholdEastNm - 3, DESTINATION.thresholdNorthNm - 0.02, glidePathAltFt(3) + 100)!
+    const d = deviations(b, ...runwayToLocalNm(DESTINATION, -3 * 1852, 37), glidePathAltFt(3) + 100)!
     expect(d.crossTrackM).toBeGreaterThan(0)
     expect(d.aboveGlidePathM).toBeGreaterThan(25)
-    const far = deviations(b, DESTINATION.thresholdEastNm - 3, DESTINATION.thresholdNorthNm - 1, glidePathAltFt(3) + 3000)!
+    const far = deviations(b, ...runwayToLocalNm(DESTINATION, -3 * 1852, 1852), glidePathAltFt(3) + 3000)!
     expect(far.lateralFs).toBe(1)
     expect(far.verticalFs).toBe(1)
   })

@@ -86,13 +86,14 @@ function decalMat(layer: Layer, roughness = 0.9) {
 }
 
 /** Runway numbers on a canvas (in the marking colour), upright for the landing direction. */
-function designatorGeo(l: AirportLayout, a: number, dir: 1 | -1) {
+function designatorGeo(l: AirportLayout, a: number, r: number, dir: 1 | -1) {
   const L = 4.5
-  const R = 6
-  const bl = raToWorld(l, a - dir * L, -dir * R, 0.5)
-  const br = raToWorld(l, a - dir * L, dir * R, 0.5)
-  const tl = raToWorld(l, a + dir * L, -dir * R, 0.5)
-  const tr = raToWorld(l, a + dir * L, dir * R, 0.5)
+  // Wide enough for a letter as well as the number (07R).
+  const R = 7.5
+  const bl = raToWorld(l, a - dir * L, r - dir * R, 0.5)
+  const br = raToWorld(l, a - dir * L, r + dir * R, 0.5)
+  const tl = raToWorld(l, a + dir * L, r - dir * R, 0.5)
+  const tr = raToWorld(l, a + dir * L, r + dir * R, 0.5)
   const g = flatGeo([...bl, ...br, ...tr, ...bl, ...tr, ...tl])
   g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1], 2))
   return g
@@ -100,14 +101,15 @@ function designatorGeo(l: AirportLayout, a: number, dir: 1 | -1) {
 
 function numberTexture(text: string, t: ThemeTokens) {
   const c = document.createElement('canvas')
-  c.width = 256
+  // Same aspect as the painted area (15 m across, 9 m along).
+  c.width = 320
   c.height = 192
   const g = c.getContext('2d')!
   g.fillStyle = toThreeStyle(t['world-marking'])
   g.font = `700 176px ${t.fontSans}`
   g.textAlign = 'center'
   g.textBaseline = 'middle'
-  g.fillText(text, 128, 100, 240)
+  g.fillText(text, 160, 100, 300)
   const tex = new THREE.CanvasTexture(c)
   tex.anisotropy = 4
   return tex
@@ -216,7 +218,7 @@ export function AirportModel({ l, t, sky, engine, blink }: { l: AirportLayout; t
       apron: rectsGeo(l, [...l.aprons, ...l.landside], 0.15),
       shoulder: rectsGeo(l, l.shoulders, 0.25),
       taxiway: stripsGeo(l, l.taxiways, TAXIWAY_WIDTH_M, 0.2),
-      runway: rectsGeo(l, [l.runway], 0.3),
+      runway: rectsGeo(l, [l.runway, ...l.extraRunways], 0.3),
       marking: rectsGeo(l, l.markings, 0.4),
       taxiline: (() => {
         const a = stripsGeo(l, l.taxiLines, 0.6, 0.45)
@@ -226,7 +228,7 @@ export function AirportModel({ l, t, sky, engine, blink }: { l: AirportLayout; t
         b.dispose()
         return flatGeo(pos)
       })(),
-      numbers: l.designators.map((d) => ({ d, geo: designatorGeo(l, d.a, d.dir) })),
+      numbers: l.designators.map((d) => ({ d, geo: designatorGeo(l, d.a, d.r, d.dir) })),
       buildings: buildingsGeo(l, l.buildings),
       pier: pier.length
         ? (() => {

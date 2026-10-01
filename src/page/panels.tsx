@@ -3,7 +3,8 @@
  * number agrees with the views.
  */
 import { RotateCcw } from 'lucide-react'
-import { DEPARTURE, DESTINATION, MADE_UP } from '@/core/region'
+import { DEPARTURE, DESTINATION, HYPOTHETICAL } from '@/core/region'
+import { GEO_SATS } from '@/core/orbits'
 import { DEFAULT_SPEEDS } from '@/core/clock'
 import type { Fix } from '@/core/receiver'
 import { HudPanel } from '@/hud/HudFrame'
@@ -28,12 +29,12 @@ export function FlightCard({ m }: { m: ViewModel }) {
   return (
     <HudPanel index="01" title="Flight">
       <TelemetryRow label="Callsign" value="LAB201" />
-      <TelemetryRow label="Route" value={`${DEPARTURE.name} → ${DESTINATION.name}`} tone="muted" />
+      <TelemetryRow label="Route" value={`${DEPARTURE.city} ${DEPARTURE.id} → ${DESTINATION.city} ${DESTINATION.id}`} tone="muted" />
       <TelemetryRow label="Altitude" value={m.altFt < 100 ? 'On ground' : Math.round(m.altFt / 10) * 10} unit={m.altFt < 100 ? undefined : 'ft'} />
       <TelemetryRow label="Ground speed" value={Math.round(m.gsKt)} unit="kt" />
-      <TelemetryRow label="To Coral Isle" value={formatNumber(m.distToGoNm, 1)} unit="NM" />
-      <TelemetryRow label="Local time" value={hhmm(m.localHour)} tone="muted" />
-      <p className="mt-2 text-[12px] leading-4 text-muted-foreground">Airports, route and region {MADE_UP}.</p>
+      <TelemetryRow label={`To ${DESTINATION.city}`} value={formatNumber(m.distToGoNm, 1)} unit="NM" />
+      <TelemetryRow label="Local time" value={`${hhmm(m.localHour)} ${m.localZone}`} tone="muted" />
+      <p className="mt-2 text-[12px] leading-4 text-muted-foreground">Real airports and Michibiki satellites. The SBAS service, its ground sites and the route are {HYPOTHETICAL}.</p>
     </HudPanel>
   )
 }
@@ -170,7 +171,7 @@ export function BenefitCard({ m }: { m: ViewModel }) {
       ) : (
         <p className="text-[13px] leading-5 text-muted-foreground">
           {m.phase === 'landing'
-            ? 'On the ground: no navigation integrity requirement. SBAS brought LAB201 down to LPV minima with no ILS at Coral Isle.'
+            ? 'On the ground: no navigation integrity requirement. SBAS brought LAB201 down to LPV minima at Bali with satellite signals alone.'
             : 'No navigation integrity requirement at the gate. The crew check the SBAS forecast and NOTAMs.'}
         </p>
       )}
@@ -241,10 +242,10 @@ export function StatusPanel({ m }: { m: ViewModel }) {
       )}
       <TelemetryRow label="Last message" value={last ? `MT${last.type} ${last.name}` : 'None'} tone={last?.alarm ? 'alert' : last ? 'brass' : 'alert'} />
       <TelemetryRow label="Message age" value={formatDuration(m.messageAgeS)} tone={m.messageAgeS > 0 ? 'alert' : 'muted'} />
-      <TelemetryRow label="GEO received" value={`${m.geosTracked} / 2`} tone={m.geosTracked === 2 ? 'ok' : m.geosTracked === 0 ? 'alert' : 'default'} />
+      <TelemetryRow label="GEO received" value={`${m.geosTracked} / ${GEO_SATS.length}`} tone={m.geosTracked === GEO_SATS.length ? 'ok' : m.geosTracked === 0 ? 'alert' : 'default'} />
       <TelemetryRow label="Service" value={serviceName(m.service)} tone="muted" />
       <p className="mt-2 text-[12px] leading-4 text-muted-foreground">
-        The DFMC service belongs to the fictional SBAS. Real DFMC services are planned, not yet in operation (Doc 9849 §4.3.4.5).
+        The DFMC service belongs to the hypothetical Indonesian SBAS. Real DFMC services are planned, not yet in operation (Doc 9849 §4.3.4.5); Japan tests DFMC on Michibiki’s L5 signal.
       </p>
     </HudPanel>
   )
@@ -300,9 +301,9 @@ export function ControlsPanel({ engine, speedMode, guidedStops, onGuidedStops }:
 
 const STOP_TEXT: Record<StopId, { title: string; body: string }> = {
   firstFix: { title: 'First fix from GPS alone', body: 'LAB201 knows where it is from GPS alone: a few metres off, with a large protection level and no vertical guarantee.' },
-  firstCorrection: { title: 'The first correction has arrived', body: 'The SBAS messages from the GEO have reached LAB201. Its position jumps toward the truth and the protection cylinder shrinks to a few metres.' },
-  lpvEngaged: { title: 'LPV engaged', body: 'On final with SBAS vertical guidance. The protection levels are inside HAL 40 m and VAL 50 m, so the avionics annunciate LPV.' },
-  touchdown: { title: 'Touchdown at Coral Isle', body: 'An approach with vertical guidance to a runway with no ILS, using only the satellites.' },
+  firstCorrection: { title: 'The first correction has arrived', body: 'The SBAS messages from QZS-3 and QZS-6 have reached LAB201. Its position jumps toward the truth and the protection cylinder shrinks to a few metres.' },
+  lpvEngaged: { title: 'LPV engaged', body: 'On final to runway 09 at Bali with SBAS vertical guidance. The protection levels are inside HAL 40 m and VAL 50 m, so the avionics annunciate LPV.' },
+  touchdown: { title: 'Touchdown in Bali', body: 'An approach with vertical guidance from the satellites alone, after SBAS guided every phase of the flight from Jakarta.' },
 }
 
 export function StopCard({ stop, onContinue, className }: { stop: StopId; onContinue: () => void; className?: string }) {

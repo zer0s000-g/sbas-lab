@@ -5,7 +5,7 @@
  * the lateral and vertical deviations the CDI shows.
  */
 import { M_PER_FT, M_PER_NM, DEG } from './units'
-import { DESTINATION, MADE_UP } from './region'
+import { DESTINATION } from './region'
 import { OPERATIONS, type OperationId } from './operations'
 import { isFiniteNumber } from './guard'
 
@@ -34,7 +34,9 @@ export function makeFasDataBlock(op: OperationId = 'apv1'): FasDataBlock {
   const o = OPERATIONS[op]
   return {
     operationType: 0,
-    sbasProvider: 'FICTIONAL-SBAS',
+    // TODO(expert-review): the real FAS block carries a numeric SBAS service provider ID (DO-229); a hypothetical
+    // Indonesian provider has none, so a name stands in.
+    sbasProvider: 'ID-SBAS (hypothetical)',
     airportId: DESTINATION.id,
     runway: DESTINATION.runway,
     performanceDesignator: op === 'cat1' ? 1 : 0,
@@ -51,10 +53,10 @@ export function makeFasDataBlock(op: OperationId = 'apv1'): FasDataBlock {
   }
 }
 
-/** The SBAS approach channel of the made-up procedure (SBAS channels are five digits). */
+/** The SBAS approach channel of the illustrative procedure (SBAS channels are five digits). */
 // TODO(expert-review): SBAS channel number range (40 000–99 999).
 export const APPROACH_CHANNEL = 54201
-export const APPROACH_NOTE = `RNP RWY ${DESTINATION.runway} at ${DESTINATION.name}, ${MADE_UP}`
+export const APPROACH_NOTE = `RNP RWY ${DESTINATION.runway} at ${DESTINATION.city} (${DESTINATION.id}), illustrative procedure, not published`
 
 // TODO(expert-review): the FAS data block CRC is a 32-bit CRC (CRC-32Q, polynomial 0x814141AB, per RTCA DO-229).
 const CRC_POLY = 0x814141ab
@@ -126,7 +128,7 @@ export function deviations(b: FasDataBlock, eastNm: number, northNm: number, alt
   }
 }
 
-/** Decision altitude of the made-up LPV procedure, ft above mean sea level (a 250 ft decision height here). */
+/** Decision altitude of the illustrative LPV procedure, ft above mean sea level (a 250 ft decision height here). */
 // TODO(expert-review): the LPV decision height is procedure-specific; 250 ft is illustrative (SBAS CAT I can reach 200 ft, Doc 9849 §4.3.3.3).
 export const DECISION_HEIGHT_FT = 250
 export const DECISION_ALTITUDE_FT = DESTINATION.elevationFt + DECISION_HEIGHT_FT

@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'vitest'
 import { initialAircraft, stepFlight } from '@/core/flight'
-import { AIRPORTS, CORAL_ISLE, NORTH_ISLE, airportToLocalNm, localNmToAirport, onPavement, type AirportLayout } from '@/views/airports'
-import { ISLANDS, airfieldFlat, islandHeightFt } from '@/views/islands'
+import { AIRPORTS, BALI, JAKARTA, airportToLocalNm, localNmToAirport, nearestLayout, onPavement, reciprocal, type AirportLayout } from '@/views/airports'
+import { AIRFIELDS, airfieldFlat, terrainFtAt } from '@/views/terrain'
 
-const islandOf = (l: AirportLayout) => ISLANDS.find((i) => i.airport?.id === l.airport.id)!
+const fieldOf = (l: AirportLayout) => AIRFIELDS.find((f) => f.airport.id === l.airport.id)!
 const local = (l: AirportLayout, a: number, r: number) => airportToLocalNm(l.airport, a, r)
 
 describe('airport layouts', () => {
@@ -23,7 +23,7 @@ describe('airport layouts', () => {
     for (let i = 0; i < 40_000 && !s.parked; i++) {
       s = stepFlight(s, 0.25)
       if (!s.onGround) continue
-      const l = s.eastNm < 0 ? NORTH_ISLE : CORAL_ISLE
+      const l = nearestLayout(s.eastNm, s.northNm)
       samples++
       if (!onPavement(l, localNmToAirport(l.airport, s.eastNm, s.northNm), 2)) off++
     }
@@ -34,7 +34,7 @@ describe('airport layouts', () => {
 
   test('everything stands on the levelled airfield, above the sea (approach lights may stand on their pier)', () => {
     for (const l of AIRPORTS) {
-      const isl = islandOf(l)
+      const f = fieldOf(l)
       const pts: [number, number][] = [
         ...l.lamps.filter((p) => p.kind !== 'approach').map((p): [number, number] => [p.a, p.r]),
         ...l.stands.map((p): [number, number] => [p.a, p.r]),
@@ -49,21 +49,24 @@ describe('airport layouts', () => {
       ]
       for (const [a, r] of pts) {
         const [e, n] = local(l, a, r)
-        expect(airfieldFlat(isl, e, n)).toBeLessThan(1)
-        expect(islandHeightFt(isl, e, n)).toBeGreaterThan(0)
+        expect(airfieldFlat(f, e, n)).toBeLessThan(1)
+        expect(terrainFtAt(e, n)).toBeGreaterThan(0)
       }
     }
   })
 
   test('the pavement, the buildings and the parked aircraft stand exactly at field elevation', () => {
     for (const l of AIRPORTS) {
-      const isl = islandOf(l)
       const elev = l.airport.elevationFt
       const pts: [number, number][] = [
         [l.runway.a0, l.runway.r0],
         [l.runway.a1, l.runway.r1],
         [l.runway.a0, l.runway.r1],
         [l.runway.a1, l.runway.r0],
+        ...l.extraRunways.flatMap((q): [number, number][] => [
+          [q.a0, q.r0],
+          [q.a1, q.r1],
+        ]),
         ...l.taxiways.flat(),
         ...[...l.aprons, ...l.landside, ...l.buildings].flatMap((b): [number, number][] => [
           [b.a0, b.r0],
@@ -75,35 +78,50 @@ describe('airport layouts', () => {
       ]
       for (const [a, r] of pts) {
         const [e, n] = local(l, a, r)
-        expect(Math.abs(islandHeightFt(isl, e, n) - elev), `${l.airport.id} a=${a.toFixed(0)} r=${r.toFixed(0)}`).toBeLessThan(0.5)
+        expect(Math.abs(terrainFtAt(e, n) - elev), `${l.airport.id} a=${a.toFixed(0)} r=${r.toFixed(0)}`).toBeLessThan(0.5)
       }
       // Approach lights are never buried: the ground under them is at or below the field.
       for (const p of l.lamps.filter((q) => q.kind === 'approach')) {
         const [e, n] = local(l, p.a, p.r)
-        expect(islandHeightFt(isl, e, n)).toBeLessThan(elev + 0.5)
+        expect(terrainFtAt(e, n)).toBeLessThan(elev + 0.5)
       }
     }
   })
 
   test('buildings and parked aircraft keep clear of the runway strip', () => {
     for (const l of AIRPORTS) {
-      for (const b of l.buildings) expect(Math.min(Math.abs(b.r0), Math.abs(b.r1))).toBeGreaterThan(150)
-      for (const s of l.stands) expect(Math.abs(s.r)).toBeGreaterThan(150)
+      const centres = [0, ...l.extraRunways.map((q) => (q.r0 + q.r1) / 2)]
+      for (const rc of centres) {
+        for (const b of l.buildings) expect(Math.min(Math.abs(b.r0 - rc), Math.abs(b.r1 - rc))).toBeGreaterThan(150)
+        for (const s of l.stands) expect(Math.abs(s.r - rc)).toBeGreaterThan(150)
+      }
     }
   })
 
-  test('the PAPI at Coral Isle: four units, highest setting nearest the runway, around the approach slope', () => {
-    const p = CORAL_ISLE.papi
+  test('the PAPI at Bali runway 09: four units, highest setting nearest the runway, around the approach slope', () => {
+    const p = BALI.papi
     expect(p).toHaveLength(4)
     for (let i = 1; i < 4; i++) {
       expect(Math.abs(p[i].r)).toBeGreaterThan(Math.abs(p[i - 1].r))
       expect(p[i].settingDeg).toBeLessThan(p[i - 1].settingDeg)
     }
     expect((p[1].settingDeg + p[2].settingDeg) / 2).toBeCloseTo(3, 6)
-    expect(NORTH_ISLE.papi).toHaveLength(0)
+    expect(JAKARTA.papi).toHaveLength(0)
   })
 
-  test('designators read 09 and 27', () => {
-    for (const l of AIRPORTS) expect(l.designators.map((d) => d.text).sort()).toEqual(['09', '27'])
+  test('designators: 09 and 27 at Bali; 07R, 25L, 07L and 25R at Jakarta', () => {
+    expect(BALI.designators.map((d) => d.text).sort()).toEqual(['09', '27'])
+    expect(JAKARTA.designators.map((d) => d.text).sort()).toEqual(['07L', '07R', '25L', '25R'])
+    expect(reciprocal('07R')).toBe('25L')
+    expect(reciprocal('18')).toBe('36')
+    expect(reciprocal('36')).toBe('18')
+  })
+
+  test('Jakarta has its parallel runway 2.4 km left of 07R, with the terminal between them', () => {
+    expect(JAKARTA.extraRunways).toHaveLength(1)
+    const rc = (JAKARTA.extraRunways[0].r0 + JAKARTA.extraRunways[0].r1) / 2
+    expect(rc).toBeCloseTo(-2400, 6)
+    for (const s of JAKARTA.stands) expect(s.r).toBeLessThan(0)
+    for (const s of JAKARTA.stands) expect(s.r).toBeGreaterThan(rc)
   })
 })

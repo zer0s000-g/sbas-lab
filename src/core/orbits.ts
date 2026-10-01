@@ -7,8 +7,10 @@
  * The model uses exactly circular orbits and evenly spaced slots (a Walker 24/6/1
  * pattern); the real slots are not evenly spaced.
  *
- * SBAS GEOs sit over the equator at a fixed longitude (Doc 9849 §4.3.1.2). Their
- * longitudes here are made up for this fictional region.
+ * SBAS GEOs sit over the equator at a fixed longitude (Doc 9849 §4.3.1.2). The two
+ * here are real: Japan's Michibiki satellites QZS-3 and QZS-6, which broadcast the MSAS
+ * SBAS signal (JCAB, EGNOS Workshop 2025; PRNs per the GPS L1 C/A PRN assignment list).
+ * In this page they carry a hypothetical Indonesian SBAS service.
  */
 import { DEG, GPS_MU_M3_S2, WGS84_A_M, WGS84_OMEGA_E_RAD_S } from './units'
 import type { Vec3 } from './geo'
@@ -31,8 +33,11 @@ export const GEO_ALTITUDE_M = GEO_RADIUS_M - WGS84_A_M
 export type SatKind = 'gps' | 'geo'
 
 export interface SatDef {
-  /** Stable id: "G01".."G24" for GPS, "GEO-A"/"GEO-B" for the SBAS satellites. */
+  /** Stable id: "G01".."G24" for GPS, "QZS-3"/"QZS-6" for the SBAS GEOs. */
   id: string
+  /** GEO: the name shown, and the SBAS PRN it broadcasts. */
+  name?: string
+  prn?: number
   kind: SatKind
   /** GPS: plane letter A–F and the slot's argument of latitude at t = 0. */
   plane?: string
@@ -46,8 +51,8 @@ export interface SatDef {
 
 // TODO(expert-review): real GPS slot phasing is uneven (IS-GPS / SPS PS almanac); an even Walker 24/6/1 pattern is used here.
 const PLANE_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
-/** Rotates the whole constellation so the fictional region starts with a typical geometry. */
-const EPOCH_RAAN_DEG = 17
+/** Rotates the whole constellation so the journey starts with a typical geometry over Indonesia. */
+const EPOCH_RAAN_DEG = 37
 
 export const GPS_SATS: readonly SatDef[] = PLANE_LETTERS.flatMap((plane, p) =>
   Array.from({ length: GPS_SLOTS_PER_PLANE }, (_, s): SatDef => ({
@@ -62,11 +67,16 @@ export const GPS_SATS: readonly SatDef[] = PLANE_LETTERS.flatMap((plane, p) =>
   })),
 )
 
-/** The two SBAS GEOs of the fictional SBAS. Longitudes are made up for this fictional region. */
+// TODO(expert-review): QZS-6 (PRN 129) was launched on 2 Feb 2025 and was still under test in late 2025 (JCAB); its
+// SBAS service-in date and the L5 (DFMC) broadcast of both satellites (the L5S signal, in R&D) need confirming.
+/** The two SBAS GEOs: Michibiki QZS-6 over the Indian Ocean and QZS-3 over Sulawesi's longitude. */
 export const GEO_SATS: readonly SatDef[] = [
-  { id: 'GEO-A', kind: 'geo', lonDeg: 83, l5: true },
-  { id: 'GEO-B', kind: 'geo', lonDeg: 102, l5: true },
+  { id: 'QZS-3', name: 'QZS-3 Michibiki', prn: 137, kind: 'geo', lonDeg: 127, l5: true },
+  { id: 'QZS-6', name: 'QZS-6 Michibiki', prn: 129, kind: 'geo', lonDeg: 90.5, l5: true },
 ]
+
+/** A GEO's short label, e.g. "QZS-3 · PRN 137". */
+export const geoLabel = (g: SatDef) => (g.prn ? `${g.id} · PRN ${g.prn}` : g.id)
 
 export const ALL_SATS: readonly SatDef[] = [...GPS_SATS, ...GEO_SATS]
 

@@ -12,11 +12,12 @@ simulation is the hero. The chrome is precise and quiet around it.
 
 - **Dark first.** The default theme is dark (graphite). The light theme is fully supported.
   Stages, scopes and cockpit instruments stay night-scene in both themes.
-  **The flight view is the exception: it is the real world.** It shows the sea, the islands,
-  both airports and the sky at the journey's own local time (daylight at the 10:00
-  departure, a lit night airport on the evening flight), the same in both themes. A
-  learner must always recognise where LAB201 is: at the gate, on a taxiway, over the open
-  sea, on final to a runway.
+  **The flight view is the exception: it is the real world.** It shows the sea, Java,
+  Madura and Bali (real coastline, procedural terrain with the main volcanoes), both
+  airports and the sky at the journey's own local time (daylight at the 08:00 WIB
+  departure from Jakarta, a lit night airport on the evening flight), the same in both
+  themes. A learner must always recognise where LAB201 is: at the gate, on a taxiway,
+  over the Java Sea, above Java, on final to runway 09 at Bali.
 - **One accent pair.**
   - Cyan `--signal` means live signal, focus and the primary action. In SBAS Lab, cyan is
     the GPS ranging signal and the protection level.
@@ -134,8 +135,8 @@ phase, and a short fade covers each switch.
 | View | What it shows | Used for |
 |---|---|---|
 | `space` | A procedural Earth shader (no textures): day and night side, a 15° graticule, the model magnetic equator in brass. Around it: the GPS constellation and its orbit rings, two GEO satellites, the ionosphere shell and the ground-station dots. Signals go to LAB201: a solid cyan wire from each GPS satellite it tracks, a dashed brass wire from each GEO. | Climb, errors, the uplink and the broadcast |
-| `network` | A 2D region map (theme-following `--sim-*` colours): the made-up islands, reference stations, master station, uplink station, the ionospheric grid (IGPs, circle size = vertical delay, × = not monitored), the model magnetic equator and a live LPV-availability area | Reference stations, master station, the storm |
-| `flight` | LAB201 at true scale (1 unit = 100 m) in a real-looking world at the journey's local time: sky and sun, the sea with shallows and surf, the made-up islands (beaches, grass, forest, rock), both airports (`views/airports.ts`: runway with Annex 14 markings and numbers, taxiways along LAB201's own ground track with yellow centrelines, apron, terminal with piers and jet bridges, parked airliners, tower, hangars; runway, threshold, end, taxiway and approach lights and a working PAPI) and fair-weather cumulus below cruise level. Around the aircraft: its HPL/VPL cylinder and the HAL/VAL wireframe of the current operation (Doc 9849 Table 2-1). Signal rays point the true way to each tracked satellite. Truth is a cross, GPS alone a hollow ring and SBAS a filled dot. **Cameras show the place:** the gate and landing shots look along the apron at the aircraft, the terminal and the runway; the follow shot is a low chase on the ground rising to a high chase over the sea; the zoom shot frames the protection cylinder on final with the runway ahead; Overview in the air backs out to the whole alert-limit ring. | Gate, takeoff, cruise, descent, final, landing |
+| `network` | A 2D map of Indonesia (theme-following `--sim-*` colours, Natural Earth 1:50m land): the hypothetical ground segment at illustrative sites (16 RIMS, the primary and backup master control centres, two uplink stations, the links to the master), where QZS-3 and QZS-6 stand above the equator, the route from Jakarta to Bali, the ionospheric grid (IGPs, circle size = vertical delay, × = not monitored), the model magnetic equator and a live LPV-availability area | Reference stations, master station, the storm |
+| `flight` | LAB201 at true scale (1 unit = 100 m) in a real-looking world at the journey's local time: sky and sun, the sea with shallows and surf, Java, Madura and Bali (`views/terrain.ts`: real coastline, coastal plain, forest, volcano rock; a coarse corridor along the route and a fine patch at each airport), both airports (`views/airports.ts`: Jakarta with runways 07R and 07L, Bali with runway 09; runways with Annex 14 markings and numbers, taxiways along LAB201's own ground track with yellow centrelines, apron, terminal with piers and jet bridges, parked airliners, tower, hangars; runway, threshold, end, taxiway and approach lights and a working PAPI) and fair-weather cumulus below cruise level. Around the aircraft: its HPL/VPL cylinder and the HAL/VAL wireframe of the current operation (Doc 9849 Table 2-1). Signal rays point the true way to each tracked satellite. Truth is a cross, GPS alone a hollow ring and SBAS a filled dot. **Cameras show the place:** the gate and landing shots look along the apron at the aircraft, the terminal and the runway; the follow shot is a low chase on the ground rising to a high chase over the sea; the zoom shot frames the protection cylinder on final with the runway ahead; Overview in the air backs out to the whole alert-limit ring. | Gate, takeoff, cruise, descent, final, landing |
 
 A **sky-plot inset** sits on every view, top right. It shows satellites by azimuth and
 elevation: used = filled, tracked = hollow, lost or excluded = crossed, GEO = diamond.
@@ -205,17 +206,20 @@ Sheet with every term.
 Every view says what is not to scale:
 - space: "Earth and orbits to scale · satellites drawn far larger than life · time ×N"
   (or "world frozen");
-- flight: "Islands, airports, aircraft and protection cylinders to scale · signal directions
-  true, distances not · position errors drawn ×10";
-- network: "Region map · stations made up for this fictional region · to scale".
+- flight: "Coast, runways and aircraft to scale · terrain and route simplified · signal
+  directions true, distances not · errors ×10";
+- network: "Map of Indonesia to scale · ground sites illustrative · hypothetical Indonesian
+  SBAS".
 
 Story device: until the first correction arrives (end of the broadcast phase) the page
 shows LAB201 navigating with GPS alone, and says that a real SBAS receiver uses SBAS from
-the gate. The DFMC service belongs to the fictional SBAS, and the page says that real DFMC
+the gate. The DFMC service belongs to the hypothetical Indonesian SBAS, and the page says that real DFMC
 services are planned, not yet operating (Doc 9849 §4.3.4.5).
 
-Slow-motion moments show "Slowed down so you can see it" and freeze the world. Stations,
-airports and frequencies are "made up for this fictional region". The Break panel says the
+Slow-motion moments show "Slowed down so you can see it" and freeze the world. The flight
+card and the footer say what is real (airports, Michibiki satellites) and what is
+hypothetical (the SBAS service, its ground sites, the route and the LPV procedure;
+Indonesia has no operational SBAS today). The Break panel says the
 flight keeps its planned path whatever is broken, and the page shows what the crew and the
 controller would do.
 
@@ -223,14 +227,17 @@ controller would do.
 
 **Lightest asset first.**
 - Everything visual is CSS, inline SVG or geometry built in code. The Earth is a shader or
-  procedural geometry, not a texture file.
+  procedural geometry, not a texture file; its continents are an alpha mask drawn at
+  runtime from coastline data. Coastlines are Natural Earth land polygons, clipped,
+  simplified and stored as small integer arrays (`src/views/geo/*.data.ts`, built by
+  `scripts/geo/build-coast.mjs`; about 16 kB gzip in all).
 - There are no image, model or HDR files in the app. The only raster files are the app
   icons and a small social card.
 - The space view is lit with drei `Lightformer`s. The flight view brings its own sun
   (direction from `core/sun`), sky and fog (`Stage scenery="world"`: no studio lights,
   bloom only on lamps and the sun, light grain).
-- The flight world is all code: a sky shader, a sea shader reading a small height map of
-  the islands (a `DataTexture` built from `views/islands`), vertex-coloured terrain,
+- The flight world is all code: a sky shader, a sea shader reading small height maps of
+  the terrain (`DataTexture`s built from `views/terrain`), vertex-coloured terrain,
   instanced trees and cloud puffs, merged airport geometry, lamps as screen-sized
   points. The only textures are tiny canvas runway numbers and alpha masks.
 - Ground layers (apron, taxiways, runway, markings, the aircraft's shadow) sit a few

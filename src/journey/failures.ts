@@ -36,7 +36,7 @@ export const FAILURES: readonly FailureDef[] = [
   {
     id: 'geoLost',
     label: 'GEO signal lost',
-    explain: 'LAB201 stops receiving both SBAS GEO satellites.',
+    explain: 'LAB201 stops receiving both SBAS GEO satellites, QZS-3 and QZS-6.',
     notice: 'The last message gets older. After the time-out LPV is lost and the receiver falls back to GPS alone with LNAV minima.',
     crewAtc: 'The crew report the loss of LPV to ATC and continue to LNAV minima or ask for another approach.',
     source: 'Doc 9849 §4.3.2.10, §4.3.4.3',
@@ -59,8 +59,8 @@ export const FAILURES: readonly FailureDef[] = [
   },
   {
     id: 'stationOffline',
-    label: 'Reference stations offline',
-    explain: 'Several reference stations stop sending data to the master station.',
+    label: 'RIMS offline',
+    explain: 'The eight RIMS east of Bali stop sending data to the master control centre.',
     notice: 'Fewer stations see each satellite. Some become "not monitored", the grid gets holes and the service edge moves.',
     crewAtc: 'The SBAS provider issues a NOTAM for the reduced service. Crews check it before the flight.',
     source: 'Doc 9849 §4.3.1.3, §4.3.3.4.1',
@@ -92,7 +92,7 @@ export const FAILURES: readonly FailureDef[] = [
   {
     id: 'evening',
     label: 'Evening flight',
-    explain: 'The same flight after local sunset, when equatorial bubbles form.',
+    explain: 'The same flight after sunset, leaving Jakarta at about 19:00 WIB, when equatorial bubbles form.',
     notice: 'Scintillation appears and the L1 grid is trusted less. DFMC still gives LPV, unless too many satellites drop out.',
     crewAtc: 'Nothing changes for a DFMC crew. With L1 only, LPV is not available.',
     source: 'Doc 9849 §5.2.1.4–5.2.1.5',
@@ -110,8 +110,8 @@ export interface FailureTimes {
 }
 export const NO_TIMES: FailureTimes = { clockJumpS: null, clockJumpSat: null, geoLostS: null }
 
-/** Reference stations taken offline by the "stations offline" failure (made up for this fictional region). */
-export const OFFLINE_SET = ['REF-4', 'REF-5', 'REF-6', 'REF-7'] as const
+/** RIMS taken offline by the "stations offline" failure: every site east of Bali. */
+export const OFFLINE_SET = ['RIMS-KOE', 'RIMS-BPN', 'RIMS-UPG', 'RIMS-MDC', 'RIMS-AMQ', 'RIMS-SOQ', 'RIMS-DJJ', 'RIMS-MKQ'] as const
 /** How big the clock jump is, m. */
 export const CLOCK_JUMP_M = 40
 /** Local hour for the evening flight: just after sunset. */

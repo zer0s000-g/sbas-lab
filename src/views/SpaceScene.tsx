@@ -1,6 +1,8 @@
 /**
- * The Space view: the Earth to scale, the GPS constellation and the SBAS GEOs where
- * the engine says they are, the ionosphere shell, the ground stations, and the
+ * The Space view: the Earth to scale with its continents (Natural Earth 1:110m, and
+ * 1:50m over Indonesia), the GPS constellation and the Michibiki SBAS GEOs where the
+ * engine says they are, the ionosphere shell, the SBAS ground sites with an uplink beam
+ * from each uplink station to its GEO, and the
  * signals LAB201 receives: a solid cyan wire from each GPS satellite it tracks and a
  * dashed brass wire from each GEO (design.md §2 "SBAS meanings"). Loaded with the 3D chunk.
  */
@@ -8,9 +10,13 @@ import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { ThemeTokens } from '@/hooks/useThemeTokens'
-import { GPS_SATS, GEO_SATS, satEcef, GPS_RADIUS_M, GPS_PERIOD_S, type SatDef } from '@/core/orbits'
+import { GPS_SATS, GEO_SATS, geoLabel, satEcef, GPS_RADIUS_M, GPS_PERIOD_S, type SatDef } from '@/core/orbits'
 import { IONO_SHELL_HEIGHT_M } from '@/core/iono'
-import { MAG_EQUATOR_LAT_DEG, REGION, localSolarHour } from '@/core/region'
+import { DIP_EQUATOR_TABLE, REGION, localSolarHour } from '@/core/region'
+import { toThreeStyle } from '@/lib/color'
+import { decodeRings, type CoastData } from './geo/coast'
+import { indonesia } from './geo/indonesia.data'
+import { world } from './geo/world.data'
 import { DEG, WGS84_A_M, WGS84_OMEGA_E_RAD_S } from '@/core/units'
 import { getJourney, useJourneyState } from '@/journey/store'
 import { useReducedMotion } from '@/stores/prefs'
@@ -30,20 +36,33 @@ const earthVertex = `
 
 // Every edge width is kept above zero and every asin/atan argument is clamped (design.md §9 shader rules).
 const earthFragment = `
-  uniform vec3 uSun; uniform vec3 uOcean; uniform vec3 uNight; uniform vec3 uLine; uniform vec3 uBrass; uniform float uMagEq;
+  uniform vec3 uSun; uniform vec3 uOcean; uniform vec3 uLand; uniform vec3 uNight; uniform vec3 uLine; uniform vec3 uBrass;
+  uniform float uDip[25]; uniform sampler2D uLandMask;
   varying vec3 vDir;
+  // Latitude of the magnetic equator (core/region dipEquatorLatDeg): linear between 15° table points.
+  float dipLat(float lonDeg){
+    float l = clamp((lonDeg + 180.0) / 15.0, 0.0, 23.999);
+    int i = int(floor(l));
+    float f = l - float(i);
+    float a = 0.0; float b = 0.0;
+    for (int k = 0; k < 24; k++) { if (k == i) { a = uDip[k]; b = uDip[k + 1]; } }
+    return mix(a, b, f);
+  }
   void main(){
     vec3 d = normalize(vDir);
     float lat = asin(clamp(d.y, -1.0, 1.0));
     float lon = atan(-d.z, d.x);
     float day = smoothstep(-0.12, 0.3, dot(d, uSun));
-    vec3 base = mix(uNight, uOcean, day);
+    vec2 uv = vec2(lon / 6.2831853 + 0.5, lat / 3.1415927 + 0.5);
+    float land = texture2D(uLandMask, uv).a;
+    vec3 surface = mix(uOcean, uLand, land);
+    vec3 base = mix(uNight + uLand * land * 0.12, surface, day);
     float stepR = radians(15.0);
     float w = max(fwidth(lat), 1e-4);
     float gLat = abs(fract(lat / stepR + 0.5) - 0.5) * stepR;
     float gLon = abs(fract(lon / stepR + 0.5) - 0.5) * stepR * max(cos(lat), 0.0);
     float line = 1.0 - smoothstep(0.0, w * 1.3, min(gLat, gLon));
-    float mag = 1.0 - smoothstep(0.0, w * 1.6, abs(lat - radians(uMagEq)));
+    float mag = 1.0 - smoothstep(0.0, w * 1.6, abs(lat - radians(dipLat(degrees(lon)))));
     vec3 c = mix(base, uLine, line * 0.28);
     c = mix(c, uBrass, mag * 0.55);
     gl_FragColor = vec4(c, 1.0);
@@ -52,6 +71,44 @@ const earthFragment = `
   }`
 
 const MAX_GPS_WIRES = 14
+
+/**
+ * The continents as an alpha mask in an equirectangular texture (longitude across,
+ * latitude up), drawn once from the coastline data: the coarse world, then Indonesia in
+ * more detail so Java, Bali and the smaller islands show.
+ */
+function landMask(t: ThemeTokens): THREE.CanvasTexture {
+  const W = 2048
+  const H = 1024
+  const cv = document.createElement('canvas')
+  cv.width = W
+  cv.height = H
+  const g = cv.getContext('2d')!
+  g.fillStyle = toThreeStyle(t['stage-terrain'])
+  const draw = (d: CoastData) => {
+    g.beginPath()
+    for (const r of decodeRings(d)) {
+      for (let i = 0; i < r.length; i += 2) {
+        const x = ((r[i] + 180) / 360) * W
+        const y = ((90 - r[i + 1]) / 180) * H
+        if (i === 0) g.moveTo(x, y)
+        else g.lineTo(x, y)
+      }
+      g.closePath()
+    }
+    g.fill('evenodd')
+  }
+  draw(world)
+  // Clear the detailed box first, so its coastline replaces the coarse one.
+  const b = indonesia.box
+  g.clearRect(((b.lon0 + 180) / 360) * W, ((90 - b.lat1) / 180) * H, ((b.lon1 - b.lon0) / 360) * W, ((b.lat1 - b.lat0) / 180) * H)
+  draw(indonesia)
+  const tex = new THREE.CanvasTexture(cv)
+  tex.wrapS = THREE.RepeatWrapping
+  tex.anisotropy = 4
+  tex.flipY = true
+  return tex
+}
 
 /** The Sun's direction in space-view units: over the equator (an equinox), at the longitude where it is noon. */
 function sunDir(tS: number, startHour: number): THREE.Vector3 {
@@ -98,6 +155,7 @@ export default function SpaceScene({ t, quality }: { t: ThemeTokens; quality: Qu
   const c = useMemo(
     () => ({
       ocean: col(t, 'stage-water'),
+      land: col(t, 'stage-terrain'),
       night: col(t, 'stage-bg'),
       line: col(t, 'stage-line'),
       signal: col(t, 'stage-signal'),
@@ -109,6 +167,7 @@ export default function SpaceScene({ t, quality }: { t: ThemeTokens; quality: Qu
     }),
     [t],
   )
+  const mask = useMemo(() => landMask(t), [t])
   const earthMat = useMemo(
     () =>
       new THREE.ShaderMaterial({
@@ -117,28 +176,37 @@ export default function SpaceScene({ t, quality }: { t: ThemeTokens; quality: Qu
         uniforms: {
           uSun: { value: new THREE.Vector3(1, 0, 0) },
           uOcean: { value: c.ocean.clone().multiplyScalar(1.6) },
+          uLand: { value: c.land.clone() },
           uNight: { value: c.night.clone().lerp(c.ocean, 0.35) },
           uLine: { value: c.line },
           uBrass: { value: c.brass },
-          uMagEq: { value: MAG_EQUATOR_LAT_DEG },
+          uDip: { value: [...DIP_EQUATOR_TABLE] },
+          uLandMask: { value: mask },
         },
       }),
-    [c],
+    [c, mask],
   )
-  useLayoutEffect(() => () => earthMat.dispose(), [earthMat])
+  useLayoutEffect(
+    () => () => {
+      earthMat.dispose()
+      mask.dispose()
+    },
+    [earthMat, mask],
+  )
   const rings = useOrbitRings()
   const ringGroup = useRef<THREE.Group>(null)
   const gpsRefs = useRef<(THREE.Mesh | null)[]>([])
   const geoRefs = useRef<(THREE.Mesh | null)[]>([])
   const gpsWires = useRef<(WireHandle | null)[]>([])
   const geoWires = useRef<(WireHandle | null)[]>([])
-  const uplinkWire = useRef<WireHandle>(null)
+  const uplinkWires = useRef<(WireHandle | null)[]>([])
   const pulse = useRef<THREE.Mesh>(null)
   const acRef = useRef<THREE.Group>(null)
   const focusRef = useRef<THREE.Group>(null)
   const geoLabelRefs = useRef<(THREE.Group | null)[]>([])
   const stations = useMemo(() => stationsSpace(), [])
-  const uplink = stations.find((s) => s.kind === 'uplink')!
+  // Each GEO's uplink station (core/region: one GUS per GEO).
+  const uplinks = useMemo(() => GEO_SATS.map((g) => stations.find((s) => s.kind === 'gus' && s.geoId === g.id)!), [stations])
   const satGeo = useMemo(() => new THREE.BoxGeometry(SAT_GLYPH_U, SAT_GLYPH_U, SAT_GLYPH_U), [])
   const panelGeo = useMemo(() => new THREE.BoxGeometry(SAT_GLYPH_U * 3.2, SAT_GLYPH_U * 0.12, SAT_GLYPH_U * 0.8), [])
   const geoGeo = useMemo(() => new THREE.OctahedronGeometry(SAT_GLYPH_U * 1.5), [])
@@ -196,8 +264,12 @@ export default function SpaceScene({ t, quality }: { t: ThemeTokens; quality: Qu
       wire?.setVisible(tr && (engine.sbasShown || phase === 'broadcast'))
     })
     const geoA = ecefToSpace(satEcef(GEO_SATS[0], tS))
-    uplinkWire.current?.set(uplink.space, geoA)
-    uplinkWire.current?.setVisible(phase === 'uplink' || phase === 'broadcast')
+    GEO_SATS.forEach((g, i) => {
+      const w = uplinkWires.current[i]
+      w?.set(uplinks[i].space, ecefToSpace(satEcef(g, tS)))
+      w?.setVisible(phase === 'uplink' || phase === 'broadcast')
+    })
+    const uplink = uplinks[0]
     // A message travelling: up to the GEO in the uplink phase, down to LAB201 in the broadcast phase.
     if (pulse.current) {
       const moving = phase === 'uplink' || phase === 'broadcast' || phase === 'errors'
@@ -243,14 +315,16 @@ export default function SpaceScene({ t, quality }: { t: ThemeTokens; quality: Qu
       {GEO_SATS.map((g, i) => (
         <Wire3D key={g.id} ref={(h) => void (geoWires.current[i] = h)} color={c.brass} px={1.6} dash={0.12} opacity={0.95} />
       ))}
-      <Wire3D ref={uplinkWire} color={c.brass} px={1.6} dash={0.12} opacity={0.95} />
+      {GEO_SATS.map((g, i) => (
+        <Wire3D key={`up-${g.id}`} ref={(h) => void (uplinkWires.current[i] = h)} color={c.brass} px={1.6} dash={0.12} opacity={0.95} />
+      ))}
       <mesh ref={pulse} visible={false}>
         <sphereGeometry args={[0.03, 12, 12]} />
         <meshBasicMaterial color={c.brass} toneMapped={false} />
       </mesh>
       {stations.map((s) => (
         <mesh key={s.id} position={s.space} rotation={[0, 0, 0]}>
-          {s.kind === 'reference' ? <tetrahedronGeometry args={[0.012]} /> : <boxGeometry args={[0.016, 0.016, 0.016]} />}
+          {s.kind === 'rims' ? <tetrahedronGeometry args={[0.01]} /> : <boxGeometry args={[0.014, 0.014, 0.014]} />}
           <meshBasicMaterial color={c.brass} toneMapped={false} />
         </mesh>
       ))}
@@ -271,7 +345,7 @@ export default function SpaceScene({ t, quality }: { t: ThemeTokens; quality: Qu
       {GEO_SATS.map((g, i) => (
         <group key={g.id} ref={(m) => void (geoLabelRefs.current[i] = m)}>
           <Callout3D position={[0, 0, 0]} tone="brass" side={i === 0 ? 'left' : 'right'}>
-            {g.id} · SBAS
+            {geoLabel(g)} · SBAS
           </Callout3D>
         </group>
       ))}

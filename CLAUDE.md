@@ -2,7 +2,8 @@
 
 One-page educational web sandbox that teaches general learners how a
 Satellite-Based Augmentation System (SBAS) works and how air traffic
-management uses it. One flight, LAB201, flies from gate to gate while the page
+management uses it. One flight, LAB201, flies gate to gate from Jakarta
+Soekarno-Hatta (WIII) to Bali I Gusti Ngurah Rai (WADD) while the page
 shows the whole SBAS chain: GPS satellites, errors, reference stations,
 master station, uplink, GEO broadcast, the aircraft receiver, protection
 levels, and an LPV approach.
@@ -31,9 +32,15 @@ One route (/). Static site on GitHub Pages.
 - Technical values must match ICAO Annex 10 Vol I (SBAS SARPs) and RTCA
   DO-229. Never invent a specification. If unsure, add
   `// TODO(expert-review): ...` and list it in docs/EXPERT_REVIEW.md.
-- The region, airports, stations and frequencies are fictional and labelled
-  "made up for this fictional region". Never claim that a real SBAS covers a
-  real place unless an official source says so.
+- The scenario is a what-if Indonesian SBAS. Real: the geography (Natural
+  Earth), the airports and runways (AIP Indonesia), the Michibiki GEOs QZS-3
+  (PRN 137) and QZS-6 (PRN 129) and their positions (JCAB, gps.gov).
+  Hypothetical, and labelled so on screen: the SBAS service, its ground sites
+  (RIMS, master control centres, uplink stations at real cities, "illustrative
+  site, not a real facility"), the route's waypoints and the LPV procedure.
+  Indonesia has no operational SBAS; MSAS serves Japan. Never claim that a real
+  SBAS covers a real place unless an official source says so, and never name a
+  real organisation as the operator.
 - When the simulation slows down, scales or simplifies reality, show a label
   on screen (design.md §6).
 - The app never shows NaN, never freezes silently and never goes blank

@@ -13,6 +13,7 @@ import { solveFix, type ApproachMode, type FixResult, type Measurement } from '.
 import { alarmBroadcastS, TIMEOUTS_S } from './messages'
 import { OPERATIONS, type Operation } from './operations'
 import { DEG } from './units'
+import { START_LOCAL_HOUR } from './region'
 
 export type SbasService = 'dfmc' | 'l1' | 'off'
 
@@ -33,7 +34,7 @@ export interface Conditions {
 
 export const NOMINAL: Conditions = {
   seed: 201,
-  startLocalHour: 10,
+  startLocalHour: START_LOCAL_HOUR,
   storm: 0,
   scintillation: false,
   service: 'dfmc',
@@ -94,9 +95,13 @@ export function alarmReceived(fault: FaultInjection | null, satId: string, tS: n
   return tS >= alarmBroadcastS(fault.startS) + 1
 }
 
-export function snapshot(tS: number, aircraft: Geodetic, c: Conditions): Snapshot {
+/** The ground segment's solution for a moment: the same for every receiver, so it can be shared. */
+export const groundFor = (tS: number, c: Conditions): GroundSnapshot =>
+  groundSolution({ tS, startLocalHour: c.startLocalHour, storm: c.storm, scintillation: c.scintillation, seed: c.seed, offline: c.offlineStations, fault: c.fault })
+
+/** The SBAS world seen from a receiver. `ground` may pass in `groundFor(tS, c)` when many receivers share one moment. */
+export function snapshot(tS: number, aircraft: Geodetic, c: Conditions, ground: GroundSnapshot = groundFor(tS, c)): Snapshot {
   const iono = { tS, startLocalHour: c.startLocalHour, storm: c.storm, scintillation: c.scintillation }
-  const ground = groundSolution({ ...iono, seed: c.seed, offline: c.offlineStations, fault: c.fault })
   const sats: SatView[] = []
   const abas: Measurement[] = []
   const l1: Measurement[] = []

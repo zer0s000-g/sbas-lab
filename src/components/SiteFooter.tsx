@@ -12,8 +12,9 @@ export function SiteFooter() {
         </p>
         <p className="max-w-2xl">
           The simulation is simplified to teach principles. Technical values follow ICAO Annex 10 Volume I and RTCA
-          DO-229 where stated and should be checked by a qualified GNSS/CNS engineer. The region, airports, stations and
-          frequencies are made up for this fictional region.
+          DO-229 where stated and should be checked by a qualified GNSS/CNS engineer. Indonesia has no operational SBAS
+          today: the SBAS service, its ground sites and the LPV procedure shown are hypothetical. QZS-3 and QZS-6 are real
+          Japanese Michibiki satellites, shown here for illustration; MSAS, the SBAS they carry, serves Japan.
         </p>
       </div>
     </footer>

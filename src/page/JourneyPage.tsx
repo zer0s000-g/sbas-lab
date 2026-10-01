@@ -131,9 +131,13 @@ export default function JourneyPage() {
         {wide ? (
           <div className="relative [--col:300px] min-[1440px]:[--col:340px]">
             {stage}
-            {/* Two glass columns over the view (design.md §4). */}
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-20 flex w-[calc(var(--col)+2rem)] flex-col gap-3 overflow-y-auto p-4 [&>*]:pointer-events-auto">{left}</div>
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-20 flex w-[calc(var(--col)+2rem)] flex-col gap-3 overflow-y-auto p-4 [&>*]:pointer-events-auto">{right}</div>
+            {/* Two glass columns over the view (design.md §4). They scroll when the panels are tall, so they take keyboard focus. */}
+            <div role="region" aria-label="Flight and phase panels" tabIndex={0} className="pointer-events-none absolute inset-y-0 left-0 z-20 flex w-[calc(var(--col)+2rem)] flex-col gap-3 overflow-y-auto p-4 [&>*]:pointer-events-auto">
+              {left}
+            </div>
+            <div role="region" aria-label="SBAS and cockpit panels" tabIndex={0} className="pointer-events-none absolute inset-y-0 right-0 z-20 flex w-[calc(var(--col)+2rem)] flex-col gap-3 overflow-y-auto p-4 [&>*]:pointer-events-auto">
+              {right}
+            </div>
           </div>
         ) : phone ? (
           <div className="flex flex-col gap-4 px-3 py-3">

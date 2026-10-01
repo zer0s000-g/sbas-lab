@@ -1,12 +1,15 @@
 /**
- * LAB201, gate to gate between the two made-up airports. The aircraft moves only
+ * LAB201, gate to gate from Jakarta (WIII) to Bali (WADD). The aircraft moves only
  * through `stepFlight` (CLAUDE.md), in the local NM frame, with simple limits: a turn
  * rate of at most 3°/s, bounded climb and descent rates, and bounded acceleration.
- * The route and its constraints are made up for this fictional region.
+ * The route is simplified: its waypoints are illustrative, not a published airway,
+ * departure or arrival procedure. It climbs out over the Java Sea, cruises at FL330
+ * along the north coast of Java, descends across East Java and joins a straight-in
+ * final to runway 09 at Bali over the sea.
  */
 import { DEG, clamp, wrap180, wrap360, M_PER_NM, M_PER_FT } from './units'
 import { positiveStep } from './guard'
-import { DEPARTURE, DESTINATION } from './region'
+import { DEPARTURE, DESTINATION, localOf, runwayToLocalNm, type Airport } from './region'
 import { makeFasDataBlock } from './approach'
 
 export type SegmentKind = 'taxi-out' | 'lineup' | 'takeoff' | 'air' | 'final' | 'landing' | 'taxi-in' | 'parked'
@@ -29,25 +32,52 @@ const GPA = FAS.gpaDeg * DEG
 /** Glide path altitude at a distance before the destination threshold, ft. */
 export const glidePathAltFt = (distNm: number) => A.elevationFt + FAS.tchFt + (Math.max(distNm, 0) * M_PER_NM * Math.tan(GPA)) / M_PER_FT
 
+/** Distance before the destination threshold along the final approach course, NM (negative past it). */
+export function distBeforeThresholdNm(eastNm: number, northNm: number): number {
+  const c = A.runwayCourseDeg * DEG
+  return -((eastNm - A.thresholdEastNm) * Math.sin(c) + (northNm - A.thresholdNorthNm) * Math.cos(c))
+}
+
+/** A waypoint in the runway frame of an airport: metres along the runway in use and to its right. */
+const onRunway = (ap: Airport, id: string, aM: number, rM: number, altFt: number, speedKt: number, kind: SegmentKind): Waypoint => {
+  const [eastNm, northNm] = runwayToLocalNm(ap, aM, rM)
+  return { id, eastNm, northNm, altFt, speedKt, kind }
+}
+/** An en-route waypoint at a latitude and longitude. */
+const at = (id: string, latDeg: number, lonDeg: number, altFt: number, speedKt: number): Waypoint => {
+  const l = localOf(latDeg, lonDeg)
+  return { id, eastNm: l.eastNm, northNm: l.northNm, altFt, speedKt, kind: 'air' }
+}
+const NM = M_PER_NM
+/** Both terminals lie on the left of the runway in use (`terminalSide` −1): r < 0. */
+const sd = (ap: Airport, m: number) => ap.terminalSide * m
+
 export const ROUTE: readonly Waypoint[] = [
-  { id: 'GATE-N', eastNm: D.thresholdEastNm + 0.7, northNm: D.thresholdNorthNm - 0.22, altFt: D.elevationFt, speedKt: 0, kind: 'taxi-out' },
-  { id: 'TWY-A', eastNm: D.thresholdEastNm - 0.1, northNm: D.thresholdNorthNm - 0.22, altFt: D.elevationFt, speedKt: 15, kind: 'taxi-out' },
-  { id: 'HOLD', eastNm: D.thresholdEastNm - 0.1, northNm: D.thresholdNorthNm - 0.04, altFt: D.elevationFt, speedKt: 12, kind: 'taxi-out' },
-  { id: 'RWY09-N', eastNm: D.thresholdEastNm, northNm: D.thresholdNorthNm, altFt: D.elevationFt, speedKt: 8, kind: 'lineup' },
-  { id: 'ROTATE', eastNm: D.thresholdEastNm + 1.0, northNm: D.thresholdNorthNm, altFt: D.elevationFt, speedKt: 150, kind: 'takeoff' },
-  { id: 'DEP1', eastNm: D.thresholdEastNm + 8, northNm: D.thresholdNorthNm, altFt: 3000, speedKt: 190, kind: 'air' },
-  { id: 'CLIMB', eastNm: -22, northNm: -9, altFt: 12000, speedKt: 260, kind: 'air' },
-  { id: 'TOC', eastNm: -8, northNm: -3, altFt: 16000, speedKt: 300, kind: 'air' },
-  { id: 'TOD', eastNm: 10, northNm: 4, altFt: 16000, speedKt: 300, kind: 'air' },
-  { id: 'ARR1', eastNm: 24, northNm: 12, altFt: 7000, speedKt: 230, kind: 'air' },
-  { id: 'IF', eastNm: A.thresholdEastNm - 10, northNm: A.thresholdNorthNm, altFt: 3200, speedKt: 170, kind: 'air' },
-  { id: 'FAF', eastNm: A.thresholdEastNm - 5, northNm: A.thresholdNorthNm, altFt: Math.round(glidePathAltFt(5)), speedKt: 145, kind: 'final' },
-  { id: 'THR', eastNm: A.thresholdEastNm, northNm: A.thresholdNorthNm, altFt: Math.round(glidePathAltFt(0)), speedKt: 140, kind: 'final' },
-  { id: 'TDZ', eastNm: A.thresholdEastNm + 0.2, northNm: A.thresholdNorthNm, altFt: A.elevationFt, speedKt: 135, kind: 'landing' },
-  { id: 'EXIT', eastNm: A.thresholdEastNm + 1.1, northNm: A.thresholdNorthNm, altFt: A.elevationFt, speedKt: 20, kind: 'landing' },
-  { id: 'TWY-B', eastNm: A.thresholdEastNm + 1.2, northNm: A.thresholdNorthNm + 0.2, altFt: A.elevationFt, speedKt: 15, kind: 'taxi-in' },
-  { id: 'GATE-C', eastNm: A.thresholdEastNm + 0.8, northNm: A.thresholdNorthNm + 0.3, altFt: A.elevationFt, speedKt: 0, kind: 'taxi-in' },
+  // Jakarta: push back from the stand, taxi along the parallel taxiway, line up on 07R.
+  onRunway(D, 'GATE-D', 1300, sd(D, 410), D.elevationFt, 0, 'taxi-out'),
+  onRunway(D, 'TWY-A', -185, sd(D, 410), D.elevationFt, 15, 'taxi-out'),
+  onRunway(D, 'HOLD', -185, sd(D, 74), D.elevationFt, 12, 'taxi-out'),
+  onRunway(D, 'LINEUP', 0, 0, D.elevationFt, 8, 'lineup'),
+  onRunway(D, 'ROTATE', 1.25 * NM, 0, D.elevationFt, 155, 'takeoff'),
+  // Climb out over the Java Sea and turn east along the coast.
+  onRunway(D, 'DEP1', 8 * NM, 0, 3000, 210, 'air'),
+  at('CLIMB', -5.85, 107.5, 18000, 300),
+  at('TOC', -6.0, 108.6, 33000, 450),
+  at('CRZ', -6.35, 110.5, 33000, 460),
+  at('TOD', -7.65, 113.35, 33000, 460),
+  // Descend across East Java and the Bali Strait, then join final over the sea.
+  at('ARR1', -8.55, 114.55, 7000, 280),
+  onRunway(A, 'IF', -10 * NM, 0, 3200, 180, 'air'),
+  onRunway(A, 'FAF', -5 * NM, 0, Math.round(glidePathAltFt(5)), 145, 'final'),
+  onRunway(A, 'THR', 0, 0, Math.round(glidePathAltFt(0)), 140, 'final'),
+  onRunway(A, 'TDZ', 370, 0, A.elevationFt, 135, 'landing'),
+  // Bali: roll out, vacate to the north and taxi to the stand at the terminal.
+  onRunway(A, 'EXIT', 2037, 0, A.elevationFt, 20, 'landing'),
+  onRunway(A, 'TWY-B', 2222, sd(A, 370), A.elevationFt, 15, 'taxi-in'),
+  onRunway(A, 'GATE-A', 1481, sd(A, 556), A.elevationFt, 0, 'taxi-in'),
 ]
+
+const TDZ = ROUTE.find((w) => w.id === 'TDZ')!
 
 export const MAX_TURN_DEG_S = 3
 export const MAX_CLIMB_FPM = 2500
@@ -71,12 +101,15 @@ export interface AircraftState {
   parked: boolean
 }
 
+const bearingDeg = (fromE: number, fromN: number, toE: number, toN: number) => wrap360(Math.atan2(toE - fromE, toN - fromN) / DEG)
+
 export function initialAircraft(): AircraftState {
   const g = ROUTE[0]
-  return { eastNm: g.eastNm, northNm: g.northNm, altFt: g.altFt, headingDeg: 270, gsKt: 0, vsFpm: 0, wp: 1, onGround: true, parked: false }
+  // At the stand facing along the apron toward the first taxi point.
+  const headingDeg = bearingDeg(g.eastNm, g.northNm, ROUTE[1].eastNm, ROUTE[1].northNm)
+  return { eastNm: g.eastNm, northNm: g.northNm, altFt: g.altFt, headingDeg, gsKt: 0, vsFpm: 0, wp: 1, onGround: true, parked: false }
 }
 
-const bearingDeg = (fromE: number, fromN: number, toE: number, toN: number) => wrap360(Math.atan2(toE - fromE, toN - fromN) / DEG)
 const distNm = (e1: number, n1: number, e2: number, n2: number) => Math.hypot(e2 - e1, n2 - n1)
 
 /** The segment the aircraft is on. */
@@ -116,13 +149,12 @@ export function stepFlight(s: AircraftState, dtS: number): AircraftState {
   let vsFpm = 0
   const liftOff = kind === 'takeoff' && gsKt >= 145
   if (kind === 'final') {
-    const d = A.thresholdEastNm - eastNm
-    const glide = glidePathAltFt(d)
+    const glide = glidePathAltFt(distBeforeThresholdNm(eastNm, northNm))
     vsFpm = clamp(((glide - s.altFt) / dtS) * 60, -MAX_DESCENT_FPM, MAX_CLIMB_FPM)
     altFt = s.altFt + (vsFpm / 60) * dtS
   } else if (kind === 'landing') {
     // Flare to the touchdown zone, then roll out.
-    const toTdz = distNm(eastNm, northNm, ROUTE[13].eastNm, ROUTE[13].northNm)
+    const toTdz = distNm(eastNm, northNm, TDZ.eastNm, TDZ.northNm)
     const rate = s.altFt > A.elevationFt ? -Math.max(150, ((s.altFt - A.elevationFt) / Math.max((toTdz * 3600) / Math.max(gsKt, 1), 1)) * 60) : 0
     vsFpm = rate
     altFt = Math.max(A.elevationFt, s.altFt + (rate / 60) * dtS)
@@ -134,7 +166,8 @@ export function stepFlight(s: AircraftState, dtS: number): AircraftState {
     altFt = s.altFt + (vsFpm / 60) * dtS
     if ((vsFpm > 0 && altFt > target.altFt && !liftOff) || (vsFpm < 0 && altFt < target.altFt)) altFt = target.altFt
   }
-  const onGround = ground && !liftOff && altFt <= (kind === 'takeoff' ? D.elevationFt : A.elevationFt) + 0.5
+  const fieldFt = kind === 'landing' || kind === 'taxi-in' ? A.elevationFt : D.elevationFt
+  const onGround = ground && !liftOff && altFt <= fieldFt + 0.5
 
   // Sequence the next waypoint: fly-by in the air (turn anticipation), fly-over on the ground.
   let wp = s.wp

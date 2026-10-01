@@ -1,6 +1,7 @@
 /**
  * The sea at true sea level: deep blue offshore, turquoise over the shallows and a
- * line of surf at the coast (read from a small height map of the islands), small
+ * line of surf at the coast (read from height maps of the terrain: a coarse one along
+ * the whole route and a detailed one around each airport), small
  * waves, the sky reflected at grazing angles and the sun's glint. Wave detail fades
  * out wherever it would be smaller than a pixel, so the far sea never shimmers.
  * The plane follows the camera; everything else is computed per pixel.
@@ -10,7 +11,8 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { ThemeTokens } from '@/hooks/useThemeTokens'
 import { col } from '@/stage/col'
-import { ISLANDS, islandHeightFt } from '../islands'
+import { terrainFtAt } from '../terrain'
+import { CORRIDOR, TERRAIN_PATCHES, type NmRect } from './Terrain'
 import { toFlight } from '../scales'
 import type { SkyState } from './skyState'
 
@@ -33,6 +35,17 @@ const fragment = `
   uniform vec3 uZenith; uniform vec3 uHorizon; uniform vec3 uSunCol; uniform vec3 uSun;
   uniform float uDay; uniform float uTime;
   uniform sampler2D uDepth; uniform vec4 uRect;
+  uniform sampler2D uDepthA; uniform vec4 uRectA;
+  uniform sampler2D uDepthB; uniform vec4 uRectB;
+
+  // Height map value at a point: the detailed map around an airport where there is one.
+  float depthAt(vec2 p){
+    vec2 a = (p - uRectA.xy) / uRectA.zw;
+    if (all(greaterThan(a, vec2(0.0))) && all(lessThan(a, vec2(1.0)))) return texture2D(uDepthA, a).r;
+    vec2 b = (p - uRectB.xy) / uRectB.zw;
+    if (all(greaterThan(b, vec2(0.0))) && all(lessThan(b, vec2(1.0)))) return texture2D(uDepthB, b).r;
+    return texture2D(uDepth, clamp((p - uRect.xy) / uRect.zw, 0.0, 1.0)).r;
+  }
   varying vec3 vWorld;
 
   // Slope of one wave train (the gradient of a sine), faded out well before it gets
@@ -58,9 +71,8 @@ const fragment = `
            + waveSlope(p, vec2(0.44, -0.90), 0.041, 0.022, 3.30, px);
     vec3 n = normalize(vec3(-g.x, 1.0, -g.y));
 
-    // Water depth from the island height map (ft, the open sea is 80 ft deep here).
-    vec2 uv = (p - uRect.xy) / uRect.zw;
-    float h = -80.0 + texture2D(uDepth, clamp(uv, 0.0, 1.0)).r * 100.0;
+    // Water depth from the height maps (ft; deeper than 80 ft all looks like open sea).
+    float h = -80.0 + depthAt(p) * 100.0;
     float shallow = clamp((h + 55.0) / 55.0, 0.0, 1.0);
     vec3 water = mix(uDeep, uShallow, shallow * shallow);
     water *= 0.18 + 0.82 * uDay;
@@ -91,23 +103,16 @@ const fragment = `
     #include <fog_fragment>
   }`
 
-/** The region the height map covers, local NM. */
-const REGION_NM = { e0: -60, e1: 62, n0: -26, n1: 23 }
-
-/** A height map of the islands (0 = 80 ft deep or deeper, 0.8 = sea level, 1 = 20 ft up). */
-function makeDepthTexture() {
-  const W = 1536
-  const H = Math.round((W * (REGION_NM.n1 - REGION_NM.n0)) / (REGION_NM.e1 - REGION_NM.e0))
+/** A height map of a rectangle (0 = 80 ft deep or deeper, 0.8 = sea level, 1 = 20 ft up). */
+function makeDepthTexture(r: NmRect, W: number) {
+  const H = Math.round((W * (r.n1 - r.n0)) / (r.e1 - r.e0))
   const data = new Uint8Array(W * H)
-  const boxes = ISLANDS.map((i) => ({ i, e0: i.eastNm - i.rxNm * 1.25, e1: i.eastNm + i.rxNm * 1.25, n0: i.northNm - i.ryNm * 1.25, n1: i.northNm + i.ryNm * 1.25 }))
   for (let y = 0; y < H; y++) {
     // Row 0 is the south edge (texture v grows north… which is −z, flipped below).
-    const n = REGION_NM.n0 + ((y + 0.5) / H) * (REGION_NM.n1 - REGION_NM.n0)
+    const n = r.n0 + ((y + 0.5) / H) * (r.n1 - r.n0)
     for (let x = 0; x < W; x++) {
-      const e = REGION_NM.e0 + ((x + 0.5) / W) * (REGION_NM.e1 - REGION_NM.e0)
-      let h = -80
-      for (const b of boxes) if (e >= b.e0 && e <= b.e1 && n >= b.n0 && n <= b.n1) h = Math.max(h, islandHeightFt(b.i, e, n))
-      data[y * W + x] = Math.round(Math.min(1, Math.max(0, (h + 80) / 100)) * 255)
+      const e = r.e0 + ((x + 0.5) / W) * (r.e1 - r.e0)
+      data[y * W + x] = Math.round(Math.min(1, Math.max(0, (terrainFtAt(e, n) + 80) / 100)) * 255)
     }
   }
   const tex = new THREE.DataTexture(data, W, H, THREE.RedFormat, THREE.UnsignedByteType)
@@ -120,11 +125,14 @@ function makeDepthTexture() {
 
 export function Ocean({ t, sky, size }: { t: ThemeTokens; sky: SkyState; size: number }) {
   const mesh = useRef<THREE.Mesh>(null)
-  const depth = useMemo(makeDepthTexture, [])
+  const depth = useMemo(() => [makeDepthTexture(CORRIDOR, 2048), ...TERRAIN_PATCHES.map((p) => makeDepthTexture(p, 1024))], [])
   const mat = useMemo(() => {
-    // World rect of the height map: x = east, z = −north (so v runs toward −z).
-    const [x0, , zSouth] = toFlight(REGION_NM.e0, REGION_NM.n0, 0)
-    const [x1, , zNorth] = toFlight(REGION_NM.e1, REGION_NM.n1, 0)
+    // World rect of a height map: x = east, z = −north (so v runs toward −z).
+    const rect = (r: NmRect) => {
+      const [x0, , zSouth] = toFlight(r.e0, r.n0, 0)
+      const [x1, , zNorth] = toFlight(r.e1, r.n1, 0)
+      return new THREE.Vector4(x0, zSouth, x1 - x0, zNorth - zSouth)
+    }
     return new THREE.ShaderMaterial({
       vertexShader: vertex,
       fragmentShader: fragment,
@@ -145,13 +153,19 @@ export function Ocean({ t, sky, size }: { t: ThemeTokens; sky: SkyState; size: n
           uDay: { value: 1 },
           uTime: { value: 0 },
           uDepth: { value: null },
-          uRect: { value: new THREE.Vector4(x0, zSouth, x1 - x0, zNorth - zSouth) },
+          uRect: { value: rect(CORRIDOR) },
+          uDepthA: { value: null },
+          uRectA: { value: rect(TERRAIN_PATCHES[0]) },
+          uDepthB: { value: null },
+          uRectB: { value: rect(TERRAIN_PATCHES[1]) },
         },
       ]),
     })
   }, [])
   useLayoutEffect(() => {
-    mat.uniforms.uDepth.value = depth
+    mat.uniforms.uDepth.value = depth[0]
+    mat.uniforms.uDepthA.value = depth[1]
+    mat.uniforms.uDepthB.value = depth[2]
     mat.uniforms.uDeep.value.copy(col(t, 'world-sea-deep'))
     mat.uniforms.uShallow.value.copy(col(t, 'world-sea-shallow'))
     mat.uniforms.uFoam.value.copy(col(t, 'world-foam'))
@@ -159,7 +173,7 @@ export function Ocean({ t, sky, size }: { t: ThemeTokens; sky: SkyState; size: n
   useLayoutEffect(
     () => () => {
       mat.dispose()
-      depth.dispose()
+      for (const d of depth) d.dispose()
     },
     [mat, depth],
   )

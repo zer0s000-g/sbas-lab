@@ -17,7 +17,7 @@ import {
   type IgpEstimate,
 } from '@/core/iono'
 import { GPS_L5_HZ } from '@/core/units'
-import { MAG_EQUATOR_LAT_DEG } from '@/core/region'
+import { dipEquatorLatDeg } from '@/core/region'
 
 const at = (hour: number, extra = {}) => ({ ...QUIET, startLocalHour: hour, tS: 0, ...extra })
 
@@ -48,8 +48,8 @@ describe('ionospheric delay model (Doc 9849 §5.2.1)', () => {
     expect(verticalTec(-2, 91, at(14))).toBeGreaterThan(3 * verticalTec(-2, 91, at(4)))
   })
   it('has dense bands about 15° either side of the magnetic equator, denser than over it', () => {
-    const crest = verticalTec(MAG_EQUATOR_LAT_DEG - 15, 91, at(14))
-    const trough = verticalTec(MAG_EQUATOR_LAT_DEG, 91, at(14))
+    const crest = verticalTec(dipEquatorLatDeg(110) - 15, 110, at(14))
+    const trough = verticalTec(dipEquatorLatDeg(110), 110, at(14))
     expect(crest).toBeGreaterThan(trough)
   })
   it('grows in a storm', () => {

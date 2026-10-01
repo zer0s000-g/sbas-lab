@@ -102,9 +102,11 @@ One route (/). Static site on GitHub Pages.
 - Technical values must match ICAO Annex 10 Vol I (SBAS SARPs) and RTCA
   DO-229. Never invent a specification. If unsure, add
   `// TODO(expert-review): ...` and list it in docs/EXPERT_REVIEW.md.
-- The region, airports, stations and frequencies are fictional and labelled
-  "made up for this fictional region". Never claim that a real SBAS covers a
-  real place unless an official source says so.
+- The scenario is a what-if Indonesian SBAS (iteration 2; it replaced the
+  fictional archipelago). Real geography, airports (WIII, WADD) and Michibiki
+  GEOs (QZS-3 PRN 137, QZS-6 PRN 129); a hypothetical service, ground sites,
+  route and LPV procedure, labelled so on screen. Never claim that a real SBAS
+  covers a real place unless an official source says so.
 - When the simulation slows down, scales or simplifies reality, show a label
   on screen (design.md §6).
 - The app never shows NaN, never freezes silently and never goes blank
@@ -323,10 +325,11 @@ Every view says what is not to scale:
 - orbit: "Earth to scale · satellites drawn 400× larger · orbits to scale · time ×N";
 - approach: "Table 20 NM across · heights ×3 · protection cylinders to scale with the
   runway";
-- network: "Region map · fictional stations · to scale".
+- network: "Map of Indonesia to scale · ground sites illustrative · hypothetical Indonesian SBAS".
 
-Slow-motion moments show "Slowed down so you can see it" and freeze the world. Stations,
-airports and frequencies are "made up for this fictional region". The Break panel says the
+Slow-motion moments show "Slowed down so you can see it" and freeze the world. The page
+says what is real (airports, Michibiki satellites) and what is hypothetical (the SBAS
+service, its ground sites, the route and the LPV procedure). The Break panel says the
 flight keeps its planned path whatever is broken, and the page shows what the crew and the
 controller would do.
 
@@ -982,9 +985,10 @@ design system: follow them exactly and do not invent another look.
 PRODUCT
 "SBAS Lab": a ONE-PAGE interactive sandbox (route "/") that teaches general
 learners how a Satellite-Based Augmentation System works and how air traffic
-management uses it. It follows one flight, LAB201, gate to gate, between two
-fictional airports in a fictional equatorial archipelago. The destination
-has no ILS, so the flight lands with an RNP approach to LPV minima. Along the
+management uses it. It follows one flight, LAB201, gate to gate, from Jakarta
+Soekarno-Hatta (WIII) to Bali I Gusti Ngurah Rai (WADD), guided by a
+hypothetical Indonesian SBAS broadcast through Japan's Michibiki GEOs. The
+flight lands with an RNP approach to LPV minima on runway 09. Along the
 way the page reveals the whole SBAS chain at the moment it matters, using
 three world views (orbit, network, approach) under Flight Deck HUD chrome,
 with glass panels, a twelve-phase timeline, guided stops, a "Break
@@ -1022,7 +1026,7 @@ src/
                    clock), DOP, HPL/VPL from the weighted covariance with the
                    K factors, mode selection (LPV / LNAV/VNAV / LNAV / none),
                    FDE with GPS only
-    approach.ts    FAS data block for the fictional runway, lateral and
+    approach.ts    FAS data block for the illustrative Bali runway 09 procedure, lateral and
                    vertical deviations, decision altitude, alert limits per
                    operation
     flight.ts      aircraft model (turn <= 3 deg/s, climb/descent limits);
@@ -1053,8 +1057,8 @@ scripts/ postbuild.mjs, budget.mjs, verify/page-e2e.mjs, verify/gpu-render.mjs
 THE TWELVE PHASES (each: a view, a camera shot, narration, what the panels
 show, and which SBAS idea it teaches)
  1 GATE        network view. Pre-flight LPV availability prediction and
-               NOTAM check for the destination. Guided idea: "SBAS is a
-               service you plan on."
+               NOTAM check for the destination. Guided idea: "Trusted
+               guidance, every phase of flight."
  2 TAXI/TAKEOFF approach view at the departure airport. The receiver has a
                GPS-only fix; show truth versus GPS-only; errors in metres.
                STOP 1: first GPS-only fix.
