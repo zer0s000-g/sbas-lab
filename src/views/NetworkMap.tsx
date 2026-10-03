@@ -203,8 +203,10 @@ export function NetworkMap({ engine, label, className }: { engine: JourneyEngine
         const inside = lon >= BOX.lon0 && lon <= BOX.lon1
         const x = X(Math.min(Math.max(lon, BOX.lon0 + 0.6), BOX.lon1 - 0.6))
         if (!equatorShown && inside) {
-          // At the bottom edge, pointing south to the equator; labelled to the side of the arrow.
-          const yb = Y(BOX.lat0) - 16
+          // At the bottom edge, pointing south to the equator, above the longitude labels;
+          // labelled to the side of the arrow, on a plate so it reads over the grid. A narrow
+          // map shows only the PRN (the arrow stands at the longitude), kept inside the map.
+          const yb = Y(BOX.lat0) - 20
           ctx.fillStyle = t['sim-signal-2']
           ctx.beginPath()
           ctx.moveTo(x, yb + 7)
@@ -212,10 +214,18 @@ export function NetworkMap({ engine, label, className }: { engine: JourneyEngine
           ctx.lineTo(x - 5, yb)
           ctx.closePath()
           ctx.fill()
-          const west = lon < 0
-          ctx.textAlign = west ? 'right' : 'left'
-          ctx.fillText(`${geoLabel(g)} · ${lonText(lon)}`, west ? x - 8 : x + 8, yb + 6)
-          ctx.textAlign = 'left'
+          const text = wide || !g.prn ? `${geoLabel(g)} · ${lonText(lon)}` : `PRN ${g.prn}`
+          const w = ctx.measureText(text).width
+          const left = X(BOX.lon0) + 2
+          const right = X(BOX.lon1) - 2
+          // West of the arrow for a western GEO, east for an eastern one, unless that runs off the map.
+          let tx = lon < 0 ? x - 8 - w : x + 8
+          if (tx < left) tx = x + 8
+          if (tx + w > right) tx = Math.max(left, x - 8 - w)
+          ctx.fillStyle = withAlpha(t['sim-bg'], 0.8)
+          ctx.fillRect(tx - 2, yb - 4, w + 4, 13)
+          ctx.fillStyle = t['sim-signal-2']
+          ctx.fillText(text, tx, yb + 6)
           continue
         }
         const y = Y(0)
