@@ -103,6 +103,9 @@ try {
         for (const p of PHASES) {
           await phaseButton(page, p).click()
           await page.waitForTimeout(p === 'reference' || p === 'master' ? 700 : 1300)
+          // The stage reads a sampled view model; under software GL its frames come slowly,
+          // so give the phase up to 6 s more to reach the stage before calling it a miss.
+          await page.waitForFunction((want) => document.querySelector('[data-view]')?.getAttribute('data-phase') === want, p, { timeout: 6000 }).catch(() => {})
           const got = await view(page).getAttribute('data-phase')
           const v = await view(page).getAttribute('data-view')
           const shot = await view(page).screenshot()
