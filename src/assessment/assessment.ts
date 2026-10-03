@@ -21,6 +21,28 @@ export interface Question {
   objective: string
 }
 
+/** A question as authored: the right answer first, which makes the bank easy to review. */
+export type AuthoredQuestion = Omit<Question, 'answer'>
+
+/** A stable seed from an id. */
+function seedOf(id: string): number {
+  let h = 2166136261
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619) >>> 0
+  return h
+}
+
+/**
+ * The question as shown: its options in an order fixed by its id (so the right answer is
+ * not always first, and every learner sees the same order), and the answer's new index.
+ */
+export function presentQuestion(q: AuthoredQuestion): Question {
+  const order = shuffled(
+    q.options.map((_, i) => i),
+    mulberry32(seedOf(q.id)),
+  )
+  return { ...q, options: order.map((i) => q.options[i]), answer: order.indexOf(0) }
+}
+
 export interface Objective {
   id: string
   text: string

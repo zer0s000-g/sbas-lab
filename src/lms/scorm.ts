@@ -126,3 +126,22 @@ export class LmsSession {
     this.started = false
   }
 }
+
+let pageSession: LmsSession | null | undefined
+/**
+ * The page's one LMS session (SCORM allows one initialise and one finish per launch):
+ * found on first use, finished when the page goes away. Null when there is no LMS.
+ */
+export function pageLmsSession(): LmsSession | null {
+  if (pageSession !== undefined) return pageSession
+  if (typeof window === 'undefined') return null
+  const found = findLmsApi(window as unknown as WindowLike)
+  pageSession = found ? new LmsSession(found) : null
+  if (pageSession) window.addEventListener('pagehide', () => pageSession?.finish(), { once: true })
+  return pageSession
+}
+
+/** For tests: forget the page's session. */
+export function resetPageLmsSession() {
+  pageSession = undefined
+}

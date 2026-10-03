@@ -143,3 +143,24 @@ Topics: why four satellites; which error is largest; what reference stations
 do; why a GEO satellite; what a protection level is; what happens when VPL >
 VAL; what LPV gives an airport without ILS; what the controller hears when LPV
 is lost.
+
+## The ESSP-SAS scenario: EGNOS from Toulouse to Nice
+- **Audience.** ESSP's learners: ATCOs, ATSEPs, pilots, procedure designers and service
+  provision staff, plus general learners. Every sentence cites claims
+  (src/content/claims); the Sources sheet shows each claim's source and review status.
+- **The flight.** LAB201 from Toulouse-Blagnac (LFBO, runway 14L; ESSP's head office is in
+  Toulouse) to Nice Côte d'Azur (LFMN, runway 04L, final over the Baie des Anges), about
+  250 NM, 08:00 CET. EGNOS v2 (L1) is used in every phase; the final is flown to LPV-200
+  minima (HAL 40 m, VAL 35 m, 6 s).
+- **Real.** EGNOS and its Safety-of-Life GEOs (SES-5, PRN 136, 5°E; Eutelsat 5 West B,
+  PRN 121, 5°W; ASTRA 5B, PRN 123, in test since September 2025), ESSP as the EGNOS service
+  provider (EUSPA contract, 2022), the two MCCs (Torrejón, Ciampino), the NLES and RIMS
+  named in public sources, the NOTAM proposal service, the EGNOS Working Agreements, the
+  2011 recording of real EGNOS messages.
+- **Illustrative.** The route's waypoints, the RNP RWY 04L procedure (channel, FAS data,
+  200 ft decision height) and which NLES feeds which GEO.
+- **What it teaches beyond the Indonesian scenario.** Mid-latitude L1 SBAS supports
+  LPV-200 (contrast: the equator); storms take vertical guidance away (DFMC preview gives it
+  back); service provision (forecast, proposed NOTAM, service notices, EWAs) and what each
+  role does; reading the real signal (message by message, UDRE and GIVE); an assessment
+  (quiz on six objectives, an exam with a hidden failure) reported with SCORM.

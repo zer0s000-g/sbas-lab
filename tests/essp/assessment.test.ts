@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { EXAMABLE, examPlan, gradeExam, gradeQuiz, overall, PASS_MARK } from '@/assessment/assessment'
-import { OBJECTIVES, QUESTIONS } from '@/scenarios/essp/questions'
+import { AUTHORED_ANSWERS, OBJECTIVES, QUESTIONS } from '@/scenarios/essp/questions'
 import { claim } from '@/content/claims'
 import { FAILURES } from '@/journey/failures'
 import { JourneyEngine } from '@/journey/engine'
@@ -21,6 +21,12 @@ describe('the ESSP-SAS question bank', () => {
       expect(OBJECTIVES.some((o) => o.id === q.objective), q.id).toBe(true)
     }
     for (const o of OBJECTIVES) expect(QUESTIONS.some((q) => q.objective === o.id), o.id).toBe(true)
+  })
+  it('shows the options in a fixed shuffled order: the right answer is not always in the same place, and is still the authored one', () => {
+    const positions = QUESTIONS.map((q) => q.answer)
+    expect(new Set(positions).size).toBeGreaterThanOrEqual(3)
+    expect(positions.filter((p) => p === 0).length).toBeLessThan(QUESTIONS.length / 2)
+    QUESTIONS.forEach((q, i) => expect(q.options[q.answer]).toBe(AUTHORED_ANSWERS[i]))
   })
   it('every answer rests on claims that exist and belong to the scenario', () => {
     for (const q of QUESTIONS) {

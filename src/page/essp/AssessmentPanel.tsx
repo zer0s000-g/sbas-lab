@@ -3,8 +3,8 @@ import { CheckCircle2, CircleSlash, XCircle } from 'lucide-react'
 import { HudPanel } from '@/hud/HudFrame'
 import { HudButton, Segmented } from '@/hud/Controls'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { examPlan, gradeExam, gradeQuiz, overall, PASS_MARK, type ExamPlan } from '@/assessment/assessment'
-import { findLmsApi, LmsSession } from '@/lms/scorm'
+import { examPlan, gradeExam, gradeQuiz, overall, PASS_MARK } from '@/assessment/assessment'
+import { pageLmsSession, type LmsSession } from '@/lms/scorm'
 import { FAILURES, type FailureId } from '@/journey/failures'
 import type { JourneyEngine } from '@/journey/engine'
 import { OBJECTIVES, QUESTIONS } from '@/scenarios/essp/questions'
@@ -61,42 +61,29 @@ function Choice<T extends string | number>({ name, legend, options, value, onCha
  * reported to it with SCORM.
  */
 export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngine; index?: string }) {
-  const [tab, setTab] = useState<Tab>('quiz')
+  // A running exam (kept in its store) opens on the exam tab, also after a phone's tab switch.
+  const [tab, setTab] = useState<Tab>(() => (useExamLock.getState().running ? 'exam' : 'quiz'))
   const [q, setQ] = useState(0)
   const { quizAnswers, quizChecked, lastExam, setAnswer, checkQuiz, retryQuiz, saveExam } = useAssessment()
-  const setLocked = useExamLock((s) => s.setLocked)
+  const { running, what, action, start, setWhat, setAction, end } = useExamLock()
   const showSources = useSources((s) => s.show)
-  const [running, setRunning] = useState<ExamPlan | null>(null)
-  const [what, setWhat] = useState<FailureId | null>(null)
-  const [action, setAction] = useState<FailureId | null>(null)
 
   const quiz = quizChecked ? gradeQuiz(QUESTIONS, quizAnswers) : null
   const lastPlan = useMemo(() => (lastExam ? examPlan(lastExam.seed, FAILURES) : null), [lastExam])
   const exam = lastExam && lastPlan ? gradeExam(lastPlan, lastExam.what, lastExam.action) : null
   const total = overall(quiz, exam, QUESTIONS.length)
 
-  // Report to the LMS, when the page runs inside one.
+  // Report to the LMS, when the page runs inside one (one session per page load).
   const lms = useRef<LmsSession | null>(null)
   const [lmsState, setLmsState] = useState<'none' | 'connected' | 'reported' | 'error'>('none')
   useEffect(() => {
-    const found = typeof window !== 'undefined' ? findLmsApi(window as unknown as Parameters<typeof findLmsApi>[0]) : null
-    if (!found) return
-    lms.current = new LmsSession(found)
-    setLmsState('connected')
-    const end = () => lms.current?.finish()
-    window.addEventListener('pagehide', end)
-    return () => {
-      window.removeEventListener('pagehide', end)
-      end()
-    }
+    lms.current = pageLmsSession()
+    if (lms.current) setLmsState('connected')
   }, [])
   useEffect(() => {
     if (!lms.current || (!quiz && !exam)) return
     setLmsState(lms.current.report({ raw: total.raw, max: total.max, status: total.status }) ? 'reported' : 'error')
   }, [quiz?.correct, exam?.correct, total.raw, total.max, total.status]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // A running exam is abandoned (and its failure mended) if the panel goes away.
-  useEffect(() => () => setLocked(false), [setLocked])
 
   const startExam = () => {
     const plan = examPlan((Date.now() % 2_000_000_000) + 1, FAILURES)
@@ -104,17 +91,13 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
     engine.jumpTo(plan.phase)
     engine.setFailure(plan.failure, true)
     engine.play()
-    setWhat(null)
-    setAction(null)
-    setRunning(plan)
-    setLocked(true)
+    start(plan)
   }
   const submitExam = () => {
     if (!running) return
     engine.setFailure(running.failure, false)
     saveExam({ seed: running.seed, what, action })
-    setRunning(null)
-    setLocked(false)
+    end()
     setTab('result')
   }
 

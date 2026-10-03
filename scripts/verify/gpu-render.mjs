@@ -8,6 +8,9 @@
 //   npm run build && npx vite preview --port 4173 &
 //   node scripts/verify/gpu-render.mjs                 # dark
 //   THEME=light OUT=gpu-shots node scripts/verify/gpu-render.mjs
+//   SCENARIO=essp node scripts/verify/gpu-render.mjs   # the ESSP-SAS scenario
+//
+// GL_ARGS overrides the GPU flags (default Metal).
 //
 // CHROME overrides the Chromium executable. Exits 1 when anything fails, so it can gate a push.
 import { chromium } from 'playwright-core'
@@ -22,7 +25,9 @@ const theme = process.env.THEME || 'dark'
 if (OUT) mkdirSync(OUT, { recursive: true })
 const PHASES = ['gate', 'takeoff', 'climb', 'errors', 'reference', 'master', 'uplink', 'broadcast', 'cruise', 'descent', 'final', 'landing']
 
-const browser = await chromium.launch({ executablePath: exe, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
+const GL_ARGS = (process.env.GL_ARGS || '--use-angle=metal --enable-gpu --ignore-gpu-blocklist').split(' ')
+const SCENARIO = process.env.SCENARIO || 'indonesia'
+const browser = await chromium.launch({ executablePath: exe, args: GL_ARGS })
 let problems = 0
 function stats(buf) {
   const png = PNG.sync.read(buf)
@@ -42,7 +47,7 @@ try {
   const warn = []
   page.on('console', (m) => { const t = m.text(); if ((m.type() === 'error' || /GL_|WebGL|shader|context lost/i.test(t)) && !/THREE.Clock/.test(t)) warn.push(t.slice(0, 160)) })
   page.on('pageerror', (e) => warn.push('pageerror ' + e.message))
-  await page.goto(HOST + '/', { waitUntil: 'load' })
+  await page.goto(HOST + (SCENARIO === 'essp' ? '/?scenario=essp' : '/'), { waitUntil: 'load' })
   // The stage loads after idle; wait until its WebGL canvas has been sized.
   await page.waitForFunction(() => { const c = document.querySelector('canvas[data-engine]'); return c && c.width > 300 && c.height > 150 }, null, { timeout: 20000 }).catch(() => warn.push('stage canvas never sized'))
   await page.waitForTimeout(3500)

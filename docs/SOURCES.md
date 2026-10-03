@@ -1,5 +1,10 @@
 # Sources
 
+> The claims registry (`src/content/claims`, rendered in `docs/EXPERT_REVIEW.md` and
+> `docs/claims.csv`) is now the record of every claim, for both scenarios, with its
+> sources and review status; tests tie it to the code. This file keeps the original
+> narrative of the Doc 9849 sources behind the AirNav Indonesia scenario.
+
 Every claim SBAS Lab makes on screen, with the section of its source. The primary
 source is **ICAO Doc 9849, *Global Navigation Satellite System (GNSS) Manual*, Fifth
 Edition, 2025**. It takes the integrity requirements from ICAO Annex 10, Volume I,
@@ -77,3 +82,16 @@ Entries are paraphrased, not quoted. Values that need a specification beyond Doc
 | States must verify SBAS performance and issue NOTAMs for degradations, using a service volume model | §4.3.3.4.1 | gate phase |
 | On GNSS loss: IRS, DME, VOR/DME, ILS and procedural methods (ATC) | §7.13.2 | jamming failure |
 | ICAO space weather advisories cover TEC and scintillation | §7.13.3 | "Go deeper" |
+
+## The ESSP-SAS scenario
+
+The EGNOS and ESSP claims, their sources and statuses are in `docs/EXPERT_REVIEW.md`
+(topics "EGNOS and ESSP", "Real signal" and "Scenario data"). The main sources: EUSPA
+news and EGNOS Service Notice 33 (GEO status, 2025), the EGNOS Safety of Life Service
+Definition Document v3.6, EU Implementing Decision 2017/1406 (ground infrastructure),
+EUSPA's announcement of the ESSP contract (2022), ESSP's EWA presentation (March 2024) and
+service provision report (NOTAM proposals), the EUROCONTROL FAS data block tool (provider
+IDs), OurAirports (runways, to confirm against AIP France), the EGNOS Toolkit's EMS
+recording (EUPL v1.1) and RTKLIB (reference decoder). The build could not reach the
+EGNOS, EUSPA, ESA, EUR-Lex or ICAO websites directly: those facts were read through
+search results quoting them and are marked for review.

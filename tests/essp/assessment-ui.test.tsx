@@ -11,7 +11,7 @@ import { sanitizeAssessment, useAssessment } from '@/page/essp/assessmentStore'
 import { useExamLock } from '@/page/essp/examLock'
 import { QUESTIONS } from '@/scenarios/essp/questions'
 import { FAILURES } from '@/journey/failures'
-import type { Scorm12Api } from '@/lms/scorm'
+import { resetPageLmsSession, type Scorm12Api } from '@/lms/scorm'
 
 const calls: string[] = []
 const api: Scorm12Api = {
@@ -28,6 +28,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   delete (window as unknown as { API?: unknown }).API
+  resetPageLmsSession()
   act(() => useExamLock.getState().setLocked(false))
 })
 
@@ -96,8 +97,30 @@ describe('the assessment panel', () => {
     expect(calls).toContain(`cmi.core.score.raw=${QUESTIONS.length + 2}`)
     expect(calls).toContain('cmi.core.lesson_status=passed')
     expect(screen.getByText(/Result sent to your learning management system/)).toBeTruthy()
+    // Unmounting the panel (a phone tab switch) keeps the session; leaving the page finishes it, once.
     cleanup()
-    expect(calls.at(-1)).toBe('finish')
+    expect(calls).not.toContain('finish')
+    render(<AssessmentPanel engine={e} />)
+    expect(calls.filter((c) => c === 'init')).toHaveLength(1)
+    window.dispatchEvent(new Event('pagehide'))
+    window.dispatchEvent(new Event('pagehide'))
+    expect(calls.filter((c) => c === 'finish')).toHaveLength(1)
+  })
+
+  it('a running exam survives the panel being unmounted (a phone tab switch), still locked', () => {
+    const e = new JourneyEngine({ guidedStops: false, running: false })
+    const first = render(<AssessmentPanel engine={e} />)
+    fireEvent.click(screen.getByRole('radio', { name: 'Exam' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Start the exam' }))
+    const on = FAILURES.find((f) => e.state.failures[f.id])!
+    first.unmount()
+    expect(useExamLock.getState().locked).toBe(true)
+    expect(e.state.failures[on.id]).toBe(true)
+    render(<AssessmentPanel engine={e} />)
+    expect(screen.getByRole('button', { name: 'Hand in the exam' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Hand in the exam' }))
+    expect(useExamLock.getState().locked).toBe(false)
+    expect(e.state.failures[on.id]).toBe(false)
   })
 
   it('without an LMS, says the results stay in the browser', () => {
