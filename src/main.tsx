@@ -17,8 +17,10 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-// Offline support in production builds only (see public/sw.js).
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+// Offline support in production builds only (see public/sw.js), and not inside a
+// learning management system, which serves the page from its own path.
+const inLms = new URLSearchParams(location.search).has('lms')
+if (import.meta.env.PROD && !inLms && 'serviceWorker' in navigator) {
   // The first visit loads before the service worker controls the page, so tell it
   // which build assets are already here; it caches them for offline use.
   const sendLoadedAssets = () => {

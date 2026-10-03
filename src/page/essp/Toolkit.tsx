@@ -6,12 +6,14 @@
 import type { JourneyEngine } from '@/journey/engine'
 import { BreakPanel } from './BreakPanel'
 import { ServicePanel } from './ServicePanel'
+import { AssessmentPanel } from './AssessmentPanel'
 
 export default function EsspToolkit({ engine, nowS, part }: { engine: JourneyEngine; nowS: number; part: 'left' | 'right' | 'all' }) {
   return (
     <>
       {part !== 'right' && <BreakPanel engine={engine} />}
       {part !== 'left' && <ServicePanel engine={engine} nowS={nowS} />}
+      {part !== 'right' && <AssessmentPanel engine={engine} />}
     </>
   )
 }

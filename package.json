@@ -12,7 +12,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "budget": "node scripts/budget.mjs",
-    "claims": "node scripts/claims-report.mjs"
+    "claims": "node scripts/claims-report.mjs",
+    "scorm": "node scripts/scorm-package.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter-tight": "^5.3.0",
