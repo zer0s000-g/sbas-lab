@@ -23,6 +23,8 @@ import { FAILURES } from '@/journey/failures'
 import { describe as describeView, viewModel } from '@/page/model'
 import { AIRPORTS } from '@/views/airports'
 import { terrainFtAt } from '@/views/terrain'
+import { OPERATIONS } from '@/core/operations'
+import { formatMetres } from '@/lib/format'
 
 const round = (v: unknown): unknown => {
   if (typeof v === 'number') return Number.isFinite(v) ? Number(v.toPrecision(12)) : String(v)
@@ -41,9 +43,7 @@ function record() {
     e.jumpTo(p.id)
     const m = viewModel(e)
     phases[p.id] = {
-      model: hash(m),
-      op: m.op ? { id: m.op.id, halM: m.op.halM, valM: m.op.valM, ttaS: m.op.ttaS } : null,
-      detail: m.detail?.kind ?? null,
+      model: round(m),
       text: (['space', 'flight', 'network'] as const).map((v) => describeView(m, v)),
     }
   }
@@ -68,7 +68,29 @@ function record() {
  * Deliberate changes since the golden record, each with its reason. They rewrite the
  * recorded values they affect before the comparison.
  */
-const GOLDEN_CHANGES: { why: string; apply: (g: ReturnType<typeof record>) => void }[] = []
+type Golden = ReturnType<typeof record> & { phases: Record<string, { model: Record<string, unknown>; text: string[] }> }
+const GOLDEN_CHANGES: { why: string; apply: (g: Golden) => void }[] = [
+  {
+    why: 'Departure has its own row in Annex 10 Vol I Table 3.7.2.4-1 (with initial, intermediate and non-precision approach): HAL 0.3 NM, 10 s; the takeoff phase used the terminal row.',
+    apply: (g) => {
+      const op = OPERATIONS.departure
+      g.phases.takeoff.model.op = round({ id: op.id, name: op.name, halM: op.halM, valM: op.valM, ttaS: op.ttaS, source: op.source })
+      g.phases.takeoff.text = g.phases.takeoff.text.map((t) => t.replace(/Terminal limits HAL [^,]+,/, `Departure limits HAL ${formatMetres(op.halM)},`))
+    },
+  },
+  {
+    why: 'The uplink panel showed the L1 message layout (8-bit preamble, 212 data bits) while the signal was DFMC on L5 (4-bit preamble, 216 data bits, ED-259); the detail now names the signal.',
+    apply: (g) => {
+      g.phases.uplink.model.detail = { kind: 'uplink', signal: g.phases.uplink.model.signal }
+    },
+  },
+  {
+    why: 'The text alternatives repeated the full stop after the view lead ("over Indonesia.. LAB201").',
+    apply: (g) => {
+      for (const p of Object.values(g.phases)) p.text = p.text.map((t) => t.replaceAll('.. ', '. '))
+    },
+  },
+]
 
 describe('the AirNav Indonesia scenario is unchanged', () => {
   it('matches the golden record of the original code, apart from the listed deliberate changes', () => {
@@ -78,7 +100,7 @@ describe('the AirNav Indonesia scenario is unchanged', () => {
       writeFileSync(out, JSON.stringify(now, null, 1))
       return
     }
-    const golden = JSON.parse(readFileSync(join(import.meta.dirname, 'indonesia.golden.json'), 'utf8'))
+    const golden = JSON.parse(readFileSync(join(import.meta.dirname, 'indonesia.golden.json'), 'utf8')) as Golden
     for (const c of GOLDEN_CHANGES) c.apply(golden)
     expect(JSON.parse(JSON.stringify(now))).toEqual(golden)
   })

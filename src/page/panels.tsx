@@ -7,6 +7,7 @@ import { DEPARTURE, DESTINATION } from '@/core/region'
 import { GEO_SATS } from '@/core/orbits'
 import { DEFAULT_SPEEDS } from '@/core/clock'
 import type { Fix } from '@/core/receiver'
+import { messageBits } from '@/core/messages'
 import { HudPanel } from '@/hud/HudFrame'
 import { HudButton, LeverSwitch, Segmented } from '@/hud/Controls'
 import { TelemetryRow } from '@/hud/Telemetry'
@@ -22,6 +23,7 @@ import { STORY_NOTE } from '@/journey/director'
 import type { JourneyEngine, SpeedMode, StopId } from '@/journey/engine'
 import type { ViewModel } from './model'
 import { SCENARIO } from '@/scenarios/active'
+import { useSources } from './sources/store'
 
 const TX = SCENARIO.texts
 
@@ -44,6 +46,7 @@ export function FlightCard({ m }: { m: ViewModel }) {
 
 export function NowPanel({ m }: { m: ViewModel }) {
   const n = NARRATION[m.phase]
+  const showSources = useSources((s) => s.show)
   return (
     <HudPanel index="02" title="What's happening">
       <h3 className="text-[15px] leading-6 font-medium text-foreground">{n.title}</h3>
@@ -54,7 +57,13 @@ export function NowPanel({ m }: { m: ViewModel }) {
       </p>
       {m.detail && <Detail d={m.detail} />}
       {!m.sbasShown && <p className="mt-2 text-[12px] leading-4 text-muted-foreground">{STORY_NOTE}</p>}
-      <p className="hud-label mt-3 normal-case">{n.source}</p>
+      {n.claims?.length ? (
+        <button type="button" onClick={() => showSources(n.claims)} className="hud-label mt-3 block text-left normal-case underline-offset-2 hover:text-foreground hover:underline" aria-label={`Sources: ${n.source}. Show the ${n.claims.length} claims behind this phase and their review status`}>
+          {n.source} · {n.claims.length} claims, review status
+        </button>
+      ) : (
+        <p className="hud-label mt-3 normal-case">{n.source}</p>
+      )}
     </HudPanel>
   )
 }
@@ -111,21 +120,26 @@ function Detail({ d }: { d: NonNullable<ViewModel['detail']> }) {
         <TelemetryRow label="Grid points monitored" value={`${d.igpMonitored} / ${d.igpTotal}`} tone="brass" />
       </div>
     )
-  if (d.kind === 'uplink')
+  if (d.kind === 'uplink') {
+    // The layout of the signal in use: L1 (8-bit preamble) or DFMC on L5 (4-bit preamble).
+    const b = messageBits(d.signal)
     return (
       <div className={box}>
-        <p className="hud-label mb-2">One SBAS message · 250 bits · one per second</p>
+        <p className="hud-label mb-2">One {d.signal === 'L1' ? 'L1' : 'L5 DFMC'} SBAS message · 250 bits · one per second</p>
         <div className="flex h-5 w-full overflow-hidden rounded-[2px] text-center font-mono text-[10px] leading-5 text-background">
-          <span className="bg-foreground/70" style={{ width: `${(8 / 250) * 100}%` }} title="Preamble, 8 bits" />
-          <span className="bg-signal" style={{ width: `${(6 / 250) * 100}%` }} title="Message type, 6 bits" />
-          <span className="bg-brass" style={{ width: `${(212 / 250) * 100}%` }}>
-            data 212
+          <span className="bg-foreground/70" style={{ width: `${(b.preamble / b.total) * 100}%` }} title={`Preamble, ${b.preamble} bits`} />
+          <span className="bg-signal" style={{ width: `${(b.type / b.total) * 100}%` }} title={`Message type, ${b.type} bits`} />
+          <span className="bg-brass" style={{ width: `${(b.data / b.total) * 100}%` }}>
+            data {b.data}
           </span>
-          <span className="bg-foreground/70" style={{ width: `${(24 / 250) * 100}%` }} title="CRC, 24 bits" />
+          <span className="bg-foreground/70" style={{ width: `${(b.crc / b.total) * 100}%` }} title={`CRC, ${b.crc} bits`} />
         </div>
-        <p className="mt-1 text-[12px] leading-4 text-muted-foreground">Preamble 8 · type 6 · data 212 · CRC 24 bits.</p>
+        <p className="mt-1 text-[12px] leading-4 text-muted-foreground">
+          Preamble {b.preamble} · type {b.type} · data {b.data} · CRC {b.crc} bits.
+        </p>
       </div>
     )
+  }
   if (d.kind === 'fas')
     return (
       <div className={box}>

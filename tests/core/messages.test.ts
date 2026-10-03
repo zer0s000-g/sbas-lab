@@ -23,3 +23,12 @@ describe('SBAS messages', () => {
     for (const raised of [100, 100.4, 100.99]) expect(alarmBroadcastS(raised) + 1 - raised).toBeLessThanOrEqual(OPERATIONS.cat1.ttaS)
   })
 })
+
+describe('message layouts', () => {
+  it('L1: 8-bit preamble, 6-bit type, 212 data bits, 24-bit CRC; DFMC on L5: 4-bit preamble and 216 data bits', async () => {
+    const { MESSAGE_BITS, DFMC_MESSAGE_BITS, messageBits } = await import('@/core/messages')
+    for (const b of [MESSAGE_BITS, DFMC_MESSAGE_BITS]) expect(b.preamble + b.type + b.data + b.crc).toBe(b.total)
+    expect(messageBits('L1')).toMatchObject({ preamble: 8, data: 212 })
+    expect(messageBits('DFMC')).toMatchObject({ preamble: 4, data: 216 })
+  })
+})

@@ -8,6 +8,7 @@ import { MissionClock } from '@/hud/MissionClock'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SiteHeader } from '@/components/SiteHeader'
 import { ScenarioBar } from '@/components/ScenarioBar'
+import { SourcesButton, SourcesSheet } from './sources/SourcesSheet'
 import { cn } from '@/lib/utils'
 import { directionFor } from '@/journey/director'
 import { getJourney, useJourneyState } from '@/journey/store'
@@ -63,6 +64,7 @@ export default function JourneyPage() {
       actions={
         <>
           <MissionClock className="mr-2 hidden sm:flex" getTimeS={() => engine.worldS} speed={engine.speed} frozen={m.frozen} auto={speedMode === 'auto'} running={running && !stop} />
+          <SourcesButton />
           <HudButton variant="solid" onClick={() => engine.toggle()} aria-label={playLabel}>
             {running && !stop ? <Pause aria-hidden /> : <Play aria-hidden />}
             <span className="hidden md:inline">{running && !stop ? 'Pause' : stop ? 'Continue' : 'Play'}</span>
@@ -129,6 +131,7 @@ export default function JourneyPage() {
     <>
       {header}
       <ScenarioBar />
+      <SourcesSheet />
       <main id="main" className="flex-1">
         {wide ? (
           <div className="relative [--col:300px] min-[1440px]:[--col:340px]">

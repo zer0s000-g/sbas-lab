@@ -29,3 +29,11 @@ describe('alert limits and time to alert (Doc 9849 Table 2-1)', () => {
     expect(withinLimits(OPERATIONS.npa, Number.NaN, null)).toBe(false)
   })
 })
+
+describe('departure (Annex 10 Vol I Table 3.7.2.4-1)', () => {
+  it('shares the row of initial, intermediate and non-precision approach: HAL 0.3 NM (556 m), 10 s to alert', () => {
+    expect(OPERATIONS.departure).toMatchObject({ id: 'departure', valM: null, ttaS: 10 })
+    expect(OPERATIONS.departure.halM).toBe(OPERATIONS.npa.halM)
+    expect(operationFor('departure')!.id).toBe('departure')
+  })
+})

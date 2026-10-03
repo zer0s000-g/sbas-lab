@@ -69,6 +69,7 @@ suite('what the page says in the ESSP-SAS scenario', () => {
       for (const view of ['space', 'flight', 'network'] as const) {
         const text = describe(m, view)
         expect(text).not.toMatch(/NaN|undefined|Infinity/)
+        expect(text).not.toMatch(/\.\./)
         expect(text).not.toMatch(INDONESIAN)
       }
       const n = NARRATION[p.id]

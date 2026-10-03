@@ -51,11 +51,20 @@ const BY_KEY = new Map(MESSAGE_TYPES.map((m) => [`${m.signal}:${m.type}`, m]))
 export const messageType = (signal: SbasSignal, type: number) => BY_KEY.get(`${signal}:${type}`)
 
 /**
- * One message per second on each signal, 250 bits: an 8-bit preamble, a 6-bit type,
+ * One message per second on each signal, 250 bits: on L1 an 8-bit preamble, a 6-bit type,
  * 212 bits of data and a 24-bit CRC.
  */
 // TODO(expert-review): 250 bit/s, 500 symbols/s after FEC, 8+6+212+24 bit layout (DO-229 / Annex 10 Appendix B).
 export const MESSAGE_BITS = { total: 250, preamble: 8, type: 6, data: 212, crc: 24 } as const
+/**
+ * A DFMC message on L5 is also 250 bits a second, with a 4-bit preamble, so its data
+ * field is 216 bits (EUROCAE ED-259; ICAO DFMC SBAS SARPs).
+ */
+// TODO(expert-review): DFMC L5 layout 4+6+216+24 bits (ED-259 / Annex 10 DFMC SBAS SARPs).
+export const DFMC_MESSAGE_BITS = { total: 250, preamble: 4, type: 6, data: 216, crc: 24 } as const
+
+/** The message layout on a signal. */
+export const messageBits = (signal: SbasSignal) => (signal === 'L1' ? MESSAGE_BITS : DFMC_MESSAGE_BITS)
 export const MESSAGE_PERIOD_S = 1
 
 /** A repeating broadcast plan (illustrative; real schedules are set by the SBAS provider within the time-outs). */

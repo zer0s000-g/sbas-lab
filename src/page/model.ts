@@ -85,11 +85,11 @@ export type PhaseDetail =
   | { kind: 'errors'; satId: string; elDeg: number; parts: { name: string; m: number; sbas: 'corrected' | 'modelled' | 'stays' }[] }
   | { kind: 'reference'; stations: number; perStation: number; pierce: number }
   | { kind: 'master'; ok: number; notMonitored: number; doNotUse: number; igpMonitored: number; igpTotal: number; bestUdreM: number }
-  | { kind: 'uplink' }
+  | { kind: 'uplink'; signal: SbasSignal }
   | { kind: 'fas'; channel: number; runway: string; gpaDeg: number; tchFt: number; halM: number; valM: number; crc: string; valid: boolean }
   | { kind: 'final'; heightFt: number; daFt: number; alongNm: number }
 
-function phaseDetail(phase: PhaseId, snap: Snapshot, dev: Deviations | null): PhaseDetail | null {
+function phaseDetail(phase: PhaseId, snap: Snapshot, dev: Deviations | null, signal: SbasSignal): PhaseDetail | null {
   if (phase === 'errors') {
     const id = snap.abas?.used[0]
     const sat = snap.sats.find((s) => s.id === id)
@@ -126,7 +126,7 @@ function phaseDetail(phase: PhaseId, snap: Snapshot, dev: Deviations | null): Ph
       bestUdreM: ok.length ? Math.min(...ok.map((x) => UDRE_TABLE_M[x.udrei] ?? Infinity)) : Number.NaN,
     }
   }
-  if (phase === 'uplink') return { kind: 'uplink' }
+  if (phase === 'uplink') return { kind: 'uplink', signal }
   if (phase === 'descent') {
     const crc = fasCrc(FAS)
     return { kind: 'fas', channel: APPROACH_CHANNEL, runway: FAS.runway, gpaDeg: FAS.gpaDeg, tchFt: FAS.tchFt, halM: FAS.halM, valM: FAS.valM, crc: crc.toString(16).toUpperCase().padStart(8, '0'), valid: fasValid(FAS, crc) }
@@ -217,7 +217,7 @@ export function viewModel(e: JourneyEngine): ViewModel {
     alarmed: snap.alarmedSats,
     dev,
     service: cond.service,
-    detail: phaseDetail(phase, snap, dev),
+    detail: phaseDetail(phase, snap, dev, signal),
     approachPhase: phase === 'descent' || phase === 'final' || phase === 'landing',
     modeText: mode === 'NONE' ? 'No GNSS approach' : phase === 'descent' ? `${mode} armed` : mode,
   }
@@ -246,5 +246,11 @@ export function describe(m: ViewModel, view: 'space' | 'flight' | 'network'): st
       : view === 'network'
         ? SCENARIO.texts.describeNetwork
         : `Flight view: LAB201 ${place}.`
-  return [lead, where, sky, `Using ${m.navSource === 'sbas' ? 'SBAS' : m.navSource === 'abas' ? 'GPS alone' : 'nothing'}: ${pl}`, lim, `Approach mode ${m.mode}`].filter(Boolean).join('. ') + '.'
+  // Each part is a sentence; a part that already ends with a full stop keeps just the one.
+  return (
+    [lead, where, sky, `Using ${m.navSource === 'sbas' ? 'SBAS' : m.navSource === 'abas' ? 'GPS alone' : 'nothing'}: ${pl}`, lim, `Approach mode ${m.mode}`]
+      .filter(Boolean)
+      .map((part) => part.replace(/\.$/, ''))
+      .join('. ') + '.'
+  )
 }

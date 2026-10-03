@@ -66,9 +66,299 @@
  "ground": "7f7c8453b09f2ed4aae1d5bb433c38ecaa6fbf1746dc3f8672694f6d44141b1e",
  "phases": {
   "gate": {
-   "model": "f5498b42c32e09fc6e991853de474106c614dce8e291fa6a2cf88fd84524e40e",
-   "op": null,
-   "detail": null,
+   "model": {
+    "phase": "gate",
+    "phaseNo": 1,
+    "frozen": false,
+    "signalS": 0,
+    "signalTotalS": 0,
+    "worldS": 0,
+    "localHour": 8,
+    "localZone": "WIB",
+    "altFt": 34,
+    "gsKt": 0,
+    "distToGoNm": 530.115733687,
+    "sbasShown": false,
+    "op": null,
+    "nav": {
+     "mode": "abas",
+     "errorEnu": [
+      0.154583662155,
+      -0.876381921126,
+      2.55611419354
+     ],
+     "horizontalErrorM": 0.889910883337,
+     "verticalErrorM": 2.55611419354,
+     "hdop": 0.884147141397,
+     "vdop": 1.58783243389,
+     "pdop": 1.81739594083,
+     "hplM": 70.4685805015,
+     "vplM": null,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "navSource": "abas",
+    "abas": {
+     "mode": "abas",
+     "errorEnu": [
+      0.154583662155,
+      -0.876381921126,
+      2.55611419354
+     ],
+     "horizontalErrorM": 0.889910883337,
+     "verticalErrorM": 2.55611419354,
+     "hdop": 0.884147141397,
+     "vdop": 1.58783243389,
+     "pdop": 1.81739594083,
+     "hplM": 70.4685805015,
+     "vplM": null,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "sbas": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.335908288562,
+      -0.181125711796,
+      -0.341407320575
+     ],
+     "horizontalErrorM": 0.381629272722,
+     "verticalErrorM": 0.341407320575,
+     "hdop": 0.884147141397,
+     "vdop": 1.58783243389,
+     "pdop": 1.81739594083,
+     "hplM": 4.77323176474,
+     "vplM": 10.4779590983,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "l1Pa": {
+     "mode": "l1sbas",
+     "errorEnu": [
+      -0.0676719843742,
+      -0.642232157093,
+      -1.65056413699
+     ],
+     "horizontalErrorM": 0.645787612976,
+     "verticalErrorM": 1.65056413699,
+     "hdop": 1.02373402578,
+     "vdop": 2.03756131782,
+     "pdop": 2.2802823245,
+     "hplM": 37.6599530736,
+     "vplM": 78.3798098009,
+     "used": [
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "dfmc": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.335908288562,
+      -0.181125711796,
+      -0.341407320575
+     ],
+     "horizontalErrorM": 0.381629272722,
+     "verticalErrorM": 0.341407320575,
+     "hdop": 0.884147141397,
+     "vdop": 1.58783243389,
+     "pdop": 1.81739594083,
+     "hplM": 4.77323176474,
+     "vplM": 10.4779590983,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "mode": "LNAV",
+    "sbasMode": "LPV",
+    "withinLimits": false,
+    "sats": [
+     {
+      "id": "G01",
+      "kind": "gps",
+      "azDeg": 272.259044948,
+      "elDeg": 6.42954136288,
+      "state": "used"
+     },
+     {
+      "id": "G02",
+      "kind": "gps",
+      "azDeg": 12.8857927579,
+      "elDeg": 13.0449535972,
+      "state": "used"
+     },
+     {
+      "id": "G05",
+      "kind": "gps",
+      "azDeg": 357.161392909,
+      "elDeg": 66.0130722819,
+      "state": "used"
+     },
+     {
+      "id": "G12",
+      "kind": "gps",
+      "azDeg": 173.847037883,
+      "elDeg": 40.0627028252,
+      "state": "used"
+     },
+     {
+      "id": "G15",
+      "kind": "gps",
+      "azDeg": 225.711123705,
+      "elDeg": 31.364991312,
+      "state": "used"
+     },
+     {
+      "id": "G18",
+      "kind": "gps",
+      "azDeg": 319.049633626,
+      "elDeg": 38.3891159846,
+      "state": "used"
+     },
+     {
+      "id": "G19",
+      "kind": "gps",
+      "azDeg": 147.777894041,
+      "elDeg": 28.2365752417,
+      "state": "used"
+     },
+     {
+      "id": "G22",
+      "kind": "gps",
+      "azDeg": 66.016071516,
+      "elDeg": 33.1485934299,
+      "state": "used"
+     },
+     {
+      "id": "QZS-3",
+      "kind": "geo",
+      "azDeg": 73.9406665711,
+      "elDeg": 65.1419952779,
+      "state": "tracked"
+     },
+     {
+      "id": "QZS-6",
+      "kind": "geo",
+      "azDeg": 290.23254631,
+      "elDeg": 69.7511452652,
+      "state": "tracked"
+     }
+    ],
+    "gpsTracked": 8,
+    "geosTracked": 2,
+    "messageAgeS": 0,
+    "signal": "DFMC",
+    "log": [
+     {
+      "second": 0,
+      "geo": "QZS-3",
+      "type": 31,
+      "name": "Satellite mask",
+      "plain": "Which satellites of which constellations are augmented",
+      "alarm": false
+     },
+     {
+      "second": -1,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": -2,
+      "geo": "QZS-3",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": -3,
+      "geo": "QZS-6",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": -4,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": -5,
+      "geo": "QZS-6",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": -6,
+      "geo": "QZS-3",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     }
+    ],
+    "alarmed": [],
+    "dev": null,
+    "service": "dfmc",
+    "detail": null,
+    "approachPhase": false,
+    "modeText": "LNAV"
+   },
    "text": [
     "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 on the ground, 530.1 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 70 m. Approach mode LNAV.",
     "Flight view: LAB201 at Jakarta Soekarno-Hatta (WIII), with its runway, taxiways and terminal.. LAB201 on the ground, 530.1 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 70 m. Approach mode LNAV.",
@@ -76,14 +366,306 @@
    ]
   },
   "takeoff": {
-   "model": "67ca8eb4489e847058c8ac674a8cc89a8bfae2ecbfe163c969c63e33a0297880",
-   "op": {
-    "id": "terminal",
-    "halM": 1852,
-    "valM": null,
-    "ttaS": 15
+   "model": {
+    "phase": "takeoff",
+    "phaseNo": 2,
+    "frozen": false,
+    "signalS": 0,
+    "signalTotalS": 0,
+    "worldS": 60,
+    "localHour": 8.01666666667,
+    "localZone": "WIB",
+    "altFt": 34,
+    "gsKt": 0,
+    "distToGoNm": 530.115733687,
+    "sbasShown": false,
+    "op": {
+     "id": "terminal",
+     "name": "Terminal",
+     "halM": 1852,
+     "valM": null,
+     "ttaS": 15,
+     "source": "Doc 9849 Table 2-1 (Annex 10 Vol I Table 3.7.2.4-1)"
+    },
+    "nav": {
+     "mode": "abas",
+     "errorEnu": [
+      0.295242797211,
+      -0.740094650425,
+      3.53218350961
+     ],
+     "horizontalErrorM": 0.796811396061,
+     "verticalErrorM": 3.53218350961,
+     "hdop": 0.882557195606,
+     "vdop": 1.58194315007,
+     "pdop": 1.81147766577,
+     "hplM": 70.369327372,
+     "vplM": null,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "navSource": "abas",
+    "abas": {
+     "mode": "abas",
+     "errorEnu": [
+      0.295242797211,
+      -0.740094650425,
+      3.53218350961
+     ],
+     "horizontalErrorM": 0.796811396061,
+     "verticalErrorM": 3.53218350961,
+     "hdop": 0.882557195606,
+     "vdop": 1.58194315007,
+     "pdop": 1.81147766577,
+     "hplM": 70.369327372,
+     "vplM": null,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "sbas": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.847407543337,
+      -0.048423675865,
+      0.119649894657
+     ],
+     "horizontalErrorM": 0.848789960407,
+     "verticalErrorM": 0.119649894657,
+     "hdop": 0.882557195606,
+     "vdop": 1.58194315007,
+     "pdop": 1.81147766577,
+     "hplM": 4.7702706848,
+     "vplM": 10.4689047465,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "l1Pa": {
+     "mode": "l1sbas",
+     "errorEnu": [
+      0.109512918847,
+      -0.548278645278,
+      -0.589641701885
+     ],
+     "horizontalErrorM": 0.559108712383,
+     "verticalErrorM": 0.589641701885,
+     "hdop": 1.02485196516,
+     "vdop": 2.03329922678,
+     "pdop": 2.27697766702,
+     "hplM": 37.6390611242,
+     "vplM": 79.1848363386,
+     "used": [
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "dfmc": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.847407543337,
+      -0.048423675865,
+      0.119649894657
+     ],
+     "horizontalErrorM": 0.848789960407,
+     "verticalErrorM": 0.119649894657,
+     "hdop": 0.882557195606,
+     "vdop": 1.58194315007,
+     "pdop": 1.81147766577,
+     "hplM": 4.7702706848,
+     "vplM": 10.4689047465,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "mode": "LNAV",
+    "sbasMode": "LPV",
+    "withinLimits": true,
+    "sats": [
+     {
+      "id": "G01",
+      "kind": "gps",
+      "azDeg": 272.697897417,
+      "elDeg": 6.41835426265,
+      "state": "used"
+     },
+     {
+      "id": "G02",
+      "kind": "gps",
+      "azDeg": 13.2543137618,
+      "elDeg": 12.8998014362,
+      "state": "used"
+     },
+     {
+      "id": "G05",
+      "kind": "gps",
+      "azDeg": 357.37793449,
+      "elDeg": 65.497065074,
+      "state": "used"
+     },
+     {
+      "id": "G12",
+      "kind": "gps",
+      "azDeg": 173.416485723,
+      "elDeg": 40.363150629,
+      "state": "used"
+     },
+     {
+      "id": "G15",
+      "kind": "gps",
+      "azDeg": 225.186446792,
+      "elDeg": 31.3142991757,
+      "state": "used"
+     },
+     {
+      "id": "G18",
+      "kind": "gps",
+      "azDeg": 318.712565902,
+      "elDeg": 38.782591359,
+      "state": "used"
+     },
+     {
+      "id": "G19",
+      "kind": "gps",
+      "azDeg": 147.863448998,
+      "elDeg": 27.8233655242,
+      "state": "used"
+     },
+     {
+      "id": "G22",
+      "kind": "gps",
+      "azDeg": 66.5732666005,
+      "elDeg": 33.2676350166,
+      "state": "used"
+     },
+     {
+      "id": "QZS-3",
+      "kind": "geo",
+      "azDeg": 73.9406665711,
+      "elDeg": 65.1419952779,
+      "state": "tracked"
+     },
+     {
+      "id": "QZS-6",
+      "kind": "geo",
+      "azDeg": 290.23254631,
+      "elDeg": 69.7511452652,
+      "state": "tracked"
+     }
+    ],
+    "gpsTracked": 8,
+    "geosTracked": 2,
+    "messageAgeS": 0,
+    "signal": "DFMC",
+    "log": [
+     {
+      "second": 60,
+      "geo": "QZS-3",
+      "type": 31,
+      "name": "Satellite mask",
+      "plain": "Which satellites of which constellations are augmented",
+      "alarm": false
+     },
+     {
+      "second": 59,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 58,
+      "geo": "QZS-3",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 57,
+      "geo": "QZS-6",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 56,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 55,
+      "geo": "QZS-6",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 54,
+      "geo": "QZS-3",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     }
+    ],
+    "alarmed": [],
+    "dev": null,
+    "service": "dfmc",
+    "detail": null,
+    "approachPhase": false,
+    "modeText": "LNAV"
    },
-   "detail": null,
    "text": [
     "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 on the ground, 530.1 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 70 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
     "Flight view: LAB201 at Jakarta Soekarno-Hatta (WIII), with its runway, taxiways and terminal.. LAB201 on the ground, 530.1 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 70 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
@@ -91,14 +673,307 @@
    ]
   },
   "climb": {
-   "model": "2c0cc075eb80c046f5cf58b24a60a9e4b372acab56320f06f2f9674eb1c52132",
-   "op": {
-    "id": "terminal",
-    "halM": 1852,
-    "valM": null,
-    "ttaS": 15
+   "model": {
+    "phase": "climb",
+    "phaseNo": 3,
+    "frozen": false,
+    "signalS": 0,
+    "signalTotalS": 0,
+    "worldS": 395.3,
+    "localHour": 8.10980555556,
+    "localZone": "WIB",
+    "altFt": 1034.83333333,
+    "gsKt": 210,
+    "distToGoNm": 528.916595197,
+    "sbasShown": false,
+    "op": {
+     "id": "terminal",
+     "name": "Terminal",
+     "halM": 1852,
+     "valM": null,
+     "ttaS": 15,
+     "source": "Doc 9849 Table 2-1 (Annex 10 Vol I Table 3.7.2.4-1)"
+    },
+    "nav": {
+     "mode": "abas",
+     "errorEnu": [
+      -0.28340891466,
+      -0.57769538832,
+      3.42434383414
+     ],
+     "horizontalErrorM": 0.643469171441,
+     "verticalErrorM": 3.42434383414,
+     "hdop": 0.874913796241,
+     "vdop": 1.54663622726,
+     "pdop": 1.77695181992,
+     "hplM": 69.5684080561,
+     "vplM": null,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "navSource": "abas",
+    "abas": {
+     "mode": "abas",
+     "errorEnu": [
+      -0.28340891466,
+      -0.57769538832,
+      3.42434383414
+     ],
+     "horizontalErrorM": 0.643469171441,
+     "verticalErrorM": 3.42434383414,
+     "hdop": 0.874913796241,
+     "vdop": 1.54663622726,
+     "pdop": 1.77695181992,
+     "hplM": 69.5684080561,
+     "vplM": null,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "sbas": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.395691707653,
+      0.352615580571,
+      0.0156255370331
+     ],
+     "horizontalErrorM": 0.530009127438,
+     "verticalErrorM": 0.0156255370331,
+     "hdop": 0.874913796241,
+     "vdop": 1.54663622726,
+     "pdop": 1.77695181992,
+     "hplM": 4.76604415708,
+     "vplM": 10.4010231905,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "l1Pa": {
+     "mode": "l1sbas",
+     "errorEnu": [
+      -0.00628480191288,
+      -0.515136686616,
+      -0.741956198095
+     ],
+     "horizontalErrorM": 0.5151750233,
+     "verticalErrorM": 0.741956198095,
+     "hdop": 0.874913796241,
+     "vdop": 1.54663622726,
+     "pdop": 1.77695181992,
+     "hplM": 33.8127791211,
+     "vplM": 70.0389026627,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "dfmc": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.395691707653,
+      0.352615580571,
+      0.0156255370331
+     ],
+     "horizontalErrorM": 0.530009127438,
+     "verticalErrorM": 0.0156255370331,
+     "hdop": 0.874913796241,
+     "vdop": 1.54663622726,
+     "pdop": 1.77695181992,
+     "hplM": 4.76604415708,
+     "vplM": 10.4010231905,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "mode": "LNAV",
+    "sbasMode": "LPV",
+    "withinLimits": true,
+    "sats": [
+     {
+      "id": "G01",
+      "kind": "gps",
+      "azDeg": 275.143729085,
+      "elDeg": 6.31330324344,
+      "state": "used"
+     },
+     {
+      "id": "G02",
+      "kind": "gps",
+      "azDeg": 15.3099067919,
+      "elDeg": 12.1378276326,
+      "state": "used"
+     },
+     {
+      "id": "G05",
+      "kind": "gps",
+      "azDeg": 358.42077633,
+      "elDeg": 62.632805961,
+      "state": "used"
+     },
+     {
+      "id": "G12",
+      "kind": "gps",
+      "azDeg": 170.991917323,
+      "elDeg": 42.0592267945,
+      "state": "used"
+     },
+     {
+      "id": "G15",
+      "kind": "gps",
+      "azDeg": 222.283872774,
+      "elDeg": 31.0062037237,
+      "state": "used"
+     },
+     {
+      "id": "G18",
+      "kind": "gps",
+      "azDeg": 316.671820032,
+      "elDeg": 40.943463922,
+      "state": "used"
+     },
+     {
+      "id": "G19",
+      "kind": "gps",
+      "azDeg": 148.276465992,
+      "elDeg": 25.5339548262,
+      "state": "used"
+     },
+     {
+      "id": "G22",
+      "kind": "gps",
+      "azDeg": 69.7178333547,
+      "elDeg": 33.9170294506,
+      "state": "used"
+     },
+     {
+      "id": "QZS-3",
+      "kind": "geo",
+      "azDeg": 73.9344547096,
+      "elDeg": 65.1683984208,
+      "state": "tracked"
+     },
+     {
+      "id": "QZS-6",
+      "kind": "geo",
+      "azDeg": 290.190256688,
+      "elDeg": 69.7283986263,
+      "state": "tracked"
+     }
+    ],
+    "gpsTracked": 8,
+    "geosTracked": 2,
+    "messageAgeS": 0,
+    "signal": "DFMC",
+    "log": [
+     {
+      "second": 395,
+      "geo": "QZS-6",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 394,
+      "geo": "QZS-3",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 393,
+      "geo": "QZS-6",
+      "type": 31,
+      "name": "Satellite mask",
+      "plain": "Which satellites of which constellations are augmented",
+      "alarm": false
+     },
+     {
+      "second": 392,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 391,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 390,
+      "geo": "QZS-3",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 389,
+      "geo": "QZS-6",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     }
+    ],
+    "alarmed": [],
+    "dev": null,
+    "service": "dfmc",
+    "detail": null,
+    "approachPhase": false,
+    "modeText": "LNAV"
    },
-   "detail": null,
    "text": [
     "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 1000 ft, 528.9 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 70 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
     "Flight view: LAB201 climbing out from Jakarta over the Java Sea.. LAB201 at 1000 ft, 528.9 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 70 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
@@ -106,14 +981,335 @@
    ]
   },
   "errors": {
-   "model": "63b8e22c9d178dccb7a14b986d061ecd234137633d3786e3948d876eb7bff884",
-   "op": {
-    "id": "terminal",
-    "halM": 1852,
-    "valM": null,
-    "ttaS": 15
+   "model": {
+    "phase": "errors",
+    "phaseNo": 4,
+    "frozen": true,
+    "signalS": 0,
+    "signalTotalS": 18,
+    "worldS": 664.7,
+    "localHour": 8.18463888889,
+    "localZone": "WIB",
+    "altFt": 10004.1666667,
+    "gsKt": 300,
+    "distToGoNm": 513.319529066,
+    "sbasShown": false,
+    "op": {
+     "id": "terminal",
+     "name": "Terminal",
+     "halM": 1852,
+     "valM": null,
+     "ttaS": 15,
+     "source": "Doc 9849 Table 2-1 (Annex 10 Vol I Table 3.7.2.4-1)"
+    },
+    "nav": {
+     "mode": "abas",
+     "errorEnu": [
+      -1.33294295031,
+      -0.586895841475,
+      2.67811030626
+     ],
+     "horizontalErrorM": 1.45642838393,
+     "verticalErrorM": 2.67811030626,
+     "hdop": 0.871283766703,
+     "vdop": 1.51519937417,
+     "pdop": 1.74784568701,
+     "hplM": 69.1457180641,
+     "vplM": null,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "navSource": "abas",
+    "abas": {
+     "mode": "abas",
+     "errorEnu": [
+      -1.33294295031,
+      -0.586895841475,
+      2.67811030626
+     ],
+     "horizontalErrorM": 1.45642838393,
+     "verticalErrorM": 2.67811030626,
+     "hdop": 0.871283766703,
+     "vdop": 1.51519937417,
+     "pdop": 1.74784568701,
+     "hplM": 69.1457180641,
+     "vplM": null,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "sbas": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.35498085494,
+      -0.154142431297,
+      -0.561183947309
+     ],
+     "horizontalErrorM": 0.387002967044,
+     "verticalErrorM": 0.561183947309,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 6.26297598775,
+     "vplM": 10.350757953,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "l1Pa": {
+     "mode": "l1sbas",
+     "errorEnu": [
+      0.428913991117,
+      -0.417083179519,
+      -2.27469875106
+     ],
+     "horizontalErrorM": 0.598268827881,
+     "verticalErrorM": 2.27469875106,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 46.4909456927,
+     "vplM": 73.0392157286,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "dfmc": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.35498085494,
+      -0.154142431297,
+      -0.561183947309
+     ],
+     "horizontalErrorM": 0.387002967044,
+     "verticalErrorM": 0.561183947309,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 6.26297598775,
+     "vplM": 10.350757953,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "mode": "LNAV",
+    "sbasMode": "LPV",
+    "withinLimits": true,
+    "sats": [
+     {
+      "id": "G01",
+      "kind": "gps",
+      "azDeg": 277.024045865,
+      "elDeg": 5.91988677504,
+      "state": "used"
+     },
+     {
+      "id": "G02",
+      "kind": "gps",
+      "azDeg": 16.8252573288,
+      "elDeg": 11.7628622743,
+      "state": "used"
+     },
+     {
+      "id": "G05",
+      "kind": "gps",
+      "azDeg": 358.441851547,
+      "elDeg": 60.4737126588,
+      "state": "used"
+     },
+     {
+      "id": "G12",
+      "kind": "gps",
+      "azDeg": 169.362707247,
+      "elDeg": 43.3820245796,
+      "state": "used"
+     },
+     {
+      "id": "G15",
+      "kind": "gps",
+      "azDeg": 220.087624925,
+      "elDeg": 30.4487470533,
+      "state": "used"
+     },
+     {
+      "id": "G18",
+      "kind": "gps",
+      "azDeg": 314.464719291,
+      "elDeg": 42.4803847075,
+      "state": "used"
+     },
+     {
+      "id": "G19",
+      "kind": "gps",
+      "azDeg": 148.705547736,
+      "elDeg": 23.7736115549,
+      "state": "used"
+     },
+     {
+      "id": "G22",
+      "kind": "gps",
+      "azDeg": 72.2696793587,
+      "elDeg": 34.7362477661,
+      "state": "used"
+     },
+     {
+      "id": "QZS-3",
+      "kind": "geo",
+      "azDeg": 73.9517120171,
+      "elDeg": 65.5451544413,
+      "state": "tracked"
+     },
+     {
+      "id": "QZS-6",
+      "kind": "geo",
+      "azDeg": 289.496710598,
+      "elDeg": 69.4319006256,
+      "state": "tracked"
+     }
+    ],
+    "gpsTracked": 8,
+    "geosTracked": 2,
+    "messageAgeS": 0,
+    "signal": "DFMC",
+    "log": [
+     {
+      "second": 664,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 663,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 662,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 661,
+      "geo": "QZS-6",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 660,
+      "geo": "QZS-3",
+      "type": 31,
+      "name": "Satellite mask",
+      "plain": "Which satellites of which constellations are augmented",
+      "alarm": false
+     },
+     {
+      "second": 659,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 658,
+      "geo": "QZS-3",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     }
+    ],
+    "alarmed": [],
+    "dev": null,
+    "service": "dfmc",
+    "detail": {
+     "kind": "errors",
+     "satId": "G01",
+     "elDeg": 5.91988677504,
+     "parts": [
+      {
+       "name": "Satellite clock",
+       "m": 0.0704614312659,
+       "sbas": "corrected"
+      },
+      {
+       "name": "Orbit",
+       "m": 0.0627734103602,
+       "sbas": "corrected"
+      },
+      {
+       "name": "Ionosphere",
+       "m": 4.86698851256,
+       "sbas": "corrected"
+      },
+      {
+       "name": "Troposphere",
+       "m": 13.9206238297,
+       "sbas": "modelled"
+      },
+      {
+       "name": "Multipath and noise",
+       "m": -0.173934862097,
+       "sbas": "stays"
+      }
+     ]
+    },
+    "approachPhase": false,
+    "modeText": "LNAV"
    },
-   "detail": "errors",
    "text": [
     "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
     "Flight view: LAB201 climbing out from Jakarta over the Java Sea.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
@@ -121,14 +1317,309 @@
    ]
   },
   "reference": {
-   "model": "b522784f07722fbdfd64888e18800a9b207f9f3fee6ec2a38d209fdaf7533592",
-   "op": {
-    "id": "terminal",
-    "halM": 1852,
-    "valM": null,
-    "ttaS": 15
+   "model": {
+    "phase": "reference",
+    "phaseNo": 5,
+    "frozen": true,
+    "signalS": 0,
+    "signalTotalS": 16,
+    "worldS": 664.7,
+    "localHour": 8.18463888889,
+    "localZone": "WIB",
+    "altFt": 10004.1666667,
+    "gsKt": 300,
+    "distToGoNm": 513.319529066,
+    "sbasShown": false,
+    "op": {
+     "id": "terminal",
+     "name": "Terminal",
+     "halM": 1852,
+     "valM": null,
+     "ttaS": 15,
+     "source": "Doc 9849 Table 2-1 (Annex 10 Vol I Table 3.7.2.4-1)"
+    },
+    "nav": {
+     "mode": "abas",
+     "errorEnu": [
+      -1.33294295031,
+      -0.586895841475,
+      2.67811030626
+     ],
+     "horizontalErrorM": 1.45642838393,
+     "verticalErrorM": 2.67811030626,
+     "hdop": 0.871283766703,
+     "vdop": 1.51519937417,
+     "pdop": 1.74784568701,
+     "hplM": 69.1457180641,
+     "vplM": null,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "navSource": "abas",
+    "abas": {
+     "mode": "abas",
+     "errorEnu": [
+      -1.33294295031,
+      -0.586895841475,
+      2.67811030626
+     ],
+     "horizontalErrorM": 1.45642838393,
+     "verticalErrorM": 2.67811030626,
+     "hdop": 0.871283766703,
+     "vdop": 1.51519937417,
+     "pdop": 1.74784568701,
+     "hplM": 69.1457180641,
+     "vplM": null,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "sbas": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.35498085494,
+      -0.154142431297,
+      -0.561183947309
+     ],
+     "horizontalErrorM": 0.387002967044,
+     "verticalErrorM": 0.561183947309,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 6.26297598775,
+     "vplM": 10.350757953,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "l1Pa": {
+     "mode": "l1sbas",
+     "errorEnu": [
+      0.428913991117,
+      -0.417083179519,
+      -2.27469875106
+     ],
+     "horizontalErrorM": 0.598268827881,
+     "verticalErrorM": 2.27469875106,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 46.4909456927,
+     "vplM": 73.0392157286,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "dfmc": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.35498085494,
+      -0.154142431297,
+      -0.561183947309
+     ],
+     "horizontalErrorM": 0.387002967044,
+     "verticalErrorM": 0.561183947309,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 6.26297598775,
+     "vplM": 10.350757953,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "mode": "LNAV",
+    "sbasMode": "LPV",
+    "withinLimits": true,
+    "sats": [
+     {
+      "id": "G01",
+      "kind": "gps",
+      "azDeg": 277.024045865,
+      "elDeg": 5.91988677504,
+      "state": "used"
+     },
+     {
+      "id": "G02",
+      "kind": "gps",
+      "azDeg": 16.8252573288,
+      "elDeg": 11.7628622743,
+      "state": "used"
+     },
+     {
+      "id": "G05",
+      "kind": "gps",
+      "azDeg": 358.441851547,
+      "elDeg": 60.4737126588,
+      "state": "used"
+     },
+     {
+      "id": "G12",
+      "kind": "gps",
+      "azDeg": 169.362707247,
+      "elDeg": 43.3820245796,
+      "state": "used"
+     },
+     {
+      "id": "G15",
+      "kind": "gps",
+      "azDeg": 220.087624925,
+      "elDeg": 30.4487470533,
+      "state": "used"
+     },
+     {
+      "id": "G18",
+      "kind": "gps",
+      "azDeg": 314.464719291,
+      "elDeg": 42.4803847075,
+      "state": "used"
+     },
+     {
+      "id": "G19",
+      "kind": "gps",
+      "azDeg": 148.705547736,
+      "elDeg": 23.7736115549,
+      "state": "used"
+     },
+     {
+      "id": "G22",
+      "kind": "gps",
+      "azDeg": 72.2696793587,
+      "elDeg": 34.7362477661,
+      "state": "used"
+     },
+     {
+      "id": "QZS-3",
+      "kind": "geo",
+      "azDeg": 73.9517120171,
+      "elDeg": 65.5451544413,
+      "state": "tracked"
+     },
+     {
+      "id": "QZS-6",
+      "kind": "geo",
+      "azDeg": 289.496710598,
+      "elDeg": 69.4319006256,
+      "state": "tracked"
+     }
+    ],
+    "gpsTracked": 8,
+    "geosTracked": 2,
+    "messageAgeS": 0,
+    "signal": "DFMC",
+    "log": [
+     {
+      "second": 664,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 663,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 662,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 661,
+      "geo": "QZS-6",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 660,
+      "geo": "QZS-3",
+      "type": 31,
+      "name": "Satellite mask",
+      "plain": "Which satellites of which constellations are augmented",
+      "alarm": false
+     },
+     {
+      "second": 659,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 658,
+      "geo": "QZS-3",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     }
+    ],
+    "alarmed": [],
+    "dev": null,
+    "service": "dfmc",
+    "detail": {
+     "kind": "reference",
+     "stations": 16,
+     "perStation": 8.5625,
+     "pierce": 137
+    },
+    "approachPhase": false,
+    "modeText": "LNAV"
    },
-   "detail": "reference",
    "text": [
     "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
     "Flight view: LAB201 climbing out from Jakarta over the Java Sea.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
@@ -136,14 +1627,312 @@
    ]
   },
   "master": {
-   "model": "a74a5ff7710755a102d42f896963d9bdcf37faee73383c364d8d8e8520065164",
-   "op": {
-    "id": "terminal",
-    "halM": 1852,
-    "valM": null,
-    "ttaS": 15
+   "model": {
+    "phase": "master",
+    "phaseNo": 6,
+    "frozen": true,
+    "signalS": 0,
+    "signalTotalS": 18,
+    "worldS": 664.7,
+    "localHour": 8.18463888889,
+    "localZone": "WIB",
+    "altFt": 10004.1666667,
+    "gsKt": 300,
+    "distToGoNm": 513.319529066,
+    "sbasShown": false,
+    "op": {
+     "id": "terminal",
+     "name": "Terminal",
+     "halM": 1852,
+     "valM": null,
+     "ttaS": 15,
+     "source": "Doc 9849 Table 2-1 (Annex 10 Vol I Table 3.7.2.4-1)"
+    },
+    "nav": {
+     "mode": "abas",
+     "errorEnu": [
+      -1.33294295031,
+      -0.586895841475,
+      2.67811030626
+     ],
+     "horizontalErrorM": 1.45642838393,
+     "verticalErrorM": 2.67811030626,
+     "hdop": 0.871283766703,
+     "vdop": 1.51519937417,
+     "pdop": 1.74784568701,
+     "hplM": 69.1457180641,
+     "vplM": null,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "navSource": "abas",
+    "abas": {
+     "mode": "abas",
+     "errorEnu": [
+      -1.33294295031,
+      -0.586895841475,
+      2.67811030626
+     ],
+     "horizontalErrorM": 1.45642838393,
+     "verticalErrorM": 2.67811030626,
+     "hdop": 0.871283766703,
+     "vdop": 1.51519937417,
+     "pdop": 1.74784568701,
+     "hplM": 69.1457180641,
+     "vplM": null,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "sbas": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.35498085494,
+      -0.154142431297,
+      -0.561183947309
+     ],
+     "horizontalErrorM": 0.387002967044,
+     "verticalErrorM": 0.561183947309,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 6.26297598775,
+     "vplM": 10.350757953,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "l1Pa": {
+     "mode": "l1sbas",
+     "errorEnu": [
+      0.428913991117,
+      -0.417083179519,
+      -2.27469875106
+     ],
+     "horizontalErrorM": 0.598268827881,
+     "verticalErrorM": 2.27469875106,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 46.4909456927,
+     "vplM": 73.0392157286,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "dfmc": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.35498085494,
+      -0.154142431297,
+      -0.561183947309
+     ],
+     "horizontalErrorM": 0.387002967044,
+     "verticalErrorM": 0.561183947309,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 6.26297598775,
+     "vplM": 10.350757953,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "mode": "LNAV",
+    "sbasMode": "LPV",
+    "withinLimits": true,
+    "sats": [
+     {
+      "id": "G01",
+      "kind": "gps",
+      "azDeg": 277.024045865,
+      "elDeg": 5.91988677504,
+      "state": "used"
+     },
+     {
+      "id": "G02",
+      "kind": "gps",
+      "azDeg": 16.8252573288,
+      "elDeg": 11.7628622743,
+      "state": "used"
+     },
+     {
+      "id": "G05",
+      "kind": "gps",
+      "azDeg": 358.441851547,
+      "elDeg": 60.4737126588,
+      "state": "used"
+     },
+     {
+      "id": "G12",
+      "kind": "gps",
+      "azDeg": 169.362707247,
+      "elDeg": 43.3820245796,
+      "state": "used"
+     },
+     {
+      "id": "G15",
+      "kind": "gps",
+      "azDeg": 220.087624925,
+      "elDeg": 30.4487470533,
+      "state": "used"
+     },
+     {
+      "id": "G18",
+      "kind": "gps",
+      "azDeg": 314.464719291,
+      "elDeg": 42.4803847075,
+      "state": "used"
+     },
+     {
+      "id": "G19",
+      "kind": "gps",
+      "azDeg": 148.705547736,
+      "elDeg": 23.7736115549,
+      "state": "used"
+     },
+     {
+      "id": "G22",
+      "kind": "gps",
+      "azDeg": 72.2696793587,
+      "elDeg": 34.7362477661,
+      "state": "used"
+     },
+     {
+      "id": "QZS-3",
+      "kind": "geo",
+      "azDeg": 73.9517120171,
+      "elDeg": 65.5451544413,
+      "state": "tracked"
+     },
+     {
+      "id": "QZS-6",
+      "kind": "geo",
+      "azDeg": 289.496710598,
+      "elDeg": 69.4319006256,
+      "state": "tracked"
+     }
+    ],
+    "gpsTracked": 8,
+    "geosTracked": 2,
+    "messageAgeS": 0,
+    "signal": "DFMC",
+    "log": [
+     {
+      "second": 664,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 663,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 662,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 661,
+      "geo": "QZS-6",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 660,
+      "geo": "QZS-3",
+      "type": 31,
+      "name": "Satellite mask",
+      "plain": "Which satellites of which constellations are augmented",
+      "alarm": false
+     },
+     {
+      "second": 659,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 658,
+      "geo": "QZS-3",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     }
+    ],
+    "alarmed": [],
+    "dev": null,
+    "service": "dfmc",
+    "detail": {
+     "kind": "master",
+     "ok": 11,
+     "notMonitored": 13,
+     "doNotUse": 0,
+     "igpMonitored": 78,
+     "igpTotal": 96,
+     "bestUdreM": 1
+    },
+    "approachPhase": false,
+    "modeText": "LNAV"
    },
-   "detail": "master",
    "text": [
     "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
     "Flight view: LAB201 climbing out from Jakarta over the Java Sea.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
@@ -151,14 +1940,306 @@
    ]
   },
   "uplink": {
-   "model": "711a21f7dd3b1a5c2104628a7af5c2dffd749fd33f25df87004041cf1eb3afd8",
-   "op": {
-    "id": "terminal",
-    "halM": 1852,
-    "valM": null,
-    "ttaS": 15
+   "model": {
+    "phase": "uplink",
+    "phaseNo": 7,
+    "frozen": true,
+    "signalS": 0,
+    "signalTotalS": 12,
+    "worldS": 664.7,
+    "localHour": 8.18463888889,
+    "localZone": "WIB",
+    "altFt": 10004.1666667,
+    "gsKt": 300,
+    "distToGoNm": 513.319529066,
+    "sbasShown": false,
+    "op": {
+     "id": "terminal",
+     "name": "Terminal",
+     "halM": 1852,
+     "valM": null,
+     "ttaS": 15,
+     "source": "Doc 9849 Table 2-1 (Annex 10 Vol I Table 3.7.2.4-1)"
+    },
+    "nav": {
+     "mode": "abas",
+     "errorEnu": [
+      -1.33294295031,
+      -0.586895841475,
+      2.67811030626
+     ],
+     "horizontalErrorM": 1.45642838393,
+     "verticalErrorM": 2.67811030626,
+     "hdop": 0.871283766703,
+     "vdop": 1.51519937417,
+     "pdop": 1.74784568701,
+     "hplM": 69.1457180641,
+     "vplM": null,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "navSource": "abas",
+    "abas": {
+     "mode": "abas",
+     "errorEnu": [
+      -1.33294295031,
+      -0.586895841475,
+      2.67811030626
+     ],
+     "horizontalErrorM": 1.45642838393,
+     "verticalErrorM": 2.67811030626,
+     "hdop": 0.871283766703,
+     "vdop": 1.51519937417,
+     "pdop": 1.74784568701,
+     "hplM": 69.1457180641,
+     "vplM": null,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "sbas": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.35498085494,
+      -0.154142431297,
+      -0.561183947309
+     ],
+     "horizontalErrorM": 0.387002967044,
+     "verticalErrorM": 0.561183947309,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 6.26297598775,
+     "vplM": 10.350757953,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "l1Pa": {
+     "mode": "l1sbas",
+     "errorEnu": [
+      0.428913991117,
+      -0.417083179519,
+      -2.27469875106
+     ],
+     "horizontalErrorM": 0.598268827881,
+     "verticalErrorM": 2.27469875106,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 46.4909456927,
+     "vplM": 73.0392157286,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "dfmc": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.35498085494,
+      -0.154142431297,
+      -0.561183947309
+     ],
+     "horizontalErrorM": 0.387002967044,
+     "verticalErrorM": 0.561183947309,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 6.26297598775,
+     "vplM": 10.350757953,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "mode": "LNAV",
+    "sbasMode": "LPV",
+    "withinLimits": true,
+    "sats": [
+     {
+      "id": "G01",
+      "kind": "gps",
+      "azDeg": 277.024045865,
+      "elDeg": 5.91988677504,
+      "state": "used"
+     },
+     {
+      "id": "G02",
+      "kind": "gps",
+      "azDeg": 16.8252573288,
+      "elDeg": 11.7628622743,
+      "state": "used"
+     },
+     {
+      "id": "G05",
+      "kind": "gps",
+      "azDeg": 358.441851547,
+      "elDeg": 60.4737126588,
+      "state": "used"
+     },
+     {
+      "id": "G12",
+      "kind": "gps",
+      "azDeg": 169.362707247,
+      "elDeg": 43.3820245796,
+      "state": "used"
+     },
+     {
+      "id": "G15",
+      "kind": "gps",
+      "azDeg": 220.087624925,
+      "elDeg": 30.4487470533,
+      "state": "used"
+     },
+     {
+      "id": "G18",
+      "kind": "gps",
+      "azDeg": 314.464719291,
+      "elDeg": 42.4803847075,
+      "state": "used"
+     },
+     {
+      "id": "G19",
+      "kind": "gps",
+      "azDeg": 148.705547736,
+      "elDeg": 23.7736115549,
+      "state": "used"
+     },
+     {
+      "id": "G22",
+      "kind": "gps",
+      "azDeg": 72.2696793587,
+      "elDeg": 34.7362477661,
+      "state": "used"
+     },
+     {
+      "id": "QZS-3",
+      "kind": "geo",
+      "azDeg": 73.9517120171,
+      "elDeg": 65.5451544413,
+      "state": "tracked"
+     },
+     {
+      "id": "QZS-6",
+      "kind": "geo",
+      "azDeg": 289.496710598,
+      "elDeg": 69.4319006256,
+      "state": "tracked"
+     }
+    ],
+    "gpsTracked": 8,
+    "geosTracked": 2,
+    "messageAgeS": 0,
+    "signal": "DFMC",
+    "log": [
+     {
+      "second": 664,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 663,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 662,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 661,
+      "geo": "QZS-6",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 660,
+      "geo": "QZS-3",
+      "type": 31,
+      "name": "Satellite mask",
+      "plain": "Which satellites of which constellations are augmented",
+      "alarm": false
+     },
+     {
+      "second": 659,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 658,
+      "geo": "QZS-3",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     }
+    ],
+    "alarmed": [],
+    "dev": null,
+    "service": "dfmc",
+    "detail": {
+     "kind": "uplink"
+    },
+    "approachPhase": false,
+    "modeText": "LNAV"
    },
-   "detail": "uplink",
    "text": [
     "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
     "Flight view: LAB201 climbing out from Jakarta over the Java Sea.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
@@ -166,14 +2247,304 @@
    ]
   },
   "broadcast": {
-   "model": "84fbf5fcceb6c0c82350f2e02069c7ab94a95eeaf6f23f096d31df804c64e27d",
-   "op": {
-    "id": "terminal",
-    "halM": 1852,
-    "valM": null,
-    "ttaS": 15
+   "model": {
+    "phase": "broadcast",
+    "phaseNo": 8,
+    "frozen": true,
+    "signalS": 0,
+    "signalTotalS": 16,
+    "worldS": 664.7,
+    "localHour": 8.18463888889,
+    "localZone": "WIB",
+    "altFt": 10004.1666667,
+    "gsKt": 300,
+    "distToGoNm": 513.319529066,
+    "sbasShown": false,
+    "op": {
+     "id": "terminal",
+     "name": "Terminal",
+     "halM": 1852,
+     "valM": null,
+     "ttaS": 15,
+     "source": "Doc 9849 Table 2-1 (Annex 10 Vol I Table 3.7.2.4-1)"
+    },
+    "nav": {
+     "mode": "abas",
+     "errorEnu": [
+      -1.33294295031,
+      -0.586895841475,
+      2.67811030626
+     ],
+     "horizontalErrorM": 1.45642838393,
+     "verticalErrorM": 2.67811030626,
+     "hdop": 0.871283766703,
+     "vdop": 1.51519937417,
+     "pdop": 1.74784568701,
+     "hplM": 69.1457180641,
+     "vplM": null,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "navSource": "abas",
+    "abas": {
+     "mode": "abas",
+     "errorEnu": [
+      -1.33294295031,
+      -0.586895841475,
+      2.67811030626
+     ],
+     "horizontalErrorM": 1.45642838393,
+     "verticalErrorM": 2.67811030626,
+     "hdop": 0.871283766703,
+     "vdop": 1.51519937417,
+     "pdop": 1.74784568701,
+     "hplM": 69.1457180641,
+     "vplM": null,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "sbas": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.35498085494,
+      -0.154142431297,
+      -0.561183947309
+     ],
+     "horizontalErrorM": 0.387002967044,
+     "verticalErrorM": 0.561183947309,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 6.26297598775,
+     "vplM": 10.350757953,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "l1Pa": {
+     "mode": "l1sbas",
+     "errorEnu": [
+      0.428913991117,
+      -0.417083179519,
+      -2.27469875106
+     ],
+     "horizontalErrorM": 0.598268827881,
+     "verticalErrorM": 2.27469875106,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 46.4909456927,
+     "vplM": 73.0392157286,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "dfmc": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.35498085494,
+      -0.154142431297,
+      -0.561183947309
+     ],
+     "horizontalErrorM": 0.387002967044,
+     "verticalErrorM": 0.561183947309,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 6.26297598775,
+     "vplM": 10.350757953,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "mode": "LNAV",
+    "sbasMode": "LPV",
+    "withinLimits": true,
+    "sats": [
+     {
+      "id": "G01",
+      "kind": "gps",
+      "azDeg": 277.024045865,
+      "elDeg": 5.91988677504,
+      "state": "used"
+     },
+     {
+      "id": "G02",
+      "kind": "gps",
+      "azDeg": 16.8252573288,
+      "elDeg": 11.7628622743,
+      "state": "used"
+     },
+     {
+      "id": "G05",
+      "kind": "gps",
+      "azDeg": 358.441851547,
+      "elDeg": 60.4737126588,
+      "state": "used"
+     },
+     {
+      "id": "G12",
+      "kind": "gps",
+      "azDeg": 169.362707247,
+      "elDeg": 43.3820245796,
+      "state": "used"
+     },
+     {
+      "id": "G15",
+      "kind": "gps",
+      "azDeg": 220.087624925,
+      "elDeg": 30.4487470533,
+      "state": "used"
+     },
+     {
+      "id": "G18",
+      "kind": "gps",
+      "azDeg": 314.464719291,
+      "elDeg": 42.4803847075,
+      "state": "used"
+     },
+     {
+      "id": "G19",
+      "kind": "gps",
+      "azDeg": 148.705547736,
+      "elDeg": 23.7736115549,
+      "state": "used"
+     },
+     {
+      "id": "G22",
+      "kind": "gps",
+      "azDeg": 72.2696793587,
+      "elDeg": 34.7362477661,
+      "state": "used"
+     },
+     {
+      "id": "QZS-3",
+      "kind": "geo",
+      "azDeg": 73.9517120171,
+      "elDeg": 65.5451544413,
+      "state": "tracked"
+     },
+     {
+      "id": "QZS-6",
+      "kind": "geo",
+      "azDeg": 289.496710598,
+      "elDeg": 69.4319006256,
+      "state": "tracked"
+     }
+    ],
+    "gpsTracked": 8,
+    "geosTracked": 2,
+    "messageAgeS": 0,
+    "signal": "DFMC",
+    "log": [
+     {
+      "second": 664,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 663,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 662,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 661,
+      "geo": "QZS-6",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 660,
+      "geo": "QZS-3",
+      "type": 31,
+      "name": "Satellite mask",
+      "plain": "Which satellites of which constellations are augmented",
+      "alarm": false
+     },
+     {
+      "second": 659,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 658,
+      "geo": "QZS-3",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     }
+    ],
+    "alarmed": [],
+    "dev": null,
+    "service": "dfmc",
+    "detail": null,
+    "approachPhase": false,
+    "modeText": "LNAV"
    },
-   "detail": null,
    "text": [
     "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
     "Flight view: LAB201 climbing out from Jakarta over the Java Sea.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
@@ -181,14 +2552,303 @@
    ]
   },
   "cruise": {
-   "model": "1c2941d24782340532c1bd3b4b58c6bdb6e49e570d7590317e8d6a5e9adb3e73",
-   "op": {
-    "id": "enroute",
-    "halM": 3704,
-    "valM": null,
-    "ttaS": 300
+   "model": {
+    "phase": "cruise",
+    "phaseNo": 9,
+    "frozen": false,
+    "signalS": 0,
+    "signalTotalS": 0,
+    "worldS": 664.7,
+    "localHour": 8.18463888889,
+    "localZone": "WIB",
+    "altFt": 10004.1666667,
+    "gsKt": 300,
+    "distToGoNm": 513.319529066,
+    "sbasShown": true,
+    "op": {
+     "id": "enroute",
+     "name": "Continental en route",
+     "halM": 3704,
+     "valM": null,
+     "ttaS": 300,
+     "source": "Doc 9849 Table 2-1 (Annex 10 Vol I Table 3.7.2.4-1)"
+    },
+    "nav": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.35498085494,
+      -0.154142431297,
+      -0.561183947309
+     ],
+     "horizontalErrorM": 0.387002967044,
+     "verticalErrorM": 0.561183947309,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 6.26297598775,
+     "vplM": 10.350757953,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "navSource": "sbas",
+    "abas": {
+     "mode": "abas",
+     "errorEnu": [
+      -1.33294295031,
+      -0.586895841475,
+      2.67811030626
+     ],
+     "horizontalErrorM": 1.45642838393,
+     "verticalErrorM": 2.67811030626,
+     "hdop": 0.871283766703,
+     "vdop": 1.51519937417,
+     "pdop": 1.74784568701,
+     "hplM": 69.1457180641,
+     "vplM": null,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "sbas": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.35498085494,
+      -0.154142431297,
+      -0.561183947309
+     ],
+     "horizontalErrorM": 0.387002967044,
+     "verticalErrorM": 0.561183947309,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 6.26297598775,
+     "vplM": 10.350757953,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "l1Pa": {
+     "mode": "l1sbas",
+     "errorEnu": [
+      0.428913991117,
+      -0.417083179519,
+      -2.27469875106
+     ],
+     "horizontalErrorM": 0.598268827881,
+     "verticalErrorM": 2.27469875106,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 46.4909456927,
+     "vplM": 73.0392157286,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "dfmc": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.35498085494,
+      -0.154142431297,
+      -0.561183947309
+     ],
+     "horizontalErrorM": 0.387002967044,
+     "verticalErrorM": 0.561183947309,
+     "hdop": 0.984784933895,
+     "vdop": 1.51531951994,
+     "pdop": 1.80720630077,
+     "hplM": 6.26297598775,
+     "vplM": 10.350757953,
+     "used": [
+      "G01",
+      "G02",
+      "G05",
+      "G12",
+      "G15",
+      "G18",
+      "G19"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "mode": "LPV",
+    "sbasMode": "LPV",
+    "withinLimits": true,
+    "sats": [
+     {
+      "id": "G01",
+      "kind": "gps",
+      "azDeg": 277.024045865,
+      "elDeg": 5.91988677504,
+      "state": "used"
+     },
+     {
+      "id": "G02",
+      "kind": "gps",
+      "azDeg": 16.8252573288,
+      "elDeg": 11.7628622743,
+      "state": "used"
+     },
+     {
+      "id": "G05",
+      "kind": "gps",
+      "azDeg": 358.441851547,
+      "elDeg": 60.4737126588,
+      "state": "used"
+     },
+     {
+      "id": "G12",
+      "kind": "gps",
+      "azDeg": 169.362707247,
+      "elDeg": 43.3820245796,
+      "state": "used"
+     },
+     {
+      "id": "G15",
+      "kind": "gps",
+      "azDeg": 220.087624925,
+      "elDeg": 30.4487470533,
+      "state": "used"
+     },
+     {
+      "id": "G18",
+      "kind": "gps",
+      "azDeg": 314.464719291,
+      "elDeg": 42.4803847075,
+      "state": "used"
+     },
+     {
+      "id": "G19",
+      "kind": "gps",
+      "azDeg": 148.705547736,
+      "elDeg": 23.7736115549,
+      "state": "used"
+     },
+     {
+      "id": "G22",
+      "kind": "gps",
+      "azDeg": 72.2696793587,
+      "elDeg": 34.7362477661,
+      "state": "tracked"
+     },
+     {
+      "id": "QZS-3",
+      "kind": "geo",
+      "azDeg": 73.9517120171,
+      "elDeg": 65.5451544413,
+      "state": "tracked"
+     },
+     {
+      "id": "QZS-6",
+      "kind": "geo",
+      "azDeg": 289.496710598,
+      "elDeg": 69.4319006256,
+      "state": "tracked"
+     }
+    ],
+    "gpsTracked": 8,
+    "geosTracked": 2,
+    "messageAgeS": 0,
+    "signal": "DFMC",
+    "log": [
+     {
+      "second": 664,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 663,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 662,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 661,
+      "geo": "QZS-6",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 660,
+      "geo": "QZS-3",
+      "type": 31,
+      "name": "Satellite mask",
+      "plain": "Which satellites of which constellations are augmented",
+      "alarm": false
+     },
+     {
+      "second": 659,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 658,
+      "geo": "QZS-3",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     }
+    ],
+    "alarmed": [],
+    "dev": null,
+    "service": "dfmc",
+    "detail": null,
+    "approachPhase": false,
+    "modeText": "LPV"
    },
-   "detail": null,
    "text": [
     "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 6.3 m, VPL 10 m. Continental en route limits HAL 3704 m, within limits. Approach mode LPV.",
     "Flight view: LAB201 climbing out from Jakarta over the Java Sea.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 6.3 m, VPL 10 m. Continental en route limits HAL 3704 m, within limits. Approach mode LPV.",
@@ -196,14 +2856,328 @@
    ]
   },
   "descent": {
-   "model": "901174529658965e31d56307c70c01c0c69cae64cb26195f1b10d3ed11466caa",
-   "op": {
-    "id": "npa",
-    "halM": 555.6,
-    "valM": null,
-    "ttaS": 10
+   "model": {
+    "phase": "descent",
+    "phaseNo": 10,
+    "frozen": false,
+    "signalS": 0,
+    "signalTotalS": 0,
+    "worldS": 3947.8,
+    "localHour": 9.09661111111,
+    "localZone": "WIB",
+    "altFt": 33000,
+    "gsKt": 460,
+    "distToGoNm": 126.203237238,
+    "sbasShown": true,
+    "op": {
+     "id": "npa",
+     "name": "Non-precision approach (LNAV)",
+     "halM": 555.6,
+     "valM": null,
+     "ttaS": 10,
+     "source": "Doc 9849 Table 2-1 (Annex 10 Vol I Table 3.7.2.4-1)"
+    },
+    "nav": {
+     "mode": "dfmc",
+     "errorEnu": [
+      -0.337412065968,
+      0.470334149715,
+      0.197230609662
+     ],
+     "horizontalErrorM": 0.578844637747,
+     "verticalErrorM": 0.197230609662,
+     "hdop": 0.985838183914,
+     "vdop": 1.72027786649,
+     "pdop": 1.98273368428,
+     "hplM": 5.66759613708,
+     "vplM": 11.4401791257,
+     "used": [
+      "G02",
+      "G05",
+      "G15",
+      "G18",
+      "G19",
+      "G21",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "navSource": "sbas",
+    "abas": {
+     "mode": "abas",
+     "errorEnu": [
+      -1.76504658126,
+      -0.746745081893,
+      3.44018051219
+     ],
+     "horizontalErrorM": 1.91651184483,
+     "verticalErrorM": 3.44018051219,
+     "hdop": 0.815239108812,
+     "vdop": 1.25818668247,
+     "pdop": 1.4992159726,
+     "hplM": 65.6375667812,
+     "vplM": null,
+     "used": [
+      "G02",
+      "G05",
+      "G08",
+      "G12",
+      "G15",
+      "G18",
+      "G19",
+      "G21",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "sbas": {
+     "mode": "dfmc",
+     "errorEnu": [
+      -0.337412065968,
+      0.470334149715,
+      0.197230609662
+     ],
+     "horizontalErrorM": 0.578844637747,
+     "verticalErrorM": 0.197230609662,
+     "hdop": 0.985838183914,
+     "vdop": 1.72027786649,
+     "pdop": 1.98273368428,
+     "hplM": 5.66759613708,
+     "vplM": 11.4401791257,
+     "used": [
+      "G02",
+      "G05",
+      "G15",
+      "G18",
+      "G19",
+      "G21",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "l1Pa": {
+     "mode": "l1sbas",
+     "errorEnu": [
+      -0.865787299719,
+      -0.706204172453,
+      -3.79975491533
+     ],
+     "horizontalErrorM": 1.11727882892,
+     "verticalErrorM": 3.79975491533,
+     "hdop": 0.985838183914,
+     "vdop": 1.72027786649,
+     "pdop": 1.98273368428,
+     "hplM": 34.9539721214,
+     "vplM": 62.9713953714,
+     "used": [
+      "G02",
+      "G05",
+      "G15",
+      "G18",
+      "G19",
+      "G21",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "dfmc": {
+     "mode": "dfmc",
+     "errorEnu": [
+      -0.337412065968,
+      0.470334149715,
+      0.197230609662
+     ],
+     "horizontalErrorM": 0.578844637747,
+     "verticalErrorM": 0.197230609662,
+     "hdop": 0.985838183914,
+     "vdop": 1.72027786649,
+     "pdop": 1.98273368428,
+     "hplM": 5.66759613708,
+     "vplM": 11.4401791257,
+     "used": [
+      "G02",
+      "G05",
+      "G15",
+      "G18",
+      "G19",
+      "G21",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "mode": "LPV",
+    "sbasMode": "LPV",
+    "withinLimits": true,
+    "sats": [
+     {
+      "id": "G02",
+      "kind": "gps",
+      "azDeg": 34.7608810346,
+      "elDeg": 10.647555922,
+      "state": "used"
+     },
+     {
+      "id": "G05",
+      "kind": "gps",
+      "azDeg": 359.573489164,
+      "elDeg": 33.298619294,
+      "state": "used"
+     },
+     {
+      "id": "G08",
+      "kind": "gps",
+      "azDeg": 236.040986892,
+      "elDeg": 15.6259858737,
+      "state": "tracked"
+     },
+     {
+      "id": "G12",
+      "kind": "gps",
+      "azDeg": 144.862457648,
+      "elDeg": 66.946472713,
+      "state": "tracked"
+     },
+     {
+      "id": "G15",
+      "kind": "gps",
+      "azDeg": 198.136222445,
+      "elDeg": 28.4631412913,
+      "state": "used"
+     },
+     {
+      "id": "G18",
+      "kind": "gps",
+      "azDeg": 277.900280306,
+      "elDeg": 49.5928361719,
+      "state": "used"
+     },
+     {
+      "id": "G19",
+      "kind": "gps",
+      "azDeg": 146.70541895,
+      "elDeg": 8.18517796515,
+      "state": "used"
+     },
+     {
+      "id": "G21",
+      "kind": "gps",
+      "azDeg": 337.729049588,
+      "elDeg": 10.8706602062,
+      "state": "used"
+     },
+     {
+      "id": "G22",
+      "kind": "gps",
+      "azDeg": 104.102464841,
+      "elDeg": 42.1509613521,
+      "state": "used"
+     },
+     {
+      "id": "QZS-3",
+      "kind": "geo",
+      "azDeg": 61.3075771524,
+      "elDeg": 71.6561938982,
+      "state": "tracked"
+     },
+     {
+      "id": "QZS-6",
+      "kind": "geo",
+      "azDeg": 287.513314732,
+      "elDeg": 61.8802533329,
+      "state": "tracked"
+     }
+    ],
+    "gpsTracked": 9,
+    "geosTracked": 2,
+    "messageAgeS": 0,
+    "signal": "DFMC",
+    "log": [
+     {
+      "second": 3947,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 3946,
+      "geo": "QZS-3",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 3945,
+      "geo": "QZS-6",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 3944,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 3943,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 3942,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 3941,
+      "geo": "QZS-6",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     }
+    ],
+    "alarmed": [],
+    "dev": {
+     "alongTrackM": 194388.629231,
+     "crossTrackM": -129776.822374,
+     "aboveGlidePathM": -147.669175851,
+     "lateralFs": -1,
+     "verticalFs": -0.0580337025295,
+     "heightAboveThresholdFt": 32989
+    },
+    "service": "dfmc",
+    "detail": {
+     "kind": "fas",
+     "channel": 54201,
+     "runway": "09",
+     "gpaDeg": 3,
+     "tchFt": 50,
+     "halM": 40,
+     "valM": 50,
+     "crc": "AF94A96B",
+     "valid": true
+    },
+    "approachPhase": true,
+    "modeText": "LPV armed"
    },
-   "detail": "fas",
    "text": [
     "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 33000 ft, 126.2 NM from Bali. 9 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 5.7 m, VPL 11 m. Non-precision approach (LNAV) limits HAL 556 m, within limits. Approach mode LPV.",
     "Flight view: LAB201 along Java, with the Java Sea to the north and the volcanoes below.. LAB201 at 33000 ft, 126.2 NM from Bali. 9 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 5.7 m, VPL 11 m. Non-precision approach (LNAV) limits HAL 556 m, within limits. Approach mode LPV.",
@@ -211,14 +3185,319 @@
    ]
   },
   "final": {
-   "model": "35bee8c5d2d3357ac76c3014313f0c3ea746178ea66c684d925d8820f03d11fe",
-   "op": {
-    "id": "apv1",
-    "halM": 40,
-    "valM": 50,
-    "ttaS": 10
+   "model": {
+    "phase": "final",
+    "phaseNo": 11,
+    "frozen": false,
+    "signalS": 0,
+    "signalTotalS": 0,
+    "worldS": 5766.2,
+    "localHour": 10.6017222222,
+    "localZone": "WITA",
+    "altFt": 1656.10865974,
+    "gsKt": 145,
+    "distToGoNm": 5.00920142823,
+    "sbasShown": true,
+    "op": {
+     "id": "apv1",
+     "name": "APV-I (LPV)",
+     "halM": 40,
+     "valM": 50,
+     "ttaS": 10,
+     "source": "Doc 9849 Table 2-1 (Annex 10 Vol I Table 3.7.2.4-1)"
+    },
+    "nav": {
+     "mode": "dfmc",
+     "errorEnu": [
+      -0.645020681171,
+      -1.21832825902,
+      -0.865085110162
+     ],
+     "horizontalErrorM": 1.37854104975,
+     "verticalErrorM": 0.865085110162,
+     "hdop": 0.944713642416,
+     "vdop": 1.68699812869,
+     "pdop": 1.93350628454,
+     "hplM": 4.89608931608,
+     "vplM": 9.90826992709,
+     "used": [
+      "G02",
+      "G05",
+      "G08",
+      "G12",
+      "G15",
+      "G18",
+      "G21",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "navSource": "sbas",
+    "abas": {
+     "mode": "abas",
+     "errorEnu": [
+      -0.964159779013,
+      -2.24405559571,
+      1.41212391113
+     ],
+     "horizontalErrorM": 2.442414706,
+     "verticalErrorM": 1.41212391113,
+     "hdop": 0.944713642416,
+     "vdop": 1.68699812869,
+     "pdop": 1.93350628454,
+     "hplM": 66.6475147422,
+     "vplM": null,
+     "used": [
+      "G02",
+      "G05",
+      "G08",
+      "G12",
+      "G15",
+      "G18",
+      "G21",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "sbas": {
+     "mode": "dfmc",
+     "errorEnu": [
+      -0.645020681171,
+      -1.21832825902,
+      -0.865085110162
+     ],
+     "horizontalErrorM": 1.37854104975,
+     "verticalErrorM": 0.865085110162,
+     "hdop": 0.944713642416,
+     "vdop": 1.68699812869,
+     "pdop": 1.93350628454,
+     "hplM": 4.89608931608,
+     "vplM": 9.90826992709,
+     "used": [
+      "G02",
+      "G05",
+      "G08",
+      "G12",
+      "G15",
+      "G18",
+      "G21",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "l1Pa": {
+     "mode": "l1sbas",
+     "errorEnu": [
+      -1.00704871047,
+      -2.56739946011,
+      -1.88402889306
+     ],
+     "horizontalErrorM": 2.75784102026,
+     "verticalErrorM": 1.88402889306,
+     "hdop": 0.944713642416,
+     "vdop": 1.68699812869,
+     "pdop": 1.93350628454,
+     "hplM": 31.1530903358,
+     "vplM": 55.0070061059,
+     "used": [
+      "G02",
+      "G05",
+      "G08",
+      "G12",
+      "G15",
+      "G18",
+      "G21",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "dfmc": {
+     "mode": "dfmc",
+     "errorEnu": [
+      -0.645020681171,
+      -1.21832825902,
+      -0.865085110162
+     ],
+     "horizontalErrorM": 1.37854104975,
+     "verticalErrorM": 0.865085110162,
+     "hdop": 0.944713642416,
+     "vdop": 1.68699812869,
+     "pdop": 1.93350628454,
+     "hplM": 4.89608931608,
+     "vplM": 9.90826992709,
+     "used": [
+      "G02",
+      "G05",
+      "G08",
+      "G12",
+      "G15",
+      "G18",
+      "G21",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "mode": "LPV",
+    "sbasMode": "LPV",
+    "withinLimits": true,
+    "sats": [
+     {
+      "id": "G02",
+      "kind": "gps",
+      "azDeg": 46.199929225,
+      "elDeg": 12.6747639667,
+      "state": "used"
+     },
+     {
+      "id": "G05",
+      "kind": "gps",
+      "azDeg": 5.26263834434,
+      "elDeg": 21.0713736892,
+      "state": "used"
+     },
+     {
+      "id": "G08",
+      "kind": "gps",
+      "azDeg": 249.7424839,
+      "elDeg": 19.4667579992,
+      "state": "used"
+     },
+     {
+      "id": "G12",
+      "kind": "gps",
+      "azDeg": 95.905172694,
+      "elDeg": 75.7426155114,
+      "state": "used"
+     },
+     {
+      "id": "G15",
+      "kind": "gps",
+      "azDeg": 185.314072559,
+      "elDeg": 31.7899997688,
+      "state": "used"
+     },
+     {
+      "id": "G18",
+      "kind": "gps",
+      "azDeg": 255.911759766,
+      "elDeg": 49.6516779149,
+      "state": "used"
+     },
+     {
+      "id": "G21",
+      "kind": "gps",
+      "azDeg": 339.60476445,
+      "elDeg": 20.7747391469,
+      "state": "used"
+     },
+     {
+      "id": "G22",
+      "kind": "gps",
+      "azDeg": 121.203279331,
+      "elDeg": 38.7647909492,
+      "state": "used"
+     },
+     {
+      "id": "QZS-3",
+      "kind": "geo",
+      "azDeg": 54.2665118897,
+      "elDeg": 72.6624853029,
+      "state": "tracked"
+     },
+     {
+      "id": "QZS-6",
+      "kind": "geo",
+      "azDeg": 288.38947675,
+      "elDeg": 59.6246576664,
+      "state": "tracked"
+     }
+    ],
+    "gpsTracked": 8,
+    "geosTracked": 2,
+    "messageAgeS": 0,
+    "signal": "DFMC",
+    "log": [
+     {
+      "second": 5766,
+      "geo": "QZS-3",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 5765,
+      "geo": "QZS-6",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 5764,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 5763,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 5762,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 5761,
+      "geo": "QZS-6",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 5760,
+      "geo": "QZS-3",
+      "type": 31,
+      "name": "Satellite mask",
+      "plain": "Which satellites of which constellations are augmented",
+      "alarm": false
+     }
+    ],
+    "alarmed": [],
+    "dev": {
+     "alongTrackM": 9277.04104507,
+     "crossTrackM": -0.0201759238946,
+     "aboveGlidePathM": 5.68434188608e-14,
+     "lateralFs": -0.0000755707189507,
+     "verticalFs": 4.68092930062e-16,
+     "heightAboveThresholdFt": 1645.10865974
+    },
+    "service": "dfmc",
+    "detail": {
+     "kind": "final",
+     "heightFt": 1645.10865974,
+     "daFt": 250,
+     "alongNm": 5.00920142822
+    },
+    "approachPhase": true,
+    "modeText": "LPV"
    },
-   "detail": "final",
    "text": [
     "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 1700 ft, 5.0 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 4.9 m, VPL 9.9 m. APV-I (LPV) limits HAL 40 m, VAL 50 m, within limits. Approach mode LPV.",
     "Flight view: LAB201 on final to runway 09 at Bali, over the sea with the coast and the runway ahead.. LAB201 at 1700 ft, 5.0 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 4.9 m, VPL 9.9 m. APV-I (LPV) limits HAL 40 m, VAL 50 m, within limits. Approach mode LPV.",
@@ -226,9 +3505,300 @@
    ]
   },
   "landing": {
-   "model": "bb5ec0519ce93cf0a32dfc73b7a66bb20fdb5ca6b9c4881a828b7c0be08bb47c",
-   "op": null,
-   "detail": null,
+   "model": {
+    "phase": "landing",
+    "phaseNo": 12,
+    "frozen": false,
+    "signalS": 0,
+    "signalTotalS": 0,
+    "worldS": 5894.8,
+    "localHour": 10.6374444444,
+    "localZone": "WITA",
+    "altFt": 63.1339741243,
+    "gsKt": 140,
+    "distToGoNm": 0.00670142824817,
+    "sbasShown": true,
+    "op": null,
+    "nav": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.979290237525,
+      0.248455283538,
+      2.98083467344
+     ],
+     "horizontalErrorM": 1.0103164837,
+     "verticalErrorM": 2.98083467344,
+     "hdop": 0.941200857385,
+     "vdop": 1.69281614371,
+     "pdop": 1.93687520258,
+     "hplM": 4.8510734033,
+     "vplM": 9.91952719108,
+     "used": [
+      "G02",
+      "G05",
+      "G08",
+      "G12",
+      "G15",
+      "G18",
+      "G21",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "navSource": "sbas",
+    "abas": {
+     "mode": "abas",
+     "errorEnu": [
+      -0.679735285963,
+      -1.67112138433,
+      3.17247752863
+     ],
+     "horizontalErrorM": 1.80407503728,
+     "verticalErrorM": 3.17247752863,
+     "hdop": 0.941200857385,
+     "vdop": 1.69281614371,
+     "pdop": 1.93687520258,
+     "hplM": 66.4666363455,
+     "vplM": null,
+     "used": [
+      "G02",
+      "G05",
+      "G08",
+      "G12",
+      "G15",
+      "G18",
+      "G21",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "sbas": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.979290237525,
+      0.248455283538,
+      2.98083467344
+     ],
+     "horizontalErrorM": 1.0103164837,
+     "verticalErrorM": 2.98083467344,
+     "hdop": 0.941200857385,
+     "vdop": 1.69281614371,
+     "pdop": 1.93687520258,
+     "hplM": 4.8510734033,
+     "vplM": 9.91952719108,
+     "used": [
+      "G02",
+      "G05",
+      "G08",
+      "G12",
+      "G15",
+      "G18",
+      "G21",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "l1Pa": {
+     "mode": "l1sbas",
+     "errorEnu": [
+      -0.747586664949,
+      -1.93798442966,
+      0.0749289641336
+     ],
+     "horizontalErrorM": 2.07717824734,
+     "verticalErrorM": 0.0749289641336,
+     "hdop": 0.941200857385,
+     "vdop": 1.69281614371,
+     "pdop": 1.93687520258,
+     "hplM": 31.0790016524,
+     "vplM": 55.0998095841,
+     "used": [
+      "G02",
+      "G05",
+      "G08",
+      "G12",
+      "G15",
+      "G18",
+      "G21",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "dfmc": {
+     "mode": "dfmc",
+     "errorEnu": [
+      0.979290237525,
+      0.248455283538,
+      2.98083467344
+     ],
+     "horizontalErrorM": 1.0103164837,
+     "verticalErrorM": 2.98083467344,
+     "hdop": 0.941200857385,
+     "vdop": 1.69281614371,
+     "pdop": 1.93687520258,
+     "hplM": 4.8510734033,
+     "vplM": 9.91952719108,
+     "used": [
+      "G02",
+      "G05",
+      "G08",
+      "G12",
+      "G15",
+      "G18",
+      "G21",
+      "G22"
+     ],
+     "excluded": [],
+     "alarm": false
+    },
+    "mode": "LPV",
+    "sbasMode": "LPV",
+    "withinLimits": false,
+    "sats": [
+     {
+      "id": "G02",
+      "kind": "gps",
+      "azDeg": 47.071336788,
+      "elDeg": 12.9208655616,
+      "state": "used"
+     },
+     {
+      "id": "G05",
+      "kind": "gps",
+      "azDeg": 5.74416135176,
+      "elDeg": 20.3787351072,
+      "state": "used"
+     },
+     {
+      "id": "G08",
+      "kind": "gps",
+      "azDeg": 250.737692215,
+      "elDeg": 19.6073935907,
+      "state": "used"
+     },
+     {
+      "id": "G12",
+      "kind": "gps",
+      "azDeg": 91.2852979804,
+      "elDeg": 75.7657289561,
+      "state": "used"
+     },
+     {
+      "id": "G15",
+      "kind": "gps",
+      "azDeg": 184.360686941,
+      "elDeg": 32.0166231895,
+      "state": "used"
+     },
+     {
+      "id": "G18",
+      "kind": "gps",
+      "azDeg": 254.258124402,
+      "elDeg": 49.5474044916,
+      "state": "used"
+     },
+     {
+      "id": "G21",
+      "kind": "gps",
+      "azDeg": 339.63808724,
+      "elDeg": 21.6251265296,
+      "state": "used"
+     },
+     {
+      "id": "G22",
+      "kind": "gps",
+      "azDeg": 122.32584522,
+      "elDeg": 38.2888022702,
+      "state": "used"
+     },
+     {
+      "id": "QZS-3",
+      "kind": "geo",
+      "azDeg": 54.0795965885,
+      "elDeg": 72.7436219778,
+      "state": "tracked"
+     },
+     {
+      "id": "QZS-6",
+      "kind": "geo",
+      "azDeg": 288.316625589,
+      "elDeg": 59.5357606491,
+      "state": "tracked"
+     }
+    ],
+    "gpsTracked": 8,
+    "geosTracked": 2,
+    "messageAgeS": 0,
+    "signal": "DFMC",
+    "log": [
+     {
+      "second": 5894,
+      "geo": "QZS-3",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 5893,
+      "geo": "QZS-6",
+      "type": 31,
+      "name": "Satellite mask",
+      "plain": "Which satellites of which constellations are augmented",
+      "alarm": false
+     },
+     {
+      "second": 5892,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 5891,
+      "geo": "QZS-6",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 5890,
+      "geo": "QZS-3",
+      "type": 34,
+      "name": "Integrity (DFREI)",
+      "plain": "How much to trust each satellite, and alarms",
+      "alarm": false
+     },
+     {
+      "second": 5889,
+      "geo": "QZS-6",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     },
+     {
+      "second": 5888,
+      "geo": "QZS-3",
+      "type": 32,
+      "name": "Clock-ephemeris corrections and covariance",
+      "plain": "Orbit and clock corrections for the ionosphere-free measurement",
+      "alarm": false
+     }
+    ],
+    "alarmed": [],
+    "dev": null,
+    "service": "dfmc",
+    "detail": null,
+    "approachPhase": true,
+    "modeText": "LPV"
+   },
    "text": [
     "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 on the ground, 0.0 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 4.9 m, VPL 9.9 m. Approach mode LPV.",
     "Flight view: LAB201 at Bali I Gusti Ngurah Rai (WADD), with its runway, taxiways and terminal.. LAB201 on the ground, 0.0 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 4.9 m, VPL 9.9 m. Approach mode LPV.",
