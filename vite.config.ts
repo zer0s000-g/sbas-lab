@@ -20,6 +20,7 @@ const SCENARIO_AGNOSTIC_TESTS = [
   'tests/core/receiver.test.ts',
   'tests/core/sun.test.ts',
   'tests/core/units.test.ts',
+  'tests/core/service.test.ts',
   'tests/lib/*.test.{ts,tsx}',
   'tests/ui/animation-frame.test.tsx',
   'tests/ui/dial.test.tsx',

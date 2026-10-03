@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { Pause, Play } from 'lucide-react'
 import { useAnimationFrame } from '@/hooks/useAnimationFrame'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SiteHeader } from '@/components/SiteHeader'
 import { ScenarioBar } from '@/components/ScenarioBar'
 import { SourcesButton, SourcesSheet } from './sources/SourcesSheet'
+import { lazyRetry } from '@/lib/lazyRetry'
+import { SCENARIO } from '@/scenarios/active'
 import { cn } from '@/lib/utils'
 import { directionFor } from '@/journey/director'
 import { getJourney, useJourneyState } from '@/journey/store'
@@ -18,6 +20,10 @@ import type { StanfordPoint } from '@/instruments/StanfordChart'
 import { viewModel } from './model'
 import { BenefitCard, CockpitPanel, ControlsPanel, FlightCard, NowPanel, SignalsPanel, StatusPanel } from './panels'
 import { JourneyStage, type ViewChoice } from './JourneyStage'
+
+// The ESSP-SAS scenario's own panels (Break something, Service provision, real signal,
+// assessment) load as one chunk, only in that scenario.
+const EsspToolkit = SCENARIO.id === 'essp' ? lazyRetry(() => import('./essp/Toolkit')) : null
 
 /** The one page: LAB201 gate to gate (design.md §4). */
 export default function JourneyPage() {
@@ -97,10 +103,17 @@ export default function JourneyPage() {
     </SiteHeader>
   )
 
+  const toolkit = (part: 'left' | 'right' | 'all') =>
+    EsspToolkit && (
+      <Suspense fallback={null}>
+        <EsspToolkit engine={engine} nowS={m.worldS} part={part} />
+      </Suspense>
+    )
   const left = (
     <>
       <FlightCard m={m} />
       <NowPanel m={m} />
+      {toolkit('left')}
     </>
   )
   const right = (
@@ -110,6 +123,7 @@ export default function JourneyPage() {
       <CockpitPanel m={m} />
       <SignalsPanel m={m} getPoints={() => points.current} />
       <ControlsPanel engine={engine} speedMode={speedMode} guidedStops={guidedStops} onGuidedStops={setGuidedStops} />
+      {toolkit('right')}
     </>
   )
   const stage = (
@@ -152,6 +166,7 @@ export default function JourneyPage() {
                 <TabsTrigger value="now">Now</TabsTrigger>
                 <TabsTrigger value="cockpit">Cockpit</TabsTrigger>
                 <TabsTrigger value="signals">Signals</TabsTrigger>
+                {EsspToolkit && <TabsTrigger value="egnos">EGNOS</TabsTrigger>}
               </TabsList>
               <TabsContent value="now" className="mt-3 flex flex-col gap-3">
                 <NowPanel m={m} />
@@ -166,6 +181,11 @@ export default function JourneyPage() {
               <TabsContent value="signals" className="mt-3 flex flex-col gap-3">
                 <SignalsPanel m={m} getPoints={() => points.current} />
               </TabsContent>
+              {EsspToolkit && (
+                <TabsContent value="egnos" className="mt-3 flex flex-col gap-3">
+                  {toolkit('all')}
+                </TabsContent>
+              )}
             </Tabs>
           </div>
         ) : (
