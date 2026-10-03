@@ -10,7 +10,7 @@
 //   THEME=light OUT=gpu-shots node scripts/verify/gpu-render.mjs
 //   SCENARIO=essp node scripts/verify/gpu-render.mjs   # the ESSP-SAS scenario
 //
-// GL_ARGS overrides the GPU flags (default Metal).
+// GL_ARGS overrides the GPU flags (default Metal); DPR the device pixel ratio (default 2).
 //
 // CHROME overrides the Chromium executable. Exits 1 when anything fails, so it can gate a push.
 import { chromium } from 'playwright-core'
@@ -22,6 +22,8 @@ const HOST = process.env.HOST || 'http://localhost:4173'
 const OUT = process.env.OUT
 const [w, h] = (process.env.SIZE || '1440x900').split('x').map(Number)
 const theme = process.env.THEME || 'dark'
+// DPR=1 for software GL, which draws a 2x stage at about one frame a second.
+const dpr = Number(process.env.DPR || 2)
 if (OUT) mkdirSync(OUT, { recursive: true })
 const PHASES = ['gate', 'takeoff', 'climb', 'errors', 'reference', 'master', 'uplink', 'broadcast', 'cruise', 'descent', 'final', 'landing']
 
@@ -41,7 +43,7 @@ function stats(buf) {
   return { black: black / n, lum: sum / n }
 }
 try {
-  const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, colorScheme: theme, serviceWorkers: 'block' })
+  const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: dpr, colorScheme: theme, serviceWorkers: 'block' })
   await ctx.addInitScript((t) => localStorage.setItem('sbaslab.prefs', JSON.stringify({ state: { theme: t, reducedMotionOverride: null, soundOn: false, captionsOn: true, guidedStops: true }, version: 1 })), theme)
   const page = await ctx.newPage()
   const warn = []
