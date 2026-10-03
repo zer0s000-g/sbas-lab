@@ -7,6 +7,7 @@ import { HudButton } from '@/hud/Controls'
 import { MissionClock } from '@/hud/MissionClock'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SiteHeader } from '@/components/SiteHeader'
+import { ScenarioBar } from '@/components/ScenarioBar'
 import { cn } from '@/lib/utils'
 import { directionFor } from '@/journey/director'
 import { getJourney, useJourneyState } from '@/journey/store'
@@ -120,13 +121,14 @@ export default function JourneyPage() {
       speed={engine.speed}
       stop={stop}
       inlineTimeline={!phone}
-      className={wide ? 'h-[calc(100svh-3.5rem)] min-h-[640px]' : phone ? 'h-[56svh] min-h-[300px] rounded-md border border-hud-line' : 'h-[520px] rounded-md border border-hud-line'}
+      className={wide ? 'h-[calc(100svh-6rem)] min-h-[640px]' : phone ? 'h-[56svh] min-h-[300px] rounded-md border border-hud-line' : 'h-[520px] rounded-md border border-hud-line'}
     />
   )
 
   return (
     <>
       {header}
+      <ScenarioBar />
       <main id="main" className="flex-1">
         {wide ? (
           <div className="relative [--col:300px] min-[1440px]:[--col:340px]">

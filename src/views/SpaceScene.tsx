@@ -1,6 +1,6 @@
 /**
  * The Space view: the Earth to scale with its continents (Natural Earth 1:110m, and
- * 1:50m over Indonesia), the GPS constellation and the Michibiki SBAS GEOs where the
+ * 1:50m over the scenario's region), the GPS constellation and the SBAS GEOs where the
  * engine says they are, the ionosphere shell, the SBAS ground sites with an uplink beam
  * from each uplink station to its GEO, and the
  * signals LAB201 receives: a solid cyan wire from each GPS satellite it tracks and a
@@ -15,9 +15,9 @@ import { IONO_SHELL_HEIGHT_M } from '@/core/iono'
 import { DIP_EQUATOR_TABLE, REGION, localSolarHour } from '@/core/region'
 import { toThreeStyle } from '@/lib/color'
 import { decodeRings, type CoastData } from './geo/coast'
-import { indonesia } from './geo/indonesia.data'
 import { world } from './geo/world.data'
 import { DEG, WGS84_A_M, WGS84_OMEGA_E_RAD_S } from '@/core/units'
+import { SCENARIO } from '@/scenarios/active'
 import { getJourney, useJourneyState } from '@/journey/store'
 import { useReducedMotion } from '@/stores/prefs'
 import { Callout3D } from '@/stage/Callout3D'
@@ -74,8 +74,8 @@ const MAX_GPS_WIRES = 14
 
 /**
  * The continents as an alpha mask in an equirectangular texture (longitude across,
- * latitude up), drawn once from the coastline data: the coarse world, then Indonesia in
- * more detail so Java, Bali and the smaller islands show.
+ * latitude up), drawn once from the coastline data: the coarse world, then the
+ * scenario's region in more detail (Indonesia's smaller islands, Europe's coasts).
  */
 function landMask(t: ThemeTokens): THREE.CanvasTexture {
   const W = 2048
@@ -100,9 +100,10 @@ function landMask(t: ThemeTokens): THREE.CanvasTexture {
   }
   draw(world)
   // Clear the detailed box first, so its coastline replaces the coarse one.
-  const b = indonesia.box
+  const detail = SCENARIO.globeDetail
+  const b = detail.box
   g.clearRect(((b.lon0 + 180) / 360) * W, ((90 - b.lat1) / 180) * H, ((b.lon1 - b.lon0) / 360) * W, ((b.lat1 - b.lat0) / 180) * H)
-  draw(indonesia)
+  draw(detail)
   const tex = new THREE.CanvasTexture(cv)
   tex.wrapS = THREE.RepeatWrapping
   tex.anisotropy = 4

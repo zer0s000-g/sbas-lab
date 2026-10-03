@@ -3,7 +3,7 @@
  * number agrees with the views.
  */
 import { RotateCcw } from 'lucide-react'
-import { DEPARTURE, DESTINATION, HYPOTHETICAL } from '@/core/region'
+import { DEPARTURE, DESTINATION } from '@/core/region'
 import { GEO_SATS } from '@/core/orbits'
 import { DEFAULT_SPEEDS } from '@/core/clock'
 import type { Fix } from '@/core/receiver'
@@ -21,9 +21,12 @@ import { NARRATION } from '@/journey/narration'
 import { STORY_NOTE } from '@/journey/director'
 import type { JourneyEngine, SpeedMode, StopId } from '@/journey/engine'
 import type { ViewModel } from './model'
+import { SCENARIO } from '@/scenarios/active'
+
+const TX = SCENARIO.texts
 
 const hhmm = (h: number) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`
-const serviceName = (s: ViewModel['service']) => (s === 'dfmc' ? 'DFMC SBAS (L1/L5)' : s === 'l1' ? 'L1 SBAS' : 'Off (GPS alone)')
+const serviceName = (s: ViewModel['service']) => TX.serviceNames[s]
 
 export function FlightCard({ m }: { m: ViewModel }) {
   return (
@@ -34,7 +37,7 @@ export function FlightCard({ m }: { m: ViewModel }) {
       <TelemetryRow label="Ground speed" value={Math.round(m.gsKt)} unit="kt" />
       <TelemetryRow label={`To ${DESTINATION.city}`} value={formatNumber(m.distToGoNm, 1)} unit="NM" />
       <TelemetryRow label="Local time" value={`${hhmm(m.localHour)} ${m.localZone}`} tone="muted" />
-      <p className="mt-2 text-[12px] leading-4 text-muted-foreground">Real airports and Michibiki satellites. The SBAS service, its ground sites and the route are {HYPOTHETICAL}.</p>
+      <p className="mt-2 text-[12px] leading-4 text-muted-foreground">{TX.flightNote}</p>
     </HudPanel>
   )
 }
@@ -170,9 +173,7 @@ export function BenefitCard({ m }: { m: ViewModel }) {
         </p>
       ) : (
         <p className="text-[13px] leading-5 text-muted-foreground">
-          {m.phase === 'landing'
-            ? 'On the ground: no navigation integrity requirement. SBAS brought LAB201 down to LPV minima at Bali with satellite signals alone.'
-            : 'No navigation integrity requirement at the gate. The crew check the SBAS forecast and NOTAMs.'}
+          {m.phase === 'landing' ? TX.benefitLanding : TX.benefitGate}
         </p>
       )}
       <table className="mt-3 w-full border-collapse text-left">
@@ -211,9 +212,7 @@ export function BenefitCard({ m }: { m: ViewModel }) {
         </tbody>
       </table>
       <p className="mt-2 text-[12px] leading-4 text-muted-foreground">
-        {m.phase === 'final' && m.service === 'dfmc'
-          ? 'L1 only: the same approach with the single-frequency grid. Near the equator its VPL is too large for LPV (Doc 9849 §5.2.1.5).'
-          : 'Same satellites, same moment: only the corrections and their bounds differ. Values: Doc 9849 Table 2-1.'}
+        {m.phase === 'final' && m.service === 'dfmc' ? TX.benefitCompareNote : 'Same satellites, same moment: only the corrections and their bounds differ. Values: Doc 9849 Table 2-1.'}
       </p>
     </HudPanel>
   )
@@ -244,9 +243,7 @@ export function StatusPanel({ m }: { m: ViewModel }) {
       <TelemetryRow label="Message age" value={formatDuration(m.messageAgeS)} tone={m.messageAgeS > 0 ? 'alert' : 'muted'} />
       <TelemetryRow label="GEO received" value={`${m.geosTracked} / ${GEO_SATS.length}`} tone={m.geosTracked === GEO_SATS.length ? 'ok' : m.geosTracked === 0 ? 'alert' : 'default'} />
       <TelemetryRow label="Service" value={serviceName(m.service)} tone="muted" />
-      <p className="mt-2 text-[12px] leading-4 text-muted-foreground">
-        The DFMC service belongs to the hypothetical Indonesian SBAS. Real DFMC services are planned, not yet in operation (Doc 9849 §4.3.4.5); Japan tests DFMC on Michibiki’s L5 signal.
-      </p>
+      <p className="mt-2 text-[12px] leading-4 text-muted-foreground">{TX.statusNote}</p>
     </HudPanel>
   )
 }
@@ -299,12 +296,7 @@ export function ControlsPanel({ engine, speedMode, guidedStops, onGuidedStops }:
   )
 }
 
-const STOP_TEXT: Record<StopId, { title: string; body: string }> = {
-  firstFix: { title: 'First fix from GPS alone', body: 'LAB201 knows where it is from GPS alone: a few metres off, with a large protection level and no vertical guarantee.' },
-  firstCorrection: { title: 'The first correction has arrived', body: 'The SBAS messages from QZS-3 and QZS-6 have reached LAB201. Its position jumps toward the truth and the protection cylinder shrinks to a few metres.' },
-  lpvEngaged: { title: 'LPV engaged', body: 'On final to runway 09 at Bali with SBAS vertical guidance. The protection levels are inside HAL 40 m and VAL 50 m, so the avionics annunciate LPV.' },
-  touchdown: { title: 'Touchdown in Bali', body: 'An approach with vertical guidance from the satellites alone, after SBAS guided every phase of the flight from Jakarta.' },
-}
+const STOP_TEXT: Readonly<Record<StopId, { title: string; body: string }>> = TX.stops
 
 export function StopCard({ stop, onContinue, className }: { stop: StopId; onContinue: () => void; className?: string }) {
   const s = STOP_TEXT[stop]

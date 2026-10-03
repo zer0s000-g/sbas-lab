@@ -2,7 +2,8 @@
  * The two airports as plain data: pavement, markings, lights, buildings and parked
  * aircraft. The runways in use sit at their real positions and courses (core/region);
  * the rest of each layout is simplified, not a survey of the real airport (Jakarta has
- * three runways and several terminals, shown here as two runways and one terminal).
+ * three runways and several terminals, shown here as two runways and one terminal; a
+ * parallel runway is drawn as long as the runway in use and abreast of it).
  * Positions are metres in the runway
  * frame: `a` along the runway from the landing threshold, `r` to the right of the
  * landing direction. The taxi routes are LAB201's own simulated ground track
@@ -209,7 +210,17 @@ function build(ap: Airport, side: 1 | -1, taxiRoute: RA[], laneR: number, gate: 
   }
   // Runways: edge lines, centreline, both landing directions and edge lights.
   runwayAt(out, L, W, 0, ap.runway)
-  if (P !== null && ap.parallelRunway) {
+  if (P !== null && ap.parallelRunway && Math.sign(P) !== side) {
+    // A parallel runway on the side away from the terminal (Toulouse, Nice): crossings
+    // from the runway in use at both ends and mid-way, with holding positions.
+    runwayAt(out, L, W, P, ap.parallelRunway)
+    const cross: RA[][] = [0, L / 2, L].map((a) => [
+      [a, 0],
+      [a, P],
+    ])
+    out.taxiways.push(...cross)
+    out.taxiLines.push(...cross.map(([p, q]): RA[] => [[p[0], Math.sign(P) * (W / 2 + 8)], [q[0], P - Math.sign(P) * (W / 2 + 8)]]))
+  } else if (P !== null && ap.parallelRunway) {
     runwayAt(out, L, W, P, ap.parallelRunway)
     // Its own parallel taxiway on the terminal side, with connectors at the ends and mid-way.
     const lane = P - side * Math.abs(laneR)
@@ -297,16 +308,26 @@ function build(ap: Airport, side: 1 | -1, taxiRoute: RA[], laneR: number, gate: 
 const dep = DEPARTURE
 const arr = DESTINATION
 
-/** Jakarta Soekarno-Hatta: the terminal between runways 07R and 07L, LAB201 at a stand on the apron. */
-export const JAKARTA = build(dep, dep.terminalSide, TRACKS.out, wpRA(dep, 'TWY-A')[1], wpRA(dep, 'GATE-D'), false, makeFasDataBlock().gpaDeg, wpRA(dep, 'HOLD'))
+/**
+ * The departure airport (Jakarta Soekarno-Hatta: the terminal between runways 07R and
+ * 07L; Toulouse-Blagnac: the terminal east of runway 14L), LAB201 at a stand on the apron.
+ */
+export const DEPARTURE_LAYOUT = build(dep, dep.terminalSide, TRACKS.out, wpRA(dep, 'TWY-A')[1], wpRA(dep, 'GATE-D'), false, makeFasDataBlock().gpaDeg, wpRA(dep, 'HOLD'))
 
-/** Bali I Gusti Ngurah Rai: the terminal north of runway 09, approach lights and PAPI for the LPV approach. */
-export const BALI = build(arr, arr.terminalSide, TRACKS.in, wpRA(arr, 'TWY-B')[1], wpRA(arr, 'GATE-A'), true, makeFasDataBlock().gpaDeg)
+/**
+ * The destination (Bali I Gusti Ngurah Rai: the terminal north of runway 09; Nice: the
+ * terminals north-west of runway 04L), approach lights and PAPI for the LPV approach.
+ */
+export const DESTINATION_LAYOUT = build(arr, arr.terminalSide, TRACKS.in, wpRA(arr, 'TWY-B')[1], wpRA(arr, 'GATE-A'), true, makeFasDataBlock().gpaDeg)
 
-export const AIRPORTS: readonly AirportLayout[] = [JAKARTA, BALI]
+/** The AirNav Indonesia names of the two layouts. */
+export const JAKARTA = DEPARTURE_LAYOUT
+export const BALI = DESTINATION_LAYOUT
+
+export const AIRPORTS: readonly AirportLayout[] = [DEPARTURE_LAYOUT, DESTINATION_LAYOUT]
 
 /** The layout of the airport nearest a local point. */
-export const nearestLayout = (eastNm: number, northNm: number): AirportLayout => (nearestAirport(eastNm, northNm).id === JAKARTA.airport.id ? JAKARTA : BALI)
+export const nearestLayout = (eastNm: number, northNm: number): AirportLayout => (nearestAirport(eastNm, northNm).id === DEPARTURE_LAYOUT.airport.id ? DEPARTURE_LAYOUT : DESTINATION_LAYOUT)
 
 /** Distance from a runway-frame point to a polyline, m. */
 export function distToPolyline(p: RA, line: RA[]): number {

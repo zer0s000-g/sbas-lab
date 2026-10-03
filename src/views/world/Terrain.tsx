@@ -1,7 +1,8 @@
 /**
- * Java, Madura and Bali at true scale, from views/terrain (the same surface the sea's
- * shallows, the camera and the ground shadow use): rice-field green on the coastal
- * plain, forest on the hills, bare rock on the volcano summits and sand at the shore,
+ * The scenario's land at true scale (Java, Madura and Bali; or southern France), from
+ * views/terrain (the same surface the sea's shallows, the camera and the ground shadow
+ * use): field green on the coastal plain, forest on the hills, bare rock on the
+ * summits and sand at the shore,
  * mown grass on the levelled airfields and instanced trees around the airports.
  *
  * Two levels of detail: a coarse corridor along the route (cells of 1.2 NM, enough from
@@ -16,6 +17,7 @@ import { hash2, valueNoise } from '@/core/random'
 import { AIRPORT_LIST, runwayToLocalNm } from '@/core/region'
 import { M_PER_FT } from '@/core/units'
 import { col } from '@/stage/col'
+import { SCENARIO } from '@/scenarios/active'
 import { anyAirfieldFlat, terrainFtAt } from '../terrain'
 import { FLIGHT_UNIT_M, toFlight } from '../scales'
 
@@ -29,7 +31,7 @@ export interface NmRect {
 /** Corridor cell size, NM. */
 const CELL_NM = 1.2
 /** The corridor along the route, local NM (multiples of the cell). */
-export const CORRIDOR: NmRect = { e0: -300, e1: 300, n0: -120, n1: 126 }
+export const CORRIDOR: NmRect = SCENARIO.terrain.corridor
 const PATCH_CELLS = 10
 const snap = (v: number) => Math.floor(v / CELL_NM) * CELL_NM
 

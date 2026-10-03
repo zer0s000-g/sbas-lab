@@ -1,0 +1,243 @@
+{
+ "region": "b44fb9b6fb464848e7e6ddd21a95a42ea270b89128299ffeb303166238a39938",
+ "zone": [
+  [
+   {
+    "zone": "WIB",
+    "hour": 8
+   },
+   {
+    "zone": "WITA",
+    "hour": 9
+   }
+  ],
+  [
+   {
+    "zone": "WIB",
+    "hour": 9
+   },
+   {
+    "zone": "WITA",
+    "hour": 10
+   }
+  ],
+  [
+   {
+    "zone": "WIB",
+    "hour": 10
+   },
+   {
+    "zone": "WITA",
+    "hour": 11
+   }
+  ],
+  [
+   {
+    "zone": "WIB",
+    "hour": 10.5
+   },
+   {
+    "zone": "WITA",
+    "hour": 11.5
+   }
+  ]
+ ],
+ "geos": "0404e090753190982ab38edd8facf686b67c086c4b6f9bbeabcaf0550761f83e",
+ "route": "1c4bd89ab46d547bd73b19d2a6015c318eebd768f3b16d065c2b693b9087ac3d",
+ "index": {
+  "startTick": {
+   "gate": 0,
+   "takeoff": 600,
+   "climb": 3953,
+   "errors": 6647,
+   "reference": 6647,
+   "master": 6647,
+   "uplink": 6647,
+   "broadcast": 6647,
+   "cruise": 6647,
+   "descent": 39478,
+   "final": 57662,
+   "landing": 58948
+  },
+  "touchdownTick": 59012,
+  "endTick": 61008,
+  "states": "dcd22c46ab5748d14a53cd9a9d0cc2970bac255bf8e0698f67749f9cd02dfbc9"
+ },
+ "ground": "7f7c8453b09f2ed4aae1d5bb433c38ecaa6fbf1746dc3f8672694f6d44141b1e",
+ "phases": {
+  "gate": {
+   "model": "f5498b42c32e09fc6e991853de474106c614dce8e291fa6a2cf88fd84524e40e",
+   "op": null,
+   "detail": null,
+   "text": [
+    "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 on the ground, 530.1 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 70 m. Approach mode LNAV.",
+    "Flight view: LAB201 at Jakarta Soekarno-Hatta (WIII), with its runway, taxiways and terminal.. LAB201 on the ground, 530.1 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 70 m. Approach mode LNAV.",
+    "Network map of Indonesia: the hypothetical SBAS ground segment, with RIMS reference stations, master control centres, uplink stations and the ionospheric grid.. LAB201 on the ground, 530.1 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 70 m. Approach mode LNAV."
+   ]
+  },
+  "takeoff": {
+   "model": "67ca8eb4489e847058c8ac674a8cc89a8bfae2ecbfe163c969c63e33a0297880",
+   "op": {
+    "id": "terminal",
+    "halM": 1852,
+    "valM": null,
+    "ttaS": 15
+   },
+   "detail": null,
+   "text": [
+    "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 on the ground, 530.1 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 70 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
+    "Flight view: LAB201 at Jakarta Soekarno-Hatta (WIII), with its runway, taxiways and terminal.. LAB201 on the ground, 530.1 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 70 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
+    "Network map of Indonesia: the hypothetical SBAS ground segment, with RIMS reference stations, master control centres, uplink stations and the ionospheric grid.. LAB201 on the ground, 530.1 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 70 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV."
+   ]
+  },
+  "climb": {
+   "model": "2c0cc075eb80c046f5cf58b24a60a9e4b372acab56320f06f2f9674eb1c52132",
+   "op": {
+    "id": "terminal",
+    "halM": 1852,
+    "valM": null,
+    "ttaS": 15
+   },
+   "detail": null,
+   "text": [
+    "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 1000 ft, 528.9 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 70 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
+    "Flight view: LAB201 climbing out from Jakarta over the Java Sea.. LAB201 at 1000 ft, 528.9 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 70 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
+    "Network map of Indonesia: the hypothetical SBAS ground segment, with RIMS reference stations, master control centres, uplink stations and the ionospheric grid.. LAB201 at 1000 ft, 528.9 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 70 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV."
+   ]
+  },
+  "errors": {
+   "model": "63b8e22c9d178dccb7a14b986d061ecd234137633d3786e3948d876eb7bff884",
+   "op": {
+    "id": "terminal",
+    "halM": 1852,
+    "valM": null,
+    "ttaS": 15
+   },
+   "detail": "errors",
+   "text": [
+    "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
+    "Flight view: LAB201 climbing out from Jakarta over the Java Sea.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
+    "Network map of Indonesia: the hypothetical SBAS ground segment, with RIMS reference stations, master control centres, uplink stations and the ionospheric grid.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV."
+   ]
+  },
+  "reference": {
+   "model": "b522784f07722fbdfd64888e18800a9b207f9f3fee6ec2a38d209fdaf7533592",
+   "op": {
+    "id": "terminal",
+    "halM": 1852,
+    "valM": null,
+    "ttaS": 15
+   },
+   "detail": "reference",
+   "text": [
+    "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
+    "Flight view: LAB201 climbing out from Jakarta over the Java Sea.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
+    "Network map of Indonesia: the hypothetical SBAS ground segment, with RIMS reference stations, master control centres, uplink stations and the ionospheric grid.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV."
+   ]
+  },
+  "master": {
+   "model": "a74a5ff7710755a102d42f896963d9bdcf37faee73383c364d8d8e8520065164",
+   "op": {
+    "id": "terminal",
+    "halM": 1852,
+    "valM": null,
+    "ttaS": 15
+   },
+   "detail": "master",
+   "text": [
+    "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
+    "Flight view: LAB201 climbing out from Jakarta over the Java Sea.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
+    "Network map of Indonesia: the hypothetical SBAS ground segment, with RIMS reference stations, master control centres, uplink stations and the ionospheric grid.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV."
+   ]
+  },
+  "uplink": {
+   "model": "711a21f7dd3b1a5c2104628a7af5c2dffd749fd33f25df87004041cf1eb3afd8",
+   "op": {
+    "id": "terminal",
+    "halM": 1852,
+    "valM": null,
+    "ttaS": 15
+   },
+   "detail": "uplink",
+   "text": [
+    "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
+    "Flight view: LAB201 climbing out from Jakarta over the Java Sea.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
+    "Network map of Indonesia: the hypothetical SBAS ground segment, with RIMS reference stations, master control centres, uplink stations and the ionospheric grid.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV."
+   ]
+  },
+  "broadcast": {
+   "model": "84fbf5fcceb6c0c82350f2e02069c7ab94a95eeaf6f23f096d31df804c64e27d",
+   "op": {
+    "id": "terminal",
+    "halM": 1852,
+    "valM": null,
+    "ttaS": 15
+   },
+   "detail": null,
+   "text": [
+    "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
+    "Flight view: LAB201 climbing out from Jakarta over the Java Sea.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV.",
+    "Network map of Indonesia: the hypothetical SBAS ground segment, with RIMS reference stations, master control centres, uplink stations and the ionospheric grid.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using GPS alone: HPL 69 m. Terminal limits HAL 1852 m, within limits. Approach mode LNAV."
+   ]
+  },
+  "cruise": {
+   "model": "1c2941d24782340532c1bd3b4b58c6bdb6e49e570d7590317e8d6a5e9adb3e73",
+   "op": {
+    "id": "enroute",
+    "halM": 3704,
+    "valM": null,
+    "ttaS": 300
+   },
+   "detail": null,
+   "text": [
+    "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 6.3 m, VPL 10 m. Continental en route limits HAL 3704 m, within limits. Approach mode LPV.",
+    "Flight view: LAB201 climbing out from Jakarta over the Java Sea.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 6.3 m, VPL 10 m. Continental en route limits HAL 3704 m, within limits. Approach mode LPV.",
+    "Network map of Indonesia: the hypothetical SBAS ground segment, with RIMS reference stations, master control centres, uplink stations and the ionospheric grid.. LAB201 at 10000 ft, 513.3 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 6.3 m, VPL 10 m. Continental en route limits HAL 3704 m, within limits. Approach mode LPV."
+   ]
+  },
+  "descent": {
+   "model": "901174529658965e31d56307c70c01c0c69cae64cb26195f1b10d3ed11466caa",
+   "op": {
+    "id": "npa",
+    "halM": 555.6,
+    "valM": null,
+    "ttaS": 10
+   },
+   "detail": "fas",
+   "text": [
+    "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 33000 ft, 126.2 NM from Bali. 9 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 5.7 m, VPL 11 m. Non-precision approach (LNAV) limits HAL 556 m, within limits. Approach mode LPV.",
+    "Flight view: LAB201 along Java, with the Java Sea to the north and the volcanoes below.. LAB201 at 33000 ft, 126.2 NM from Bali. 9 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 5.7 m, VPL 11 m. Non-precision approach (LNAV) limits HAL 556 m, within limits. Approach mode LPV.",
+    "Network map of Indonesia: the hypothetical SBAS ground segment, with RIMS reference stations, master control centres, uplink stations and the ionospheric grid.. LAB201 at 33000 ft, 126.2 NM from Bali. 9 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 5.7 m, VPL 11 m. Non-precision approach (LNAV) limits HAL 556 m, within limits. Approach mode LPV."
+   ]
+  },
+  "final": {
+   "model": "35bee8c5d2d3357ac76c3014313f0c3ea746178ea66c684d925d8820f03d11fe",
+   "op": {
+    "id": "apv1",
+    "halM": 40,
+    "valM": 50,
+    "ttaS": 10
+   },
+   "detail": "final",
+   "text": [
+    "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 at 1700 ft, 5.0 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 4.9 m, VPL 9.9 m. APV-I (LPV) limits HAL 40 m, VAL 50 m, within limits. Approach mode LPV.",
+    "Flight view: LAB201 on final to runway 09 at Bali, over the sea with the coast and the runway ahead.. LAB201 at 1700 ft, 5.0 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 4.9 m, VPL 9.9 m. APV-I (LPV) limits HAL 40 m, VAL 50 m, within limits. Approach mode LPV.",
+    "Network map of Indonesia: the hypothetical SBAS ground segment, with RIMS reference stations, master control centres, uplink stations and the ionospheric grid.. LAB201 at 1700 ft, 5.0 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 4.9 m, VPL 9.9 m. APV-I (LPV) limits HAL 40 m, VAL 50 m, within limits. Approach mode LPV."
+   ]
+  },
+  "landing": {
+   "model": "bb5ec0519ce93cf0a32dfc73b7a66bb20fdb5ca6b9c4881a828b7c0be08bb47c",
+   "op": null,
+   "detail": null,
+   "text": [
+    "Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.. LAB201 on the ground, 0.0 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 4.9 m, VPL 9.9 m. Approach mode LPV.",
+    "Flight view: LAB201 at Bali I Gusti Ngurah Rai (WADD), with its runway, taxiways and terminal.. LAB201 on the ground, 0.0 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 4.9 m, VPL 9.9 m. Approach mode LPV.",
+    "Network map of Indonesia: the hypothetical SBAS ground segment, with RIMS reference stations, master control centres, uplink stations and the ionospheric grid.. LAB201 on the ground, 0.0 NM from Bali. 8 GPS satellites tracked, 2 of 2 SBAS GEOs (QZS-3 and QZS-6) received. Using SBAS: HPL 4.9 m, VPL 9.9 m. Approach mode LPV."
+   ]
+  }
+ },
+ "narration": "441e904b14730fd1f93b65cc695b98bad478c9dc943b275f9882e927d6809223",
+ "failures": "f25de0ba788d019f97b804b4d7cc5308e5c0fb223cea254ce654d6c1d95ee2fc",
+ "airports": "cd08033892f74237b1433c1c655e27dcff8581c3d3fca82dc7804e1ceea83d1d",
+ "terrain": "79f394a0f6d82512897ad6d11bed5974fefbec4702294a3ecb4dba0da3e95c4d"
+}

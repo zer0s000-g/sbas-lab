@@ -1,5 +1,6 @@
 /**
- * The ionosphere over Indonesia, on and south of the magnetic equator.
+ * The ionosphere, worldwide, with what matters near the magnetic equator (the AirNav
+ * Indonesia scenario) and at mid-latitudes (the ESSP-SAS scenario over southern France).
  *
  * What the model shows (Doc 9849 §5.2.1):
  * - the delay depends on the density of ionised particles, which follows the sun
@@ -19,6 +20,7 @@
 import { DEG, GPS_L1_HZ, WGS84_A_M, clamp } from './units'
 import { hash2, valueNoise } from './random'
 import { START_LOCAL_HOUR, localSolarHour, magLatDeg } from './region'
+import { SCENARIO } from '@/scenarios/active'
 
 // TODO(expert-review): 350 km thin-shell height and the pierce-point formulas follow RTCA DO-229 (Appendix A); confirm the edition.
 export const IONO_SHELL_HEIGHT_M = 350e3
@@ -158,8 +160,8 @@ export interface Igp {
   lonDeg: number
 }
 
-/** The IGPs over the hypothetical service area: Indonesia, 90–145°E, 20°S–15°N. */
-export const IGP_BOX = { lat0: -20, lat1: 15, lon0: 90, lon1: 145 } as const
+/** The IGPs over the scenario's service area (Indonesia: 90–145°E, 20°S–15°N; Europe: 25°W–40°E, 25–55°N). */
+export const IGP_BOX = SCENARIO.igpBox
 export const IGPS: readonly Igp[] = (() => {
   const out: Igp[] = []
   for (let lat = IGP_BOX.lat0; lat <= IGP_BOX.lat1; lat += IGP_SPACING_DEG) for (let lon = IGP_BOX.lon0; lon <= IGP_BOX.lon1; lon += IGP_SPACING_DEG) out.push({ latDeg: lat, lonDeg: lon })

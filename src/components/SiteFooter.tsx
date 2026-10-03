@@ -1,4 +1,5 @@
 import { ShieldAlert } from 'lucide-react'
+import { SCENARIO } from '@/scenarios/active'
 
 export const DISCLAIMER = 'For educational use only, not for operational use.'
 
@@ -10,12 +11,7 @@ export function SiteFooter() {
           <ShieldAlert className="size-4 shrink-0" aria-hidden />
           {DISCLAIMER}
         </p>
-        <p className="max-w-2xl">
-          The simulation is simplified to teach principles. Technical values follow ICAO Annex 10 Volume I and RTCA
-          DO-229 where stated and should be checked by a qualified GNSS/CNS engineer. Indonesia has no operational SBAS
-          today: the SBAS service, its ground sites and the LPV procedure shown are hypothetical. QZS-3 and QZS-6 are real
-          Japanese Michibiki satellites, shown here for illustration; MSAS, the SBAS they carry, serves Japan.
-        </p>
+        <p className="max-w-2xl">{SCENARIO.texts.footer}</p>
       </div>
     </footer>
   )

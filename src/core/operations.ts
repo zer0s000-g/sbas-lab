@@ -8,6 +8,7 @@
  * exceeds its alert limit the avionics must alert the crew (Doc 9849 §2.2.4.3).
  */
 import { M_PER_NM } from './units'
+import { SCENARIO } from '@/scenarios/active'
 
 export type OperationId = 'oceanic' | 'enroute' | 'terminal' | 'npa' | 'lnavvnav' | 'apv1' | 'apv2' | 'cat1'
 
@@ -42,7 +43,8 @@ export const OPERATIONS: Record<OperationId, Operation> = {
 /** The operation that sets the alert limits in each part of the journey. */
 export type FlightStage = 'ground' | 'departure' | 'terminal' | 'enroute' | 'approach' | 'final' | 'landed'
 
-export function operationFor(stage: FlightStage, finalOp: OperationId = 'apv1'): Operation | null {
+/** The operation on final is the one the scenario's FAS data block carries (APV-I at Bali, LPV-200 at Nice). */
+export function operationFor(stage: FlightStage, finalOp: OperationId = SCENARIO.approach.op): Operation | null {
   switch (stage) {
     case 'departure':
     case 'terminal':

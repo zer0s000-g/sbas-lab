@@ -8,10 +8,20 @@ import { M_PER_FT, M_PER_NM, DEG } from './units'
 import { DESTINATION } from './region'
 import { OPERATIONS, type OperationId } from './operations'
 import { isFiniteNumber } from './guard'
+import { SCENARIO } from '@/scenarios/active'
+
+const AP = SCENARIO.approach
 
 export interface FasDataBlock {
   operationType: number
+  /** The SBAS service provider, by name (for the page). */
   sbasProvider: string
+  /**
+   * The numeric SBAS service provider ID the FAS data block carries (EUROCONTROL FAS data
+   * block tool, after ICAO Annex 10 / RTCA DO-229: 0 WAAS, 1 EGNOS, 2 MSAS, …, 15 any SBAS),
+   * or null for a provider that has none (the hypothetical Indonesian SBAS).
+   */
+  sbasProviderId: number | null
   airportId: string
   runway: string
   /** 0 = APV-I, 1 = LPV-200 style (Category I). */
@@ -30,17 +40,18 @@ export interface FasDataBlock {
 }
 
 // TODO(expert-review): FAS data block field set and the course width at threshold (105 m typical) follow RTCA DO-229 / Annex 10 Appendix B.
-export function makeFasDataBlock(op: OperationId = 'apv1'): FasDataBlock {
+export function makeFasDataBlock(op: OperationId = AP.op): FasDataBlock {
   const o = OPERATIONS[op]
   return {
     operationType: 0,
     // TODO(expert-review): the real FAS block carries a numeric SBAS service provider ID (DO-229); a hypothetical
     // Indonesian provider has none, so a name stands in.
-    sbasProvider: 'ID-SBAS (hypothetical)',
+    sbasProvider: AP.providerName,
+    sbasProviderId: AP.providerId,
     airportId: DESTINATION.id,
     runway: DESTINATION.runway,
     performanceDesignator: op === 'cat1' ? 1 : 0,
-    referencePathId: 'R09A',
+    referencePathId: AP.referencePathId,
     ltpEastNm: DESTINATION.thresholdEastNm,
     ltpNorthNm: DESTINATION.thresholdNorthNm,
     ltpHeightM: DESTINATION.elevationFt * M_PER_FT,
@@ -55,8 +66,8 @@ export function makeFasDataBlock(op: OperationId = 'apv1'): FasDataBlock {
 
 /** The SBAS approach channel of the illustrative procedure (SBAS channels are five digits). */
 // TODO(expert-review): SBAS channel number range (40 000–99 999).
-export const APPROACH_CHANNEL = 54201
-export const APPROACH_NOTE = `RNP RWY ${DESTINATION.runway} at ${DESTINATION.city} (${DESTINATION.id}), illustrative procedure, not published`
+export const APPROACH_CHANNEL = AP.channel
+export const APPROACH_NOTE = AP.note
 
 // TODO(expert-review): the FAS data block CRC is a 32-bit CRC (CRC-32Q, polynomial 0x814141AB, per RTCA DO-229).
 const CRC_POLY = 0x814141ab
@@ -71,9 +82,13 @@ export function crc32q(bytes: Uint8Array): number {
   return crc >>> 0
 }
 
-/** A stable byte encoding of the block's fields (the real block is bit-packed; this keeps the same idea). */
+/**
+ * A stable byte encoding of the block's fields (the real block is bit-packed; this keeps
+ * the same idea). The provider ID is encoded only when there is one, so a block without
+ * it encodes exactly as before the field existed.
+ */
 export function encodeFas(b: FasDataBlock): Uint8Array {
-  const text = [b.operationType, b.sbasProvider, b.airportId, b.runway, b.performanceDesignator, b.referencePathId, b.ltpEastNm.toFixed(6), b.ltpNorthNm.toFixed(6), b.ltpHeightM.toFixed(2), b.courseDeg.toFixed(3), b.tchFt.toFixed(1), b.gpaDeg.toFixed(2), b.courseWidthM.toFixed(1), b.halM.toFixed(1), b.valM.toFixed(1)].join('|')
+  const text = [b.operationType, b.sbasProvider, ...(b.sbasProviderId === null ? [] : [`id${b.sbasProviderId}`]), b.airportId, b.runway, b.performanceDesignator, b.referencePathId, b.ltpEastNm.toFixed(6), b.ltpNorthNm.toFixed(6), b.ltpHeightM.toFixed(2), b.courseDeg.toFixed(3), b.tchFt.toFixed(1), b.gpaDeg.toFixed(2), b.courseWidthM.toFixed(1), b.halM.toFixed(1), b.valM.toFixed(1)].join('|')
   return new TextEncoder().encode(text)
 }
 
@@ -128,7 +143,7 @@ export function deviations(b: FasDataBlock, eastNm: number, northNm: number, alt
   }
 }
 
-/** Decision altitude of the illustrative LPV procedure, ft above mean sea level (a 250 ft decision height here). */
-// TODO(expert-review): the LPV decision height is procedure-specific; 250 ft is illustrative (SBAS CAT I can reach 200 ft, Doc 9849 §4.3.3.3).
-export const DECISION_HEIGHT_FT = 250
+/** Decision altitude of the illustrative LPV procedure, ft above mean sea level (the scenario's decision height). */
+// TODO(expert-review): the LPV decision height is procedure-specific; the scenario's value is illustrative (250 ft at Bali, 200 ft for the LPV-200 at Nice; SBAS CAT I can reach 200 ft, Doc 9849 §4.3.3.3).
+export const DECISION_HEIGHT_FT = AP.decisionHeightFt
 export const DECISION_ALTITUDE_FT = DESTINATION.elevationFt + DECISION_HEIGHT_FT

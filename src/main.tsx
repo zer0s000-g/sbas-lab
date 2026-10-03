@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client'
 import './globals.css'
 import App from './App'
 import { applyTheme, usePrefs } from './stores/prefs'
+import { SCENARIO } from './scenarios/active'
+
+// The scenario's own title (index.html carries the default scenario's).
+if (SCENARIO.id === 'essp') document.title = 'SBAS Lab · ESSP-SAS: EGNOS guides a flight from Toulouse to Nice'
 
 // Apply the saved theme before the first paint to avoid a flash.
 applyTheme(usePrefs.getState().theme)

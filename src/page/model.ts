@@ -11,6 +11,7 @@ import { scheduledMessage, messageType, type SbasSignal } from '@/core/messages'
 import { GEO_SATS } from '@/core/orbits'
 import { DEPARTURE, DESTINATION, REGION, zoneTime, type ZoneTime } from '@/core/region'
 import { localToGeodetic } from '@/core/geo'
+import { SCENARIO } from '@/scenarios/active'
 import { directionFor } from '@/journey/director'
 import type { JourneyEngine } from '@/journey/engine'
 import { phaseDef, PHASE_INDEX, type PhaseId } from '@/journey/phases'
@@ -42,7 +43,7 @@ export interface ViewModel {
   signalS: number
   signalTotalS: number
   worldS: number
-  /** Indonesian standard time under the aircraft: the clock hour and the zone (WIB, WITA). */
+  /** Civil time under the aircraft: the clock hour and the zone (WIB, WITA; CET). */
   localHour: number
   localZone: ZoneTime['zone']
   altFt: number
@@ -228,22 +229,22 @@ export function describe(m: ViewModel, view: 'space' | 'flight' | 'network'): st
   const lim = m.op ? `${m.op.name} limits HAL ${formatMetres(m.op.halM)}${m.op.valM !== null ? `, VAL ${formatMetres(m.op.valM)}` : ''}, ${m.withinLimits ? 'within limits' : 'outside limits'}` : ''
   const where = `LAB201 ${m.altFt < 100 ? 'on the ground' : `at ${Math.round(m.altFt / 100) * 100} ft`}, ${m.distToGoNm.toFixed(1)} NM from ${DESTINATION.city}`
   const sky = `${m.gpsTracked} GPS satellites tracked, ${m.geosTracked} of ${GEO_SATS.length} SBAS GEOs (${GEO_SATS.map((g) => g.id).join(' and ')}) received`
-  // Where the flight view is looking: an airport, the Java Sea, Java or the sea off Bali.
+  // Where the flight view is looking: an airport, the climb-out, the cruise or the final approach.
   const routeNm = Math.hypot(DESTINATION.thresholdEastNm - DEPARTURE.thresholdEastNm, DESTINATION.thresholdNorthNm - DEPARTURE.thresholdNorthNm)
   const ap = (a: typeof DEPARTURE) => `${a.city} ${a.name} (${a.id})`
   const place =
     m.altFt < 100
       ? `at ${m.distToGoNm > routeNm / 2 ? ap(DEPARTURE) : ap(DESTINATION)}, with its runway, taxiways and terminal`
       : m.distToGoNm < 15
-        ? `on final to runway ${DESTINATION.runway} at ${DESTINATION.city}, over the sea with the coast and the runway ahead`
+        ? `on final to runway ${DESTINATION.runway} at ${DESTINATION.city}, ${SCENARIO.texts.describeFinal}`
         : m.distToGoNm > routeNm - 25
-          ? `climbing out from ${DEPARTURE.city} over the Java Sea`
-          : 'along Java, with the Java Sea to the north and the volcanoes below'
+          ? `climbing out from ${DEPARTURE.city} ${SCENARIO.texts.describeClimb}`
+          : SCENARIO.texts.describeCruise
   const lead =
     view === 'space'
-      ? 'Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.'
+      ? SCENARIO.texts.describeSpace
       : view === 'network'
-        ? 'Network map of Indonesia: the hypothetical SBAS ground segment, with RIMS reference stations, master control centres, uplink stations and the ionospheric grid.'
+        ? SCENARIO.texts.describeNetwork
         : `Flight view: LAB201 ${place}.`
   return [lead, where, sky, `Using ${m.navSource === 'sbas' ? 'SBAS' : m.navSource === 'abas' ? 'GPS alone' : 'nothing'}: ${pl}`, lim, `Approach mode ${m.mode}`].filter(Boolean).join('. ') + '.'
 }

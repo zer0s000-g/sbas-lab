@@ -1,19 +1,22 @@
 /**
- * Terrain of Java, Madura and Bali as a height function over the local NM frame: the
- * real coastline (Natural Earth 1:10m), a low coastal plain rising inland into hills,
- * the main volcanoes as cones at their summits, and the sea deepening offshore. The two
- * airfields are levelled to their field elevation along their real runway courses.
- * Pure, so the flight view, the sea's shallows, the camera and the ground shadow share
- * one surface. Simplified: heights between the summits are procedural, not survey data.
+ * Terrain along the active scenario's route as a height function over the local NM frame
+ * (Java, Madura and Bali; or southern France from Toulouse to Nice): the real coastline
+ * (Natural Earth 1:10m), a coastal plain rising inland into hills, the main summits as
+ * cones, and the sea deepening offshore. The two airfields are levelled to their field
+ * elevation along their real runway courses. Pure, so the flight view, the sea's
+ * shallows, the camera and the ground shadow share one surface. Simplified: heights
+ * between the summits are procedural, not survey data.
  */
 import { valueNoise } from '@/core/random'
 import { AIRPORT_LIST, localNmToRunway, localOf, type Airport } from '@/core/region'
 import { M_PER_FT } from '@/core/units'
+import { SCENARIO } from '@/scenarios/active'
 import { CoastIndex, decodeRings, projectRings } from './geo/coast'
-import { javaBali } from './geo/javaBali.data'
+
+const T = SCENARIO.terrain
 
 /** Coast rings in local NM, and the index over them (2 NM cells). */
-export const COAST_RINGS_NM = projectRings(decodeRings(javaBali), (lon, lat) => {
+export const COAST_RINGS_NM = projectRings(decodeRings(T.coast), (lon, lat) => {
   const l = localOf(lat, lon)
   return [l.eastNm, l.northNm]
 })
@@ -31,37 +34,9 @@ interface Peak {
   radiusNm: number
 }
 
-// Summits, approximate positions and heights (metres above sea level).
-const PEAKS_M: readonly [string, number, number, number][] = [
-  ['Salak', -6.72, 106.73, 2211],
-  ['Gede-Pangrango', -6.78, 106.97, 3019],
-  ['Tangkuban Perahu', -6.77, 107.6, 2084],
-  ['Papandayan', -7.32, 107.73, 2665],
-  ['Cikuray', -7.32, 107.86, 2821],
-  ['Ciremai', -6.89, 108.4, 3078],
-  ['Slamet', -7.24, 109.21, 3428],
-  ['Sindoro', -7.3, 109.99, 3136],
-  ['Sumbing', -7.38, 110.07, 3371],
-  ['Merbabu', -7.45, 110.43, 3145],
-  ['Merapi', -7.54, 110.45, 2930],
-  ['Muria', -6.62, 110.88, 1602],
-  ['Lawu', -7.63, 111.19, 3265],
-  ['Wilis', -7.81, 111.76, 2563],
-  ['Kelud', -7.93, 112.31, 1731],
-  ['Arjuno', -7.76, 112.59, 3339],
-  ['Bromo-Tengger', -7.94, 112.95, 2329],
-  ['Semeru', -8.11, 112.92, 3676],
-  ['Argopuro', -7.97, 113.57, 3088],
-  ['Raung', -8.12, 114.04, 3332],
-  ['Ijen', -8.06, 114.24, 2769],
-  ['Batukaru', -8.33, 115.09, 2276],
-  ['Batur', -8.24, 115.38, 1717],
-  ['Agung', -8.34, 115.51, 3031],
-  ['Rinjani', -8.41, 116.46, 3726],
-]
-
-export const PEAKS: readonly Peak[] = PEAKS_M.map(([name, lat, lon, m]) => {
-  const l = localOf(lat, lon)
+/** The scenario's summits (approximate positions and heights), in the local frame. */
+export const PEAKS: readonly Peak[] = T.peaks.map(({ name, latDeg, lonDeg, heightM: m }) => {
+  const l = localOf(latDeg, lonDeg)
   return { name, eastNm: l.eastNm, northNm: l.northNm, heightFt: m / M_PER_FT, radiusNm: 2.4 + m / 1400 }
 })
 
@@ -81,14 +56,19 @@ export interface Airfield {
 const airfield = (ap: Airport): Airfield => {
   const L = ap.runwayLengthM
   const t = ap.terminalSide
-  // The terminal side reaches past the parallel runway, if there is one.
-  const far = (ap.parallelOffsetM !== null ? Math.abs(ap.parallelOffsetM) : 0) + 1600
-  const r0 = t < 0 ? -far : -1100
-  const r1 = t < 0 ? 1100 : far
+  const P = ap.parallelOffsetM
+  // A parallel runway on the terminal side (Jakarta): the terminal side reaches past it.
+  const far = (P !== null && Math.sign(P) === t ? Math.abs(P) : 0) + 1600
+  // A parallel runway on the other side (Toulouse, Nice): that side reaches past it too.
+  const near = P !== null && Math.sign(P) !== t ? Math.abs(P) : 0
+  const away = near + 1100
+  const fillAway = near + 250
+  const r0 = t < 0 ? -far : -away
+  const r1 = t < 0 ? away : far
   return {
     airport: ap,
     level: { a0: -1400, a1: L + 1400, r0, r1 },
-    fill: { a0: -350, a1: L + 1200, r0: t < 0 ? -(far - 300) : -250, r1: t < 0 ? 250 : far - 300 },
+    fill: { a0: -350, a1: L + 1200, r0: t < 0 ? -(far - 300) : -fillAway, r1: t < 0 ? fillAway : far - 300 },
   }
 }
 
@@ -128,10 +108,11 @@ export function naturalFtAt(eastNm: number, northNm: number): number {
     // The sea floor drops away from the beach: shallow near the coast, about 600 ft deep 4 NM out.
     return Math.max(-1200, 6 + 150 * sd)
   }
-  // A wide, low coastal plain (Jakarta, the north coast) that rises inland into hills.
+  // A wide, low coastal plain (Jakarta and the north coast of Java; the Languedoc) that rises
+  // inland into hills, from an inland plain where the scenario has one (Toulouse, ~150 m).
   const inland = smooth((sd - 3) / 12)
-  const hills = (valueNoise(eastNm * 0.16, northNm * 0.16, 7) * 0.7 + valueNoise(eastNm * 0.55, northNm * 0.55, 3) * 0.3) * 1500 * inland
-  let h = 6 + 18 * Math.min(sd, 3) + hills
+  const hills = (valueNoise(eastNm * 0.16, northNm * 0.16, 7) * 0.7 + valueNoise(eastNm * 0.55, northNm * 0.55, 3) * 0.3) * T.hillsFt * inland
+  let h = 6 + 18 * Math.min(sd, 3) + hills + T.inlandBaseFt * inland
   // Volcano cones: steep near the summit, long gentle skirts.
   const onLand = smooth(sd / 0.8)
   for (const p of PEAKS) {
