@@ -31,12 +31,27 @@ afterEach(() => {
   act(() => useExamLock.getState().setLocked(false))
 })
 
+/** Answer every question right, one at a time, then check. */
 const answerQuiz = () => {
-  QUESTIONS.forEach((q) => fireEvent.click(screen.getByRole('radio', { name: q.options[q.answer] })))
+  QUESTIONS.forEach((q, i) => {
+    fireEvent.click(screen.getByRole('radio', { name: q.options[q.answer] }))
+    if (i < QUESTIONS.length - 1) fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+  })
   fireEvent.click(screen.getByRole('button', { name: 'Check my answers' }))
 }
 
 describe('the assessment panel', () => {
+  it('steps through the questions, keeping each answer when going back', () => {
+    render(<AssessmentPanel engine={new JourneyEngine({ guidedStops: false, running: false })} />)
+    expect(screen.getByText(/Question 1 of 12/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Previous' }).hasAttribute('disabled')).toBe(true)
+    fireEvent.click(screen.getByRole('radio', { name: QUESTIONS[0].options[2] }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    expect(screen.getByText(/Question 2 of 12 · 1 answered/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Previous' }))
+    expect((screen.getByRole('radio', { name: QUESTIONS[0].options[2] }) as HTMLElement).getAttribute('aria-checked')).toBe('true')
+  })
+
   it('marks the quiz, explains each answer, and keeps the answers', () => {
     render(<AssessmentPanel engine={new JourneyEngine({ guidedStops: false, running: false })} />)
     answerQuiz()

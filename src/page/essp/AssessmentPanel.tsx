@@ -62,6 +62,7 @@ function Choice<T extends string | number>({ name, legend, options, value, onCha
  */
 export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngine; index?: string }) {
   const [tab, setTab] = useState<Tab>('quiz')
+  const [q, setQ] = useState(0)
   const { quizAnswers, quizChecked, lastExam, setAnswer, checkQuiz, retryQuiz, saveExam } = useAssessment()
   const setLocked = useExamLock((s) => s.setLocked)
   const showSources = useSources((s) => s.show)
@@ -131,32 +132,62 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
 
       {tab === 'quiz' && (
         <div className="mt-2">
-          <p className="text-[12.5px] leading-5 text-muted-foreground">{QUESTIONS.length} questions. Every answer rests on the claims listed under Sources.</p>
-          {QUESTIONS.map((q, i) => (
-            <div key={q.id} className="border-b border-hud-line pb-2 last:border-b-0">
-              <Choice name={q.id} legend={`${i + 1}. ${q.prompt}`} options={q.options.map((text, k) => ({ value: k, text }))} value={quizAnswers[i] ?? null} onChange={(a) => setAnswer(i, a)} disabled={quizChecked} />
-              {quiz && (
-                <div className="mt-1 flex flex-col gap-1 text-[12px] leading-4">
-                  <Mark ok={quiz.marks[i]} />
-                  <p className="text-foreground/85">{q.explain}</p>
-                  <button type="button" className="hud-label self-start normal-case underline-offset-2 hover:text-foreground hover:underline" onClick={() => showSources(q.claims)}>
-                    Sources · {q.claims.length} claims
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-          {quiz ? (
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <p className="hud-value text-[13px] text-foreground">
-                {quiz.correct} / {quiz.max} right
+          {!quiz ? (
+            <>
+              <p className="hud-label" aria-live="polite">
+                Question {q + 1} of {QUESTIONS.length} · {quizAnswers.filter((a) => a !== null && a !== undefined).length} answered
               </p>
-              <HudButton onClick={retryQuiz}>Try again</HudButton>
-            </div>
+              <Choice key={QUESTIONS[q].id} name={QUESTIONS[q].id} legend={`${q + 1}. ${QUESTIONS[q].prompt}`} options={QUESTIONS[q].options.map((text, k) => ({ value: k, text }))} value={quizAnswers[q] ?? null} onChange={(a) => setAnswer(q, a)} />
+              <div className="mt-2 flex gap-2">
+                <HudButton className="flex-1" disabled={q === 0} onClick={() => setQ(q - 1)}>
+                  Previous
+                </HudButton>
+                {q < QUESTIONS.length - 1 ? (
+                  <HudButton className="flex-1" onClick={() => setQ(q + 1)}>
+                    Next
+                  </HudButton>
+                ) : (
+                  <HudButton variant="solid" className="flex-1" onClick={checkQuiz}>
+                    Check my answers
+                  </HudButton>
+                )}
+              </div>
+            </>
           ) : (
-            <HudButton variant="solid" className="mt-2 w-full" onClick={checkQuiz}>
-              Check my answers
-            </HudButton>
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <p className="hud-value text-[13px] text-foreground">
+                  {quiz.correct} / {quiz.max} right
+                </p>
+                <HudButton
+                  onClick={() => {
+                    retryQuiz()
+                    setQ(0)
+                  }}
+                >
+                  Try again
+                </HudButton>
+              </div>
+              <ol className="mt-2 flex flex-col">
+                {QUESTIONS.map((x, i) => (
+                  <li key={x.id} className="border-b border-hud-line py-1.5 last:border-b-0">
+                    <details>
+                      <summary className="flex cursor-pointer items-start justify-between gap-2 text-[12.5px] leading-5 text-foreground/90">
+                        <span>
+                          {i + 1}. {x.prompt}
+                        </span>
+                        <Mark ok={quiz.marks[i]} />
+                      </summary>
+                      <p className="mt-1 text-[12px] leading-4 text-foreground">Answer: {x.options[x.answer]}</p>
+                      <p className="mt-1 text-[12px] leading-4 text-foreground/85">{x.explain}</p>
+                      <button type="button" className="hud-label mt-1 normal-case underline-offset-2 hover:text-foreground hover:underline" onClick={() => showSources(x.claims)}>
+                        Sources · {x.claims.length} claims
+                      </button>
+                    </details>
+                  </li>
+                ))}
+              </ol>
+            </>
           )}
         </div>
       )}

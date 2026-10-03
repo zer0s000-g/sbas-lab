@@ -126,6 +126,26 @@ export const EGNOS_CLAIMS: readonly Claim[] = [
     value: [85, 46, 954],
     unit: 'EWAs, of them with ANSPs, procedures (March 2024)',
   },
+  // The real signal (the replay panel).
+  {
+    id: 'replay.recording',
+    topic: 'Real signal',
+    scenarios: ESSP,
+    text: 'The replayed messages are real: 15 minutes broadcast by PRN 124 on 29 March 2011 from 15:00 GPS time, recorded by ESA’s EGNOS Message Server and shipped with the EGNOS Toolkit (the Linux port of the EGNOS SDK the GSA published in 2011).',
+    refs: [{ source: 'egnos-toolkit' }, { source: 'esa-ems' }],
+    status: 'sourced',
+    code: 'src/replay/data/NOTICE.md',
+    note: 'EUPL v1.1; check the licence suits the training use before distributing. EGNOS has changed since 2011: its GEOs, RIMS network and performance.',
+  },
+  {
+    id: 'replay.decoder-check',
+    topic: 'Real signal',
+    scenarios: ESSP,
+    text: 'SBAS Lab decodes the messages itself (the DO-229 layout: CRC-24Q, PRN mask, fast corrections and UDREI, IGP mask, ionospheric delays and GIVEI). Every recorded message passes the CRC, and the decoded picture equals the one RTKLIB’s independent decoder builds from the same file.',
+    refs: [{ source: 'rtca-do229', section: 'Appendix A' }, { source: 'rtklib' }],
+    status: 'sourced',
+    code: 'src/core/sbasDecode.ts',
+  },
   // The data the two scenarios rest on.
   {
     id: 'scenario.essp-airports',

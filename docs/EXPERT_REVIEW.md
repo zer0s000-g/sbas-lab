@@ -17,7 +17,7 @@ narration cites exists; and this file must be regenerated when the registry chan
 | Status | Claims | Meaning |
 |---|---|---|
 | Reviewed | 0 | Confirmed by a named reviewer against the primary source |
-| Sourced, awaiting review | 52 | Source and section identified; not yet signed off |
+| Sourced, awaiting review | 54 | Source and section identified; not yet signed off |
 | To confirm | 41 | Not yet traced to a primary source, or an illustrative value the page labels as such |
 
 ## To confirm
@@ -120,6 +120,8 @@ narration cites exists; and this file must be regenerated when the registry chan
 | `essp.notam-proposal` | ESSP-SAS | ESSP’s NOTAM proposal service predicts periods when the EGNOS APV-I service will be unavailable at airports with EGNOS procedures, formats them as proposed NOTAMs and sends them to the NOTAM offices concerned (by AFTN). |  | ESSP EGNOS Service Provision Yearly Report |  |
 | `essp.forecast-model` | ESSP-SAS | The page forecasts LPV availability by running its own SBAS model forward at the airport with the conditions known in advance (a storm forecast, a planned RIMS outage); sudden failures such as a lost GEO are not in a forecast. *A real prediction uses the almanac, planned outages and the service volume model.* |  | ICAO Doc 9849 §4.3.3.4.1; ESSP EGNOS Service Provision Yearly Report | `src/core/service.ts` |
 | `essp.ewa` | ESSP-SAS | An air navigation service provider’s first step to publish EGNOS-based (LPV) procedures is an EGNOS Working Agreement (EWA) with ESSP. In March 2024, 85 EWAs were in force (46 with ANSPs), and 954 EGNOS-based procedures were published. | 85, 46, 954 EWAs, of them with ANSPs, procedures (March 2024) | ESSP EWA for SoL aviation users (ESSP presentation) |  |
+| `replay.recording` | ESSP-SAS | The replayed messages are real: 15 minutes broadcast by PRN 124 on 29 March 2011 from 15:00 GPS time, recorded by ESA’s EGNOS Message Server and shipped with the EGNOS Toolkit (the Linux port of the EGNOS SDK the GSA published in 2011). *EUPL v1.1; check the licence suits the training use before distributing. EGNOS has changed since 2011: its GEOs, RIMS network and performance.* |  | EGNOS Toolkit authors (SourceForge) EGNOS Toolkit (libegnos) 0.5.1, with its example EMS file…; ESA EGNOS Message Server (EMS) User Interface Document | `src/replay/data/NOTICE.md` |
+| `replay.decoder-check` | ESSP-SAS | SBAS Lab decodes the messages itself (the DO-229 layout: CRC-24Q, PRN mask, fast corrections and UDREI, IGP mask, ionospheric delays and GIVEI). Every recorded message passes the CRC, and the decoded picture equals the one RTKLIB’s independent decoder builds from the same file. |  | RTCA DO-229 Appendix A; T. Takasu (BSD 2-clause) RTKLIB, src/sbas.c | `src/core/sbasDecode.ts` |
 | `scenario.msas` | AirNav Indonesia | MSAS v3: GEOs QZS-3 at 127°E (PRN 137) and QZS-6 at 90.5°E (PRN 129); two MCS (Hitachi-ota, Kobe); uplinks at Hitachi-ota, Tanegashima and Miyakojima; each PRN has its own uplink. | 137, 127, 129, 90.5 | JCAB MSAS (Michibiki Satellite-based Augmentation Service), JC… slides 3–6; ICAO APAC ICAO APAC CNS SG/24 IP15 (Japan); gps.gov GPS L1 C/A PRN code assignments | `src/scenarios/indonesia/geos.ts` |
 | `data.coastlines` | both | Coastlines come from Natural Earth land polygons (1:10m for the flight view, 1:50m for the maps, 1:110m for the globe), clipped and simplified. |  | Natural Earth (public domain) Natural Earth land polygons, 1:10m, 1:50m and 1:110m | `scripts/geo/build-coast.mjs` |
 
