@@ -4,7 +4,7 @@
  * its recording) and the assessment. Placed in the page's left column, right column, or
  * a tab of their own on phones.
  */
-import { Suspense } from 'react'
+import { PanelBoundary } from '@/components/PanelBoundary'
 import type { JourneyEngine } from '@/journey/engine'
 import { lazyRetry } from '@/lib/lazyRetry'
 import { BreakPanel } from './BreakPanel'
@@ -19,9 +19,9 @@ export default function EsspToolkit({ engine, nowS, part }: { engine: JourneyEng
       {part !== 'right' && <BreakPanel engine={engine} />}
       {part !== 'left' && <ServicePanel engine={engine} nowS={nowS} />}
       {part !== 'left' && (
-        <Suspense fallback={null}>
+        <PanelBoundary name="The real EGNOS signal">
           <ReplayPanel engine={engine} nowS={nowS} />
-        </Suspense>
+        </PanelBoundary>
       )}
       {part !== 'right' && <AssessmentPanel engine={engine} />}
     </>

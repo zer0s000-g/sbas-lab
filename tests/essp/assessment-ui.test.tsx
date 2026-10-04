@@ -94,7 +94,7 @@ describe('the assessment panel', () => {
     fireEvent.click(screen.getByRole('radio', { name: f.label }))
     fireEvent.click(screen.getByRole('radio', { name: f.crewAtc }))
     fireEvent.click(screen.getByRole('button', { name: 'Hand in the exam' }))
-    expect(calls).toContain(`cmi.core.score.raw=${QUESTIONS.length + 2}`)
+    expect(calls).toContain('cmi.core.score.raw=100')
     expect(calls).toContain('cmi.core.lesson_status=passed')
     expect(screen.getByText(/Result sent to your learning management system/)).toBeTruthy()
     // Unmounting the panel (a phone tab switch) keeps the session; leaving the page finishes it, once.
@@ -120,6 +120,18 @@ describe('the assessment panel', () => {
     expect(screen.getByRole('button', { name: 'Hand in the exam' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Hand in the exam' }))
     expect(useExamLock.getState().locked).toBe(false)
+    expect(e.state.failures[on.id]).toBe(false)
+  })
+
+  it('the exam failure stays on when the learner flies again from the gate', () => {
+    const e = new JourneyEngine({ guidedStops: false, running: false })
+    render(<AssessmentPanel engine={e} />)
+    fireEvent.click(screen.getByRole('radio', { name: 'Exam' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Start the exam' }))
+    const on = FAILURES.find((f) => e.state.failures[f.id])!
+    act(() => e.reset())
+    expect(e.state.failures[on.id]).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Hand in the exam' }))
     expect(e.state.failures[on.id]).toBe(false)
   })
 

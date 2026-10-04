@@ -257,6 +257,8 @@ export function applyMessage(s: DecoderState, m: Decoded, tS: number): void {
   switch (m.type) {
     case 1:
       if (!('maskBits' in m) || 'band' in m) return
+      // A new mask renumbers the slots: corrections kept by slot belong to the old one.
+      if (s.iodp !== m.iodp) s.fast.clear()
       s.maskBits = m.maskBits
       s.iodp = m.iodp
       return
@@ -278,7 +280,9 @@ export function applyMessage(s: DecoderState, m: Decoded, tS: number): void {
       if (!('iodf' in m) || !Array.isArray(m.iodf)) return
       for (let slot = 0; slot < s.maskBits.length && slot < 51; slot++) {
         const f = s.fast.get(slot)
-        if (!f || f.iodf !== m.iodf[Math.floor(slot / 13)]) continue
+        const iodf = m.iodf[Math.floor(slot / 13)]
+        // IODF 3 marks an alarm: the UDREIs apply whatever IODF the corrections carry (DO-229).
+        if (!f || (iodf !== 3 && f.iodf !== iodf)) continue
         s.fast.set(slot, { ...f, udrei: m.udrei[slot] })
       }
       return
@@ -288,6 +292,8 @@ export function applyMessage(s: DecoderState, m: Decoded, tS: number): void {
     case 18: {
       if (!('maskBits' in m) || !('band' in m)) return
       const igps = m.maskBits.map((i) => igpAt(m.band, i)).filter((p): p is IgpPos => p !== null)
+      // A new IODI is a new mask for the band: its old grid points no longer apply.
+      if (s.bands.get(m.band)?.iodi !== m.iodi) for (const [k, g] of s.grid) if (g.band === m.band) s.grid.delete(k)
       s.bands.set(m.band, { iodi: m.iodi, igps })
       return
     }

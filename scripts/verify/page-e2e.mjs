@@ -261,6 +261,7 @@ try {
 
   if (!ONLY || ONLY === 'scorm') {
     // A stand-in LMS on the same origin: a SCORM 1.2 API on the parent, the course in a frame.
+    // SCORM 1.2 scores are percentages (the manifest's masteryscore is one).
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block' })
     const page = await ctx.newPage()
     const errors = []
@@ -289,7 +290,7 @@ try {
     await course.getByRole('button', { name: 'Hand in the exam' }).click()
     await page.waitForTimeout(500)
     calls = await page.evaluate(() => window.__calls)
-    check(calls.some((c) => /^cmi\.core\.lesson_status=(passed|failed)$/.test(c)) && calls.some((c) => /^cmi\.core\.score\.max=14$/.test(c)), `SCORM: the result reaches the LMS (${calls.filter((c) => c.includes('lesson_status')).at(-1)})`)
+    check(calls.some((c) => /^cmi\.core\.lesson_status=(passed|failed)$/.test(c)) && calls.some((c) => /^cmi\.core\.score\.max=100$/.test(c)) && calls.some((c) => /^cmi\.core\.score\.raw=(\d|[1-9]\d|100)$/.test(c)), `SCORM: the result reaches the LMS (${calls.filter((c) => c.includes('lesson_status')).at(-1)})`)
     check((await course.getByText(/Result sent to your learning management system/).count()) === 1, 'SCORM: the page says the result was sent')
     check(errors.length === 0, `SCORM: no page errors${errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''}`)
     await ctx.close()

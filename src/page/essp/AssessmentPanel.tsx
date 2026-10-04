@@ -14,6 +14,22 @@ import { useAssessment } from './assessmentStore'
 import { useExamLock } from './examLock'
 
 type Tab = 'quiz' | 'exam' | 'result'
+
+let stopKeeping: (() => void) | null = null
+/**
+ * While an exam runs, its failure stays on: "Fly again from the gate" clears the timed
+ * failures, which would leave the learner graded on a failure that is no longer there.
+ */
+function keepExamFailure(engine: JourneyEngine) {
+  stopKeeping?.()
+  stopKeeping = engine.subscribe(() => {
+    const r = useExamLock.getState().running
+    if (!r) {
+      stopKeeping?.()
+      stopKeeping = null
+    } else if (!engine.state.failures[r.failure]) engine.setFailure(r.failure, true)
+  })
+}
 const label = (id: FailureId) => FAILURES.find((f) => f.id === id)?.label ?? id
 const response = (id: FailureId) => FAILURES.find((f) => f.id === id)?.crewAtc ?? ''
 
@@ -85,6 +101,9 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
     setLmsState(lms.current.report({ raw: total.raw, max: total.max, status: total.status }) ? 'reported' : 'error')
   }, [quiz?.correct, exam?.correct, total.raw, total.max, total.status]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // After an action that removes the button in use, focus goes to the tab's content, not the page.
+  const content = useRef<HTMLDivElement>(null)
+  const refocus = () => requestAnimationFrame(() => content.current?.focus())
   const startExam = () => {
     const plan = examPlan((Date.now() % 2_000_000_000) + 1, FAILURES)
     for (const f of FAILURES) engine.setFailure(f.id, false)
@@ -92,13 +111,17 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
     engine.setFailure(plan.failure, true)
     engine.play()
     start(plan)
+    keepExamFailure(engine)
+    refocus()
   }
   const submitExam = () => {
     if (!running) return
-    engine.setFailure(running.failure, false)
-    saveExam({ seed: running.seed, what, action })
+    const r = running
     end()
+    engine.setFailure(r.failure, false)
+    saveExam({ seed: r.seed, what, action })
     setTab('result')
+    refocus()
   }
 
   return (
@@ -113,6 +136,7 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
         ]}
       />
 
+      <div ref={content} tabIndex={-1} className="outline-none">
       {tab === 'quiz' && (
         <div className="mt-2">
           {!quiz ? (
@@ -130,7 +154,14 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
                     Next
                   </HudButton>
                 ) : (
-                  <HudButton variant="solid" className="flex-1" onClick={checkQuiz}>
+                  <HudButton
+                    variant="solid"
+                    className="flex-1"
+                    onClick={() => {
+                      checkQuiz()
+                      refocus()
+                    }}
+                  >
                     Check my answers
                   </HudButton>
                 )}
@@ -146,6 +177,7 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
                   onClick={() => {
                     retryQuiz()
                     setQ(0)
+                    refocus()
                   }}
                 >
                   Try again
@@ -232,6 +264,7 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
           </details>
         </div>
       )}
+      </div>
     </HudPanel>
   )
 }

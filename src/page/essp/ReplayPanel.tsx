@@ -46,11 +46,18 @@ export function ReplayPanel({ engine, nowS, index = '10' }: { engine: JourneyEng
   const second = ((Math.floor(nowS) % rec.durationS) + rec.durationS) % rec.durationS
   const i = rec.indexAt(second)
   const msg = rec.messages[i]
-  const state = rec.stateAfter(i)
-  const fast = [...state.fast.entries()].sort((a, b) => a[0] - b[0]).map(([slot, f]) => ({ ...f, ...slotSystem(state.maskBits[slot] ?? 0) }))
-  const usable = fast.filter((f) => f.udrei < 14)
-  const grid = [...state.grid.values()].filter((g) => g.lonDeg >= MAP.lon0 && g.lonDeg <= MAP.lon1 && g.latDeg >= MAP.lat0 && g.latDeg <= MAP.lat1)
-  const monitored = [...state.grid.values()].filter((g) => g.givei < 15)
+  // The decoded picture changes once a recorded second, not with the page's 10 Hz readouts.
+  const { state, fast, usable, grid, monitored } = useMemo(() => {
+    const state = rec.stateAfter(i)
+    const fast = [...state.fast.entries()].sort((a, b) => a[0] - b[0]).map(([slot, f]) => ({ ...f, ...slotSystem(state.maskBits[slot] ?? 0) }))
+    return {
+      state,
+      fast,
+      usable: fast.filter((f) => f.udrei < 14),
+      grid: [...state.grid.values()].filter((g) => g.lonDeg >= MAP.lon0 && g.lonDeg <= MAP.lon1 && g.latDeg >= MAP.lat0 && g.latDeg <= MAP.lat1),
+      monitored: [...state.grid.values()].filter((g) => g.givei < 15),
+    }
+  }, [rec, i])
   const sim = engine.snapshot()
   const simOk = [...sim.ground.corrections.values()].filter((c) => c.status === 'ok')
   const simBest = simOk.length ? Math.min(...simOk.map((c) => UDRE_TABLE_M[c.udrei] ?? Infinity)) : Number.NaN
@@ -89,7 +96,7 @@ export function ReplayPanel({ engine, nowS, index = '10' }: { engine: JourneyEng
       <TelemetryRow label="Best UDRE · recording" value={formatMetres(recBest)} tone="brass" />
       <TelemetryRow label="Best UDRE · simulation now" value={formatMetres(simBest)} tone="muted" />
       <TelemetryRow label="Grid points monitored" value={`${monitored.length} / ${state.grid.size}`} tone="brass" />
-      <div className="mt-2 flex flex-wrap gap-1" aria-label="Fast corrections by satellite: PRN and UDRE">
+      <div className="mt-2 flex flex-wrap gap-1" role="group" aria-label="Fast corrections by satellite: PRN and UDRE">
         {usable.slice(0, 32).map((f) => (
           <span key={`${f.system}${f.prn}`} className="hud-value rounded-[2px] border border-hud-line px-1 text-[10px] text-foreground/90" title={`${f.system} ${f.prn}: correction ${f.prcM.toFixed(3)} m, UDRE ${UDRE_TABLE_M[f.udrei]} m`}>
             {f.system === 'GPS' ? 'G' : f.system === 'GLONASS' ? 'R' : 'S'}

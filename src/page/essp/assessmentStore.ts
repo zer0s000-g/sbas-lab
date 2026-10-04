@@ -2,12 +2,14 @@
  * The learner's assessment progress in the ESSP-SAS scenario, kept in this browser
  * (safeStorage, with a validating merge): the quiz answers and whether they were
  * checked, and the last exam's seed and answers. A running exam is not saved: the
- * journey it runs in is not, so a reload abandons it.
+ * journey it runs in is not, so a reload abandons it. Launched from an LMS, saved
+ * progress is not restored (see the merge).
  */
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { ALL_FAILURE_IDS, type FailureId } from '@/journey/failures'
 import { isRecord, safeStorage } from '@/stores/storage'
+import { pageLmsSession } from '@/lms/scorm'
 
 export interface DoneExam {
   seed: number
@@ -63,7 +65,9 @@ export const useAssessment = create<AssessmentState>()(
       storage: safeStorage,
       version: 1,
       partialize: (s): Saved => ({ quizAnswers: s.quizAnswers, quizChecked: s.quizChecked, lastExam: s.lastExam }),
-      merge: (persisted, current) => ({ ...current, ...sanitizeAssessment(persisted) }),
+      // Inside a learning management system this browser may be shared by several learners:
+      // results saved here are someone's earlier attempt, never this learner's to report.
+      merge: (persisted, current) => (pageLmsSession() ? current : { ...current, ...sanitizeAssessment(persisted) }),
     },
   ),
 )

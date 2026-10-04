@@ -17,9 +17,13 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
+// Launched from a learning management system: start its SCORM session at once, so the
+// attempt is recorded even if the learner leaves before reporting a result.
+const inLms = new URLSearchParams(location.search).has('lms')
+if (inLms) void import('./lms/scorm').then((m) => m.pageLmsSession()?.start())
+
 // Offline support in production builds only (see public/sw.js), and not inside a
 // learning management system, which serves the page from its own path.
-const inLms = new URLSearchParams(location.search).has('lms')
 if (import.meta.env.PROD && !inLms && 'serviceWorker' in navigator) {
   // The first visit loads before the service worker controls the page, so tell it
   // which build assets are already here; it caches them for offline use.

@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Pause, Play } from 'lucide-react'
 import { useAnimationFrame } from '@/hooks/useAnimationFrame'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
@@ -7,6 +7,7 @@ import { HudButton } from '@/hud/Controls'
 import { MissionClock } from '@/hud/MissionClock'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SiteHeader } from '@/components/SiteHeader'
+import { PanelBoundary } from '@/components/PanelBoundary'
 import { ScenarioBar } from '@/components/ScenarioBar'
 import { SourcesButton, SourcesSheet } from './sources/SourcesSheet'
 import { lazyRetry } from '@/lib/lazyRetry'
@@ -119,9 +120,9 @@ export default function JourneyPage() {
 
   const toolkit = (part: 'left' | 'right' | 'all') =>
     EsspToolkit && (
-      <Suspense fallback={null}>
+      <PanelBoundary name="The EGNOS panels">
         <EsspToolkit engine={engine} nowS={m.worldS} part={part} />
-      </Suspense>
+      </PanelBoundary>
     )
   const left = (
     <>

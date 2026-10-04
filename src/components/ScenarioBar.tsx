@@ -10,6 +10,9 @@ import { cn } from '@/lib/utils'
  */
 export function ScenarioBar() {
   const search = typeof location !== 'undefined' ? location.search : ''
+  // Launched from a learning management system: the LMS chose the scenario, and leaving
+  // the page would end its SCORM session (an LMS accepts one initialise per launch).
+  if (new URLSearchParams(search).has('lms')) return null
   return (
     <nav aria-label="Scenario" className="border-b border-hud-line bg-background/60">
       <div className="mx-auto flex h-10 max-w-[1440px] items-stretch gap-1 px-4 md:px-8">

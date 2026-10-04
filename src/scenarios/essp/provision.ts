@@ -94,5 +94,9 @@ export const EWA_FACTS = {
   claims: ['essp.ewa'] as readonly string[],
 }
 
-/** The failures that are known in advance and so belong in a forecast (a storm forecast, a planned RIMS outage, the service in use). */
-export const FORECASTABLE: readonly FailureId[] = ['storm', 'stationOffline', 'sbasOff', 'dfmcPreview']
+/**
+ * The failures that are known in advance and so belong in a forecast (a storm forecast, a
+ * planned RIMS outage, the service in use). Not "SBAS off": that is the receiver's choice,
+ * not a change in the service the provider forecasts.
+ */
+export const FORECASTABLE: readonly FailureId[] = ['storm', 'stationOffline', 'dfmcPreview']

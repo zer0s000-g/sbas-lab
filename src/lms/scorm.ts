@@ -67,9 +67,13 @@ export interface LmsReport {
  * One LMS session: initialised once, then each report sets the score and the status and
  * commits. Every call is guarded: a misbehaving LMS never breaks the page.
  */
+const STATUS_RANK: Record<LmsReport['status'], number> = { incomplete: 0, failed: 1, passed: 2 }
+
 export class LmsSession {
   private started = false
   private readonly lms: LmsApi
+  /** The best result reported in this session: a later, lower one is not sent. */
+  private best: { rank: number; share: number } | null = null
   constructor(lms: LmsApi) {
     this.lms = lms
   }
@@ -78,7 +82,8 @@ export class LmsSession {
     return this.lms.version
   }
 
-  private start(): boolean {
+  /** Initialise the session (at launch, so the LMS sees the attempt even without a result). */
+  start(): boolean {
     if (this.started) return true
     try {
       const ok = this.lms.version === '1.2' ? this.lms.api.LMSInitialize('') : this.lms.api.Initialize('')
@@ -93,12 +98,19 @@ export class LmsSession {
     if (!this.start()) return false
     const max = Math.max(r.max, 1)
     const raw = Math.min(Math.max(r.raw, 0), max)
+    // Reopening a passed quiz to review it must not turn the LMS record back to incomplete.
+    const rank = STATUS_RANK[r.status]
+    const share = raw / max
+    if (this.best && (rank < this.best.rank || (rank === this.best.rank && share < this.best.share))) return true
+    this.best = { rank, share }
     try {
       if (this.lms.version === '1.2') {
         const a = this.lms.api
+        // SCORM 1.2 scores are 0–100 and the LMS compares them with the manifest's
+        // masteryscore (a percentage), so the score is sent as a percentage.
         a.LMSSetValue('cmi.core.score.min', '0')
-        a.LMSSetValue('cmi.core.score.max', String(max))
-        a.LMSSetValue('cmi.core.score.raw', String(raw))
+        a.LMSSetValue('cmi.core.score.max', '100')
+        a.LMSSetValue('cmi.core.score.raw', String(Math.round(100 * share)))
         a.LMSSetValue('cmi.core.lesson_status', r.status)
         return String(a.LMSCommit('')) === 'true'
       }
@@ -112,6 +124,17 @@ export class LmsSession {
       return String(a.Commit('')) === 'true'
     } catch {
       return false
+    }
+  }
+
+  /** Save what has been reported so far. */
+  commit(): void {
+    if (!this.started) return
+    try {
+      if (this.lms.version === '1.2') this.lms.api.LMSCommit('')
+      else this.lms.api.Commit('')
+    } catch {
+      /* the LMS is gone */
     }
   }
 
@@ -137,7 +160,15 @@ export function pageLmsSession(): LmsSession | null {
   if (typeof window === 'undefined') return null
   const found = findLmsApi(window as unknown as WindowLike)
   pageSession = found ? new LmsSession(found) : null
-  if (pageSession) window.addEventListener('pagehide', () => pageSession?.finish(), { once: true })
+  if (pageSession) {
+    const session = pageSession
+    window.addEventListener('pagehide', (e) => {
+      // A page kept in the back/forward cache may come back: commit only, so the session
+      // can carry on (an LMS rejects a second initialise after finish).
+      if (e.persisted) session.commit()
+      else session.finish()
+    })
+  }
   return pageSession
 }
 

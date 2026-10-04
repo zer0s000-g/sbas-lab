@@ -3,6 +3,7 @@ import { BookOpenCheck } from 'lucide-react'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { HudButton } from '@/hud/Controls'
 import { lazyRetry } from '@/lib/lazyRetry'
+import { StageBoundary } from '@/stage/StageBoundary'
 import { useSources } from './store'
 
 // The registry's text loads only when the sheet opens (design.md §7: lightest asset first).
@@ -37,9 +38,18 @@ export function SourcesSheet() {
           </SheetDescription>
         </SheetHeader>
         {open && (
-          <Suspense fallback={<p className="hud-label p-4">Loading the sources…</p>}>
-            <SourcesList focus={focus} />
-          </Suspense>
+          <StageBoundary
+            fallback={({ retry }) => (
+              <div role="status" className="flex flex-col items-start gap-2 p-4 text-[13px] text-muted-foreground">
+                <p>The sources could not be loaded.</p>
+                <HudButton onClick={retry}>Try again</HudButton>
+              </div>
+            )}
+          >
+            <Suspense fallback={<p className="hud-label p-4">Loading the sources…</p>}>
+              <SourcesList focus={focus} />
+            </Suspense>
+          </StageBoundary>
         )}
       </SheetContent>
     </Sheet>
