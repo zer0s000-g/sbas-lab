@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { initialAircraft, stepFlight } from '@/core/flight'
-import { AIRPORTS, BALI, JAKARTA, airportToLocalNm, localNmToAirport, nearestLayout, onPavement, reciprocal, type AirportLayout } from '@/views/airports'
+import { AIRPORTS, BALI, JAKARTA, TAXI_LAMP_SPACING_M, airportToLocalNm, localNmToAirport, nearestLayout, onPavement, reciprocal, type AirportLayout } from '@/views/airports'
 import { AIRFIELDS, airfieldFlat, terrainFtAt } from '@/views/terrain'
 
 const fieldOf = (l: AirportLayout) => AIRFIELDS.find((f) => f.airport.id === l.airport.id)!
@@ -123,5 +123,23 @@ describe('airport layouts', () => {
     expect(rc).toBeCloseTo(-2400, 6)
     for (const s of JAKARTA.stands) expect(s.r).toBeLessThan(0)
     for (const s of JAKARTA.stands) expect(s.r).toBeGreaterThan(rc)
+  })
+
+  test('taxiway edge lights: a pair about every 60 m along each taxiway, also through the bends', () => {
+    for (const l of AIRPORTS) {
+      const taxi = l.lamps.filter((p) => p.kind === 'taxi').length
+      let most = 0
+      for (const line of l.taxiways) {
+        let len = 0
+        for (let i = 0; i + 1 < line.length; i++) len += Math.hypot(line[i + 1][0] - line[i][0], line[i + 1][1] - line[i][1])
+        most += 2 * (Math.floor(len / TAXI_LAMP_SPACING_M) + 1)
+      }
+      expect(taxi).toBeGreaterThan(20)
+      // Lamps on the runway strip are left out, so at most one pair per 60 m.
+      expect(taxi).toBeLessThanOrEqual(most)
+    }
+    // LAB201's own tracks (a point every few metres) are lit no denser than a straight taxiway.
+    const track = BALI.taxiways[0]
+    expect(track.length).toBeGreaterThan(20)
   })
 })

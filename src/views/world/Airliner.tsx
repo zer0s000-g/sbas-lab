@@ -5,8 +5,8 @@
  * are the real ones: red on the left wingtip, green on the right, a red beacon, white
  * strobes, and landing lights in the air below 10 000 ft.
  */
-import { useLayoutEffect, useMemo, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useLayoutEffect, useMemo, useRef, type ReactNode, type Ref } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { ThemeTokens } from '@/hooks/useThemeTokens'
 import { col } from '@/stage/col'
@@ -187,12 +187,16 @@ export interface AirlinerHandle {
   beacon: boolean
 }
 
-/**
- * One airliner. `state` is read every frame (mutate it from the caller's frame loop).
- * `blink` animates the beacon and strobes (off with reduced motion: steady lights).
- */
-export function Airliner({ t, state, blink, night }: { t: ThemeTokens; state: AirlinerHandle; blink: boolean; night: { value: number } }) {
-  const g = airlinerGeos()
+export interface AirlinerMaterials {
+  body: THREE.MeshStandardMaterial
+  wing: THREE.MeshStandardMaterial
+  dark: THREE.MeshStandardMaterial
+  glass: THREE.MeshStandardMaterial
+  tail: THREE.MeshStandardMaterial
+}
+
+/** One set of airliner materials in the theme's colours (share it between aircraft; freed on unmount). */
+export function useAirlinerMaterials(t: ThemeTokens): AirlinerMaterials {
   const mats = useMemo(
     () => ({
       body: new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0.1 }),
@@ -211,6 +215,41 @@ export function Airliner({ t, state, blink, night }: { t: ThemeTokens; state: Ai
     mats.tail.color.copy(col(t, 'world-roof'))
   }, [mats, t])
   useLayoutEffect(() => () => Object.values(mats).forEach((m) => m.dispose()), [mats])
+  return mats
+}
+
+/** The airframe in metres-to-scene scale: the shared geometries in the given materials. */
+function Airframe({ mats, gearRef, children }: { mats: AirlinerMaterials; gearRef?: Ref<THREE.Mesh>; children?: ReactNode }) {
+  const g = airlinerGeos()
+  const s = 1 / FLIGHT_UNIT_M
+  return (
+    <group scale={[s, s, s]}>
+      <mesh geometry={g.body} material={mats.body} />
+      <mesh geometry={g.wing} material={mats.wing} />
+      <mesh geometry={g.dark} material={mats.dark} />
+      <mesh geometry={g.glass} material={mats.glass} />
+      <mesh geometry={g.tail} material={mats.tail} />
+      <mesh ref={gearRef} geometry={g.gear} material={mats.dark} />
+      {children}
+    </group>
+  )
+}
+
+/** A parked airliner: gear down, lights off, nothing to update per frame. Share `mats` between them. */
+export function ParkedAirliner({ mats }: { mats: AirlinerMaterials }) {
+  return <Airframe mats={mats} />
+}
+
+/** Lamp point size, CSS px (scaled by the pixel ratio, like the airport lamps). */
+const LIGHT_PX = 4
+
+/**
+ * One airliner. `state` is read every frame (mutate it from the caller's frame loop).
+ * `blink` animates the beacon and strobes (off with reduced motion: steady lights).
+ */
+export function Airliner({ t, state, blink, night }: { t: ThemeTokens; state: AirlinerHandle; blink: boolean; night: { value: number } }) {
+  const mats = useAirlinerMaterials(t)
+  const dpr = useThree((s) => s.viewport.dpr)
   const gearRef = useRef<THREE.Mesh>(null)
 
   // Lights: left nav (red), right nav (green), beacon top and bottom (red), wingtip strobes, landing lights.
@@ -228,9 +267,12 @@ export function Airliner({ t, state, blink, night }: { t: ThemeTokens; state: Ai
     const geo = new THREE.BufferGeometry()
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pts.flat(), 3))
     geo.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(pts.length * 3), 3))
-    const mat = new THREE.PointsMaterial({ size: 4, sizeAttenuation: false, vertexColors: true, map: lampSprite(), transparent: true, depthWrite: false, toneMapped: false, alphaTest: 0.02 })
+    const mat = new THREE.PointsMaterial({ size: LIGHT_PX, sizeAttenuation: false, vertexColors: true, map: lampSprite(), transparent: true, depthWrite: false, toneMapped: false, alphaTest: 0.02 })
     return new THREE.Points(geo, mat)
   }, [])
+  useLayoutEffect(() => {
+    ;(lights.material as THREE.PointsMaterial).size = LIGHT_PX * dpr
+  }, [lights, dpr])
   useLayoutEffect(
     () => () => {
       lights.geometry.dispose()
@@ -257,16 +299,9 @@ export function Airliner({ t, state, blink, night }: { t: ThemeTokens; state: Ai
     set(7, lampCols.white, state.landing, 1.6)
     c.needsUpdate = true
   })
-  const s = 1 / FLIGHT_UNIT_M
   return (
-    <group scale={[s, s, s]}>
-      <mesh geometry={g.body} material={mats.body} />
-      <mesh geometry={g.wing} material={mats.wing} />
-      <mesh geometry={g.dark} material={mats.dark} />
-      <mesh geometry={g.glass} material={mats.glass} />
-      <mesh geometry={g.tail} material={mats.tail} />
-      <mesh ref={gearRef} geometry={g.gear} material={mats.dark} />
+    <Airframe mats={mats} gearRef={gearRef}>
       <primitive object={lights} />
-    </group>
+    </Airframe>
   )
 }

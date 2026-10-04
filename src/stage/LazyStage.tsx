@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState, type ComponentProps } from 'react'
+import { Suspense, useEffect, useState, type ComponentProps, type ReactNode } from 'react'
 import { RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { isChunkLoadError, lazyRetry } from '@/lib/lazyRetry'
@@ -45,13 +45,25 @@ export function useWhenIdle() {
 }
 
 export function LazyStage(props: StageProps) {
-  const ready = useWhenIdle()
-  if (!ready) return <StagePoster className={props.className} label={props.label} />
   return (
-    <StageBoundary fallback={(f) => <StageFailurePoster {...f} className={props.className} label={props.label} />}>
-      <Suspense fallback={<StagePoster className={props.className} label={props.label} />}>
-        <StageImpl {...props} />
-      </Suspense>
+    <DeferredStage className={props.className} label={props.label}>
+      <StageImpl {...props} />
+    </DeferredStage>
+  )
+}
+
+/**
+ * Mounts `children` (a lazily loaded 3D view) once the page is idle, with the poster
+ * while it downloads and the failure poster if it cannot load or render. For a view
+ * that wraps Stage in its own lazy module, so its setup code also stays out of the
+ * first load.
+ */
+export function DeferredStage({ className, label, children }: { className?: string; label: string; children: ReactNode }) {
+  const ready = useWhenIdle()
+  if (!ready) return <StagePoster className={className} label={label} />
+  return (
+    <StageBoundary fallback={(f) => <StageFailurePoster {...f} className={className} label={label} />}>
+      <Suspense fallback={<StagePoster className={className} label={label} />}>{children}</Suspense>
     </StageBoundary>
   )
 }
@@ -62,14 +74,21 @@ export function LazyStage(props: StageProps) {
  * reloads the page. Anything else (no WebGL, a shader the GPU rejects) is a limit of
  * this device.
  */
-export function StageFailurePoster({ error, retry, attempts, className, label }: StageFailure & { className?: string; label: string }) {
+export function StageFailurePoster({
+  error,
+  retry,
+  attempts,
+  className,
+  label,
+  subject = '3D view',
+}: StageFailure & { className?: string; label: string; /** What failed, for the message. */ subject?: string }) {
   const download = isChunkLoadError(error)
   const reload = attempts >= 2
   return (
     <StagePoster
       className={className}
       label={label}
-      message={download ? '3D view could not be downloaded' : '3D view unavailable on this device'}
+      message={download ? `${subject} could not be downloaded` : `${subject} unavailable on this device`}
       action={
         download ? (
           <Button size="sm" variant="outline" onClick={reload ? () => window.location.reload() : retry}>

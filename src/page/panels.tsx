@@ -2,6 +2,7 @@
  * The journey panels (design.md §4). Each reads the sampled view model, so every
  * number agrees with the views.
  */
+import { useState } from 'react'
 import { RotateCcw } from 'lucide-react'
 import { DEPARTURE, DESTINATION, HYPOTHETICAL } from '@/core/region'
 import { GEO_SATS } from '@/core/orbits'
@@ -22,7 +23,7 @@ import { STORY_NOTE } from '@/journey/director'
 import type { JourneyEngine, SpeedMode, StopId } from '@/journey/engine'
 import type { ViewModel } from './model'
 
-const hhmm = (h: number) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`
+const hhmm = (h: number) => (Number.isFinite(h) ? `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}` : NO_VALUE)
 const serviceName = (s: ViewModel['service']) => (s === 'dfmc' ? 'DFMC SBAS (L1/L5)' : s === 'l1' ? 'L1 SBAS' : 'Off (GPS alone)')
 
 export function FlightCard({ m }: { m: ViewModel }) {
@@ -30,8 +31,8 @@ export function FlightCard({ m }: { m: ViewModel }) {
     <HudPanel index="01" title="Flight">
       <TelemetryRow label="Callsign" value="LAB201" />
       <TelemetryRow label="Route" value={`${DEPARTURE.city} ${DEPARTURE.id} → ${DESTINATION.city} ${DESTINATION.id}`} tone="muted" />
-      <TelemetryRow label="Altitude" value={m.altFt < 100 ? 'On ground' : Math.round(m.altFt / 10) * 10} unit={m.altFt < 100 ? undefined : 'ft'} />
-      <TelemetryRow label="Ground speed" value={Math.round(m.gsKt)} unit="kt" />
+      <TelemetryRow label="Altitude" value={m.altFt < 100 ? 'On ground' : formatNumber(Math.round(m.altFt / 10) * 10, 0)} unit={m.altFt < 100 ? undefined : 'ft'} />
+      <TelemetryRow label="Ground speed" value={formatNumber(m.gsKt, 0)} unit="kt" />
       <TelemetryRow label={`To ${DESTINATION.city}`} value={formatNumber(m.distToGoNm, 1)} unit="NM" />
       <TelemetryRow label="Local time" value={`${hhmm(m.localHour)} ${m.localZone}`} tone="muted" />
       <p className="mt-2 text-[12px] leading-4 text-muted-foreground">Real airports and Michibiki satellites. The SBAS service, its ground sites and the route are {HYPOTHETICAL}.</p>
@@ -66,7 +67,7 @@ function Detail({ d }: { d: NonNullable<ViewModel['detail']> }) {
     return (
       <div className={box}>
         <p className="hud-label mb-2">
-          Range error of {d.satId} · elevation {Math.round(d.elDeg)}°
+          Range error of {d.satId} · elevation {formatNumber(d.elDeg, 0)}°
         </p>
         <div className="flex h-3 w-full overflow-hidden rounded-[2px]" aria-hidden>
           {d.parts.map((p, i) => (
@@ -129,7 +130,7 @@ function Detail({ d }: { d: NonNullable<ViewModel['detail']> }) {
         <p className="hud-label mb-1">Final approach segment data block</p>
         <TelemetryRow label="Channel" value={d.channel} tone="brass" />
         <TelemetryRow label="Runway" value={d.runway} />
-        <TelemetryRow label="Glide path" value={`${d.gpaDeg.toFixed(2)}°`} />
+        <TelemetryRow label="Glide path" value={`${formatNumber(d.gpaDeg, 2)}°`} />
         <TelemetryRow label="Threshold crossing" value={d.tchFt} unit="ft" />
         <TelemetryRow label="HAL / VAL" value={`${d.halM} / ${d.valM} m`} tone="brass" />
         <TelemetryRow label="CRC" value={`${d.crc} ${d.valid ? 'valid' : 'FAIL'}`} tone={d.valid ? 'ok' : 'alert'} />
@@ -137,7 +138,7 @@ function Detail({ d }: { d: NonNullable<ViewModel['detail']> }) {
     )
   return (
     <div className={box}>
-      <TelemetryRow label="Height above threshold" value={Math.round(d.heightFt)} unit="ft" />
+      <TelemetryRow label="Height above threshold" value={formatNumber(d.heightFt, 0)} unit="ft" />
       <TelemetryRow label="Decision height" value={d.daFt} unit="ft" tone="brass" />
       <TelemetryRow label="To threshold" value={formatNumber(Math.max(0, d.alongNm), 1)} unit="NM" />
     </div>
@@ -155,7 +156,8 @@ export function BenefitCard({ m }: { m: ViewModel }) {
   const final = m.phase === 'final' || m.phase === 'descent'
   const cols: { name: string; fix: Fix | null; inUse: boolean }[] = [
     { name: 'GPS alone', fix: m.abas, inUse: m.navSource === 'abas' },
-    { name: m.service === 'l1' ? 'L1 SBAS' : 'DFMC SBAS', fix: m.service === 'l1' ? m.sbas : m.dfmc, inUse: m.navSource === 'sbas' },
+    // The DFMC column shows the protection levels of the fix flown in this phase: the precision K factor on final, otherwise non-precision.
+    { name: m.service === 'l1' ? 'L1 SBAS' : 'DFMC SBAS', fix: m.service === 'l1' ? m.sbas : m.phase === 'final' ? m.dfmc : m.dfmcNpa, inUse: m.navSource === 'sbas' },
   ]
   if (final && m.service === 'dfmc') cols.push({ name: 'L1 only', fix: m.l1Pa, inUse: false })
   return (
@@ -241,7 +243,12 @@ export function StatusPanel({ m }: { m: ViewModel }) {
         />
       )}
       <TelemetryRow label="Last message" value={last ? `MT${last.type} ${last.name}` : 'None'} tone={last?.alarm ? 'alert' : last ? 'brass' : 'alert'} />
-      <TelemetryRow label="Message age" value={formatDuration(m.messageAgeS)} tone={m.messageAgeS > 0 ? 'alert' : 'muted'} />
+      {/* No GEO received and no loss on record (jamming): there is no last message to age. */}
+      {m.geosTracked === 0 && m.messageAgeS === 0 ? (
+        <TelemetryRow label="Message age" value="No signal" tone="alert" />
+      ) : (
+        <TelemetryRow label="Message age" value={formatDuration(m.messageAgeS)} tone={m.messageAgeS > 0 ? 'alert' : 'muted'} />
+      )}
       <TelemetryRow label="GEO received" value={`${m.geosTracked} / ${GEO_SATS.length}`} tone={m.geosTracked === GEO_SATS.length ? 'ok' : m.geosTracked === 0 ? 'alert' : 'default'} />
       <TelemetryRow label="Service" value={serviceName(m.service)} tone="muted" />
       <p className="mt-2 text-[12px] leading-4 text-muted-foreground">
@@ -308,6 +315,13 @@ const STOP_TEXT: Record<StopId, { title: string; body: string }> = {
 
 export function StopCard({ stop, onContinue, className }: { stop: StopId; onContinue: () => void; className?: string }) {
   const s = STOP_TEXT[stop]
+  // Continue takes focus so the stop is announced and one key press goes on; afterwards
+  // focus goes back where the learner was (the card unmounts, which would drop it to <body>).
+  const [back] = useState(() => (typeof document === 'undefined' ? null : document.activeElement))
+  const proceed = () => {
+    onContinue()
+    if (back instanceof HTMLElement && back !== document.body && back.isConnected) back.focus()
+  }
   return (
     <section role="dialog" aria-modal="false" aria-labelledby="stop-title" className={cn('hud-panel rounded-md p-4 shadow-[0_0_24px_-12px_var(--signal)]', className)}>
       <p className="hud-label text-signal">Guided stop</p>
@@ -315,7 +329,7 @@ export function StopCard({ stop, onContinue, className }: { stop: StopId; onCont
         {s.title}
       </h2>
       <p className="mt-1 text-[13px] leading-5 text-foreground/90">{s.body}</p>
-      <Button className="mt-3" autoFocus onClick={onContinue}>
+      <Button className="mt-3" autoFocus onClick={proceed}>
         Continue
       </Button>
     </section>

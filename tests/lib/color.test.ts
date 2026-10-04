@@ -32,4 +32,14 @@ describe('colour token parsing', () => {
     expect(toThreeStyle('hsl(0 0% 100%)')).toBe('rgb(255, 255, 255)')
     expect(alphaOf('hsl(0 0% 100% / 0.3)')).toBeCloseTo(0.3)
   })
+  it('memoised parses stay correct: callers cannot change the cache, and many colours do not break it', () => {
+    const c = parseColor('rgb(10, 20, 30)')!
+    c.r = 99
+    expect(parseColor('rgb(10, 20, 30)')).toEqual({ r: 10, g: 20, b: 30, a: 1 })
+    for (let i = 0; i < 600; i++) expect(withAlpha(`rgb(${i % 256}, 0, 0)`, 0.5)).toBe(`rgba(${i % 256}, 0, 0, 0.500)`)
+    expect(withAlpha('rgb(1, 2, 3)', 0.5)).toBe(withAlpha('rgb(1, 2, 3)', 0.5))
+    expect(withAlpha('rgb(1, 2, 3)', 0.25)).toBe('rgba(1, 2, 3, 0.250)')
+    expect(toThreeStyle('rgb(1, 2, 3)')).toBe('rgb(1, 2, 3)')
+    expect(toThreeStyle('garbage')).toBe('rgb(128, 128, 128)')
+  })
 })

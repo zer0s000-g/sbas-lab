@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { Canvas2D, type DrawFn } from '@/components/Canvas2D'
 import { withAlpha } from '@/lib/color'
 import { cn } from '@/lib/utils'
@@ -19,6 +19,14 @@ const lg = (v: number) => Math.log10(Math.min(HI, Math.max(LO, v)))
  * "available" from "unavailable". Region names are written on the chart.
  */
 export function StanfordChart({ getPoints, alM, label, className }: { getPoints: () => StanfordPoint[]; alM: number | null; label: string; className?: string }) {
+  // A point is added once a second: redraw when the list changes, not every frame. The
+  // caller appends to and trims the same array, so its ends and length tell a change.
+  const getRef = useRef(getPoints)
+  getRef.current = getPoints
+  const frameKey = useCallback(() => {
+    const pts = getRef.current()
+    return [pts, pts.length, pts[0], pts[pts.length - 1]]
+  }, [])
   const draw = useCallback<DrawFn>(
     (ctx, { width, height, tokens }) => {
       const pad = { l: 30, r: 8, t: 8, b: 22 }
@@ -69,12 +77,12 @@ export function StanfordChart({ getPoints, alM, label, className }: { getPoints:
       ctx.textAlign = 'right'
       ctx.fillText('misleading', pad.l + w - 2, pad.t + h - 4)
       ctx.fillStyle = withAlpha(tokens['scope-trace'], 0.7)
-      for (const p of getPoints()) {
+      for (const p of getRef.current()) {
         if (!Number.isFinite(p.errM) || !Number.isFinite(p.plM)) continue
         ctx.fillRect(X(p.errM) - 1.5, Y(p.plM) - 1.5, 3, 3)
       }
     },
-    [getPoints, alM],
+    [alM],
   )
-  return <Canvas2D draw={draw} label={label} className={cn('aspect-[4/3]', className)} />
+  return <Canvas2D draw={draw} frameKey={frameKey} label={label} className={cn('aspect-[4/3]', className)} />
 }

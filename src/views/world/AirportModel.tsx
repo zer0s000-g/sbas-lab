@@ -16,7 +16,7 @@ import { col } from '@/stage/col'
 import { TAXIWAY_WIDTH_M, type AirportLayout, type Box, type Lamp, type RA, type Rect } from '../airports'
 import { aircraftFlight } from '../shots'
 import { FLIGHT_UNIT_M } from '../scales'
-import { Airliner, type AirlinerHandle } from './Airliner'
+import { ParkedAirliner, useAirlinerMaterials } from './Airliner'
 import { lampSprite } from './lampSprite'
 import { raToWorld, type SkyState } from './skyState'
 
@@ -99,19 +99,32 @@ function designatorGeo(l: AirportLayout, a: number, r: number, dir: 1 | -1) {
   return g
 }
 
-function numberTexture(text: string, t: ThemeTokens) {
+function numberTexture(text: string, colour: string, fontSans: string) {
   const c = document.createElement('canvas')
   // Same aspect as the painted area (15 m across, 9 m along).
   c.width = 320
   c.height = 192
-  const g = c.getContext('2d')!
-  g.fillStyle = toThreeStyle(t['world-marking'])
-  g.font = `700 176px ${t.fontSans}`
-  g.textAlign = 'center'
-  g.textBaseline = 'middle'
-  g.fillText(text, 160, 100, 300)
+  const font = `700 176px ${fontSans}`
   const tex = new THREE.CanvasTexture(c)
   tex.anisotropy = 4
+  const draw = () => {
+    const g = c.getContext('2d')!
+    g.clearRect(0, 0, c.width, c.height)
+    g.fillStyle = colour
+    g.font = font
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    g.fillText(text, 160, 100, 300)
+    tex.needsUpdate = true
+  }
+  draw()
+  // The web font may still be loading: draw again in it once it has (a fallback face until then).
+  const fonts = typeof document !== 'undefined' ? document.fonts : undefined
+  if (fonts && !fonts.check(font))
+    fonts
+      .load(font)
+      .then(draw)
+      .catch(() => {})
   return tex
 }
 
@@ -199,18 +212,19 @@ function buildingsGeo(l: AirportLayout, boxes: Box[]) {
 
 const LAMP_PX: Record<Lamp['kind'], number> = { edge: 3, threshold: 3.4, end: 3.4, approach: 3.6, taxi: 2.4 }
 
-function lampsPoints(l: AirportLayout, kind: Lamp['kind'], color: THREE.Color) {
+function lampsPoints(l: AirportLayout, kind: Lamp['kind']) {
   const pts = l.lamps.filter((p) => p.kind === kind).flatMap((p) => raToWorld(l, p.a, p.r, 0.6))
   const geo = new THREE.BufferGeometry()
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3))
   geo.computeBoundingSphere()
-  const mat = new THREE.PointsMaterial({ size: LAMP_PX[kind], sizeAttenuation: false, color, map: lampSprite(), transparent: true, depthWrite: false, toneMapped: false, alphaTest: 0.02 })
+  const mat = new THREE.PointsMaterial({ size: LAMP_PX[kind], sizeAttenuation: false, map: lampSprite(), transparent: true, depthWrite: false, toneMapped: false, alphaTest: 0.02 })
   const pts3 = new THREE.Points(geo, mat)
-  pts3.userData = { kind, base: color.clone() }
+  // The lamp colour (set from the tokens below), boosted at night in the frame loop.
+  pts3.userData = { kind, base: new THREE.Color() }
   return pts3
 }
 
-export function AirportModel({ l, t, sky, engine, blink }: { l: AirportLayout; t: ThemeTokens; sky: SkyState; engine: JourneyEngine; blink: boolean }) {
+export function AirportModel({ l, t, sky, engine }: { l: AirportLayout; t: ThemeTokens; sky: SkyState; engine: JourneyEngine }) {
   const dpr = useThree((s) => s.viewport.dpr)
   const geos = useMemo(() => {
     const pier: Rect[] = l.lamps.some((p) => p.kind === 'approach') ? [{ a0: -905, a1: -40, r0: -2.5, r1: 2.5 }] : []
@@ -259,7 +273,9 @@ export function AirportModel({ l, t, sky, engine, blink }: { l: AirportLayout; t
     }),
     [],
   )
-  const numberTex = useMemo(() => l.designators.map((d) => numberTexture(d.text, t)), [l, t])
+  // Keyed on the colour and font, not the tokens object: a theme switch that keeps them redraws nothing.
+  const marking = toThreeStyle(t['world-marking'])
+  const numberTex = useMemo(() => l.designators.map((d) => numberTexture(d.text, marking, t.fontSans)), [l, marking, t.fontSans])
   const numberMats = useMemo(
     () =>
       numberTex.map((tex) => {
@@ -284,16 +300,14 @@ export function AirportModel({ l, t, sky, engine, blink }: { l: AirportLayout; t
     mats.pier.color.copy(col(t, 'world-concrete'))
   }, [mats, t])
 
-  const lamps = useMemo(
-    () => [
-      lampsPoints(l, 'edge', col(t, 'lamp-white')),
-      lampsPoints(l, 'approach', col(t, 'lamp-white')),
-      lampsPoints(l, 'threshold', col(t, 'lamp-green')),
-      lampsPoints(l, 'end', col(t, 'lamp-red')),
-      lampsPoints(l, 'taxi', col(t, 'lamp-blue')),
-    ],
-    [l, t],
-  )
+  const lamps = useMemo(() => (['edge', 'approach', 'threshold', 'end', 'taxi'] as const).map((k) => lampsPoints(l, k)), [l])
+  const lampKey = [t['lamp-white'], t['lamp-green'], t['lamp-red'], t['lamp-blue']].join('|')
+  useLayoutEffect(() => {
+    const tone: Record<Lamp['kind'], 'lamp-white' | 'lamp-green' | 'lamp-red' | 'lamp-blue'> = { edge: 'lamp-white', approach: 'lamp-white', threshold: 'lamp-green', end: 'lamp-red', taxi: 'lamp-blue' }
+    for (const p of lamps) (p.userData.base as THREE.Color).copy(col(t, tone[p.userData.kind as Lamp['kind']]))
+    // Keyed on the lamp colours, not the tokens object.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lamps, lampKey])
   const papi = useMemo(() => {
     if (!l.papi.length) return null
     const geo = new THREE.BufferGeometry()
@@ -303,11 +317,18 @@ export function AirportModel({ l, t, sky, engine, blink }: { l: AirportLayout; t
     const mat = new THREE.PointsMaterial({ size: 4.2, sizeAttenuation: false, vertexColors: true, map: lampSprite(), transparent: true, depthWrite: false, toneMapped: false, alphaTest: 0.02 })
     return new THREE.Points(geo, mat)
   }, [l])
+  useLayoutEffect(
+    () => () => {
+      if (!papi) return
+      papi.geometry.dispose()
+      ;(papi.material as THREE.Material).dispose()
+    },
+    [papi],
+  )
   const papiCols = useMemo(() => ({ white: col(t, 'lamp-white'), red: col(t, 'lamp-red') }), [t])
 
-  // Parked airliners: gear down, lights off.
-  const parked = useMemo<AirlinerHandle>(() => ({ gear: true, landing: false, beacon: false }), [])
-  const night = useMemo(() => ({ value: 0 }), [])
+  // Parked airliners: gear down, lights off, one set of materials for all of them.
+  const parkedMats = useAirlinerMaterials(t)
 
   useLayoutEffect(
     () => () => {
@@ -336,9 +357,8 @@ export function AirportModel({ l, t, sky, engine, blink }: { l: AirportLayout; t
 
   const glow = useMemo(() => ({ concrete: col(t, 'world-concrete'), building: col(t, 'world-building'), window: col(t, 'lamp-amber').lerp(col(t, 'lamp-white'), 0.5) }), [t])
   useFrame(() => {
-    night.value = 1 - sky.day
     // At night the apron is floodlit and the terminal windows are lit.
-    const nv = night.value
+    const nv = 1 - sky.day
     mats.apron.emissive.copy(glow.concrete).multiplyScalar(0.16 * nv)
     mats.taxiway.emissive.copy(glow.concrete).multiplyScalar(0.035 * nv)
     mats.runway.emissive.copy(glow.concrete).multiplyScalar(0.025 * nv)
@@ -347,12 +367,12 @@ export function AirportModel({ l, t, sky, engine, blink }: { l: AirportLayout; t
     mats.walls.emissive.copy(glow.building).multiplyScalar(0.07 * nv)
     mats.glass.emissive.copy(glow.window).multiplyScalar(0.55 * nv)
     // Lamps are bright points in the dark and small, steady dots in daylight.
-    const boost = 0.9 + 2.4 * night.value
+    const boost = 0.9 + 2.4 * nv
     for (const p of lamps) {
       const m = p.material as THREE.PointsMaterial
       m.color.copy(p.userData.base as THREE.Color).multiplyScalar(boost)
-      m.opacity = 0.75 + 0.25 * night.value
-      m.size = LAMP_PX[p.userData.kind as Lamp['kind']] * dpr * (0.8 + 0.5 * night.value)
+      m.opacity = 0.75 + 0.25 * nv
+      m.size = LAMP_PX[p.userData.kind as Lamp['kind']] * dpr * (0.8 + 0.5 * nv)
     }
     if (papi) {
       // Each unit shows white when LAB201 is above its setting angle, red below.
@@ -397,7 +417,7 @@ export function AirportModel({ l, t, sky, engine, blink }: { l: AirportLayout; t
       {papi && <primitive object={papi} />}
       {stands.map((s) => (
         <group key={s.key} position={s.pos} rotation-y={s.rotY}>
-          <Airliner t={t} state={parked} blink={blink} night={night} />
+          <ParkedAirliner mats={parkedMats} />
         </group>
       ))}
     </group>

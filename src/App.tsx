@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { PageBoundary } from '@/components/RouteError'
 import { SiteFooter } from '@/components/SiteFooter'
-import { applyTheme, usePrefs } from '@/stores/prefs'
+import { applyMotion, applyTheme, usePrefs } from '@/stores/prefs'
 import JourneyPage from '@/page/JourneyPage'
 
 function useThemeSync() {
@@ -17,9 +17,15 @@ function useThemeSync() {
   }, [theme])
 }
 
+function useMotionSync() {
+  const override = usePrefs((s) => s.reducedMotionOverride)
+  useEffect(() => applyMotion(override), [override])
+}
+
 /** The one page ("/"): LAB201's journey. */
 export default function App() {
   useThemeSync()
+  useMotionSync()
   return (
     <TooltipProvider delayDuration={300}>
       <a

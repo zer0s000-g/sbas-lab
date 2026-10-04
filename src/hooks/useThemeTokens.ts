@@ -138,16 +138,26 @@ let cached: ThemeTokens | null = null
 const listeners = new Set<() => void>()
 let observer: MutationObserver | null = null
 
+function sameTokens(a: ThemeTokens, b: ThemeTokens): boolean {
+  for (const k of Object.keys(a) as (keyof ThemeTokens)[]) if (a[k] !== b[k]) return false
+  return true
+}
+
 function ensureObserver() {
   if (observer || typeof document === 'undefined') return
+  // Any class or style change on <html> lands here (scroll locks, hover classes...).
+  // Only a change in a token value replaces the tokens and tells the subscribers, so
+  // drawings and anything memoised on the tokens object do not rebuild for nothing.
   observer = new MutationObserver(() => {
-    cached = readThemeTokens()
+    const next = readThemeTokens()
+    if (cached && sameTokens(cached, next)) return
+    cached = next
     listeners.forEach((l) => l())
   })
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] })
 }
 
-/** Current tokens (cached until the theme changes). Safe to call inside draw loops. */
+/** Current tokens (the same object until a token value changes). Safe to call inside draw loops. */
 export function getThemeTokens(): ThemeTokens {
   ensureObserver()
   if (!cached) cached = readThemeTokens()

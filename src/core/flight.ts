@@ -149,8 +149,10 @@ export function stepFlight(s: AircraftState, dtS: number): AircraftState {
   let vsFpm = 0
   const liftOff = kind === 'takeoff' && gsKt >= 145
   if (kind === 'final') {
+    // The glide path is captured from below: an aircraft under it holds its altitude
+    // until it meets the path, it never climbs up to it.
     const glide = glidePathAltFt(distBeforeThresholdNm(eastNm, northNm))
-    vsFpm = clamp(((glide - s.altFt) / dtS) * 60, -MAX_DESCENT_FPM, MAX_CLIMB_FPM)
+    vsFpm = clamp(((glide - s.altFt) / dtS) * 60, -MAX_DESCENT_FPM, 0)
     altFt = s.altFt + (vsFpm / 60) * dtS
   } else if (kind === 'landing') {
     // Flare to the touchdown zone, then roll out.

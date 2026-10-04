@@ -80,6 +80,8 @@ export interface AirportLayout {
 }
 
 export const TAXIWAY_WIDTH_M = 23
+/** Taxiway edge lights: one each side every this many metres along the taxiway. */
+export const TAXI_LAMP_SPACING_M = 60
 export const RUNWAY_WIDTH_M = 45
 
 /** Runway-frame metres to local NM east/north. */
@@ -268,20 +270,27 @@ function build(ap: Airport, side: 1 | -1, taxiRoute: RA[], laneR: number, gate: 
     out.buildings.push({ ...span(a, a + 60, front + 200, front + 245 + (k % 3) * 20), h: 9 + (k % 4) * 4, kind: 'block' })
   }
 
-  // Blue taxiway edge lights (runway lights: white edge every 60 m, green threshold, red end, in `runwayAt`).
-  for (const line of out.taxiways)
+  // Blue taxiway edge lights, a pair every 60 m along each taxiway (the distance runs on
+  // through the bends: LAB201's tracks have a point every few metres). Runway lights:
+  // white edge every 60 m, green threshold, red end, in `runwayAt`.
+  for (const line of out.taxiways) {
+    // Distance along the line to the next pair, from the start of the current segment.
+    let next = 0
     for (let i = 0; i + 1 < line.length; i++) {
       const [p, q] = [line[i], line[i + 1]]
       const len = Math.hypot(q[0] - p[0], q[1] - p[1])
+      if (!(len > 0)) continue
       const ua = (q[0] - p[0]) / len
       const ur = (q[1] - p[1]) / len
-      for (let s = 0; s <= len; s += 60)
+      for (; next <= len; next += TAXI_LAMP_SPACING_M)
         for (const o of [-1, 1]) {
-          const a = p[0] + ua * s - ur * o * 13
-          const r = p[1] + ur * s + ua * o * 13
+          const a = p[0] + ua * next - ur * o * 13
+          const r = p[1] + ur * next + ua * o * 13
           if (Math.abs(r) > W / 2 + 10 && (P === null || Math.abs(r - P) > W / 2 + 10)) out.lamps.push({ a, r, kind: 'taxi' })
         }
+      next -= len
     }
+  }
   if (approachLights) {
     // A 900 m approach light system: barrettes every 30 m and a crossbar at 300 m.
     for (let d = 30; d <= 900; d += 30) for (let r = -2; r <= 2.01; r += 1) out.lamps.push({ a: -d, r, kind: 'approach' })

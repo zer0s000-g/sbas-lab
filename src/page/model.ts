@@ -59,6 +59,8 @@ export interface ViewModel {
   /** L1 SBAS vertical-guidance fix, to compare with DFMC on final. */
   l1Pa: Fix | null
   dfmc: Fix | null
+  /** DFMC with the non-precision K factor (the fix navigated with outside the final approach). */
+  dfmcNpa: Fix | null
   mode: ApproachMode
   /** Approach mode if SBAS were in use (for the benefit card before the reveal). */
   sbasMode: ApproachMode
@@ -204,6 +206,7 @@ export function viewModel(e: JourneyEngine): ViewModel {
     sbas: snap.sbasFix,
     l1Pa: snap.l1sbasPa,
     dfmc: snap.dfmc,
+    dfmcNpa: snap.dfmcNpa,
     mode,
     sbasMode: am.mode,
     withinLimits: !!(op && nav && withinLimits(op, nav.hplM, nav.vplM)),

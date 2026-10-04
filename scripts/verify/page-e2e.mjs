@@ -156,7 +156,7 @@ try {
       seen.add(info.label)
       if (!info.ring) ringMissing.push(info.label)
     }
-    const needed = ['Pause the journey', 'Display and sound settings', 'View:', 'Camera: follow', 'Camera: reset', 'Phase 1: Gate', 'Phase 12: Landing', 'Automatic time-lapse', 'Guided stops']
+    const needed = ['Pause the journey', 'Display and motion settings', 'View:', 'Camera: follow', 'Camera: reset', 'Phase 1: Gate', 'Phase 12: Landing', 'Automatic time-lapse', 'Guided stops']
     const missing = needed.filter((n) => ![...seen].some((s) => s.startsWith(n)))
     check(missing.length === 0, `Tab reaches the controls (${seen.size} stops)${missing.length ? '; missing ' + missing.join(', ') : ''}`)
     ringMissing = [...new Set(ringMissing)]

@@ -40,7 +40,8 @@ simulation is the hero. The chrome is precise and quiet around it.
   | Reading | Inter Tight | Prose, 15–18px |
   | Data | JetBrains Mono, `.hud-label` / `.hud-value` | Labels (uppercase, tracked, 10–11px) and numbers |
 
-  All numbers use tabular figures.
+  All numbers use tabular figures. Fonts are woff2, latin plus the Greek letters the
+  lessons use (`src/fonts.css`); Inter Tight latin is preloaded.
 - **Motion teaches.**
   - The camera moves between shots, and pen-plot edges reveal the space-view miniatures.
   - Signals travel along wires, messages scroll into the log, and protection-level
@@ -199,7 +200,11 @@ Sheet with every term.
   LPV available").
 - Every 3D label is also in a keyboard-reachable list.
 - Audio (an alert chime, a captioned radio call) always has a caption.
-- Reduced motion: the camera snaps, and signal pulses become static wires.
+- Reduced motion: the camera snaps, and signal pulses become static wires. The settings
+  menu offers "Same as device", "Reduce motion" and "Full motion"; the choice is set on
+  `<html data-motion>` so CSS transitions follow it too.
+- Audio is not wired in yet (`src/lib/audio.ts`); the sound switches return to the settings
+  menu with it.
 
 ## 6. Honesty labels
 
@@ -233,7 +238,8 @@ controller would do.
   `scripts/geo/build-coast.mjs`; about 16 kB gzip in all).
 - There are no image, model or HDR files in the app. The only raster files are the app
   icons and a small social card.
-- The space view is lit with drei `Lightformer`s. The flight view brings its own sun
+- The space view is lit with light-formers baked once into a prefiltered environment map
+  (`StudioLights`; no drei `Environment`, which ships HDR/EXR loaders). The flight view brings its own sun
   (direction from `core/sun`), sky and fog (`Stage scenery="world"`: no studio lights,
   bloom only on lamps and the sun, light grain).
 - The flight world is all code: a sky shader, a sea shader reading small height maps of
@@ -250,7 +256,14 @@ controller would do.
 - three.js, drei and postprocessing live in their own chunk. `LazyStage` loads it after
   the page has loaded and the browser is idle, and shows a same-size `StagePoster` until
   then.
-- Each view scene is lazy (`lazyRetry`, never `React.lazy` directly).
+- Each view scene is lazy (`lazyRetry`, never `React.lazy` directly). The camera shots
+  (`views/shots`, which read the terrain and the flight's track) load with the 3D chunk
+  through `page/JourneyScene`, and the network map and its coastline load when the page
+  is idle.
+- The Stage's Canvas subtree is memoised: the page's 10 Hz readouts never re-render the
+  scene. 4× MSAA is used only at a pixel ratio below 1.5.
+- Nothing costly runs on the main thread when a view mounts: scenery data is built once
+  per session at module scope.
 
 **Budget.** `scripts/budget.mjs` runs after every build and in CI. It fails the build if the
 page's first-load JS goes over 250 kB gzip (scripts plus modulepreload hints) or its CSS over

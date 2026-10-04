@@ -1,7 +1,8 @@
 /**
  * The sea at true sea level: deep blue offshore, turquoise over the shallows and a
- * line of surf at the coast (read from height maps of the terrain: a coarse one along
- * the whole route and a detailed one around each airport), small
+ * line of surf at the coast (read from height maps of the terrain, built once per
+ * session in world/terrainData: a coarse one along the whole route and a detailed one
+ * around each airport), small
  * waves, the sky reflected at grazing angles and the sun's glint. Wave detail fades
  * out wherever it would be smaller than a pixel, so the far sea never shimmers.
  * The plane follows the camera; everything else is computed per pixel.
@@ -11,9 +12,8 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { ThemeTokens } from '@/hooks/useThemeTokens'
 import { col } from '@/stage/col'
-import { terrainFtAt } from '../terrain'
-import { CORRIDOR, TERRAIN_PATCHES, type NmRect } from './Terrain'
 import { toFlight } from '../scales'
+import { CORRIDOR, TERRAIN_PATCHES, seaCorridor, seaPatch, type NmRect, type SeaMap } from './terrainData'
 import type { SkyState } from './skyState'
 
 const vertex = `
@@ -103,19 +103,10 @@ const fragment = `
     #include <fog_fragment>
   }`
 
-/** A height map of a rectangle (0 = 80 ft deep or deeper, 0.8 = sea level, 1 = 20 ft up). */
-function makeDepthTexture(r: NmRect, W: number) {
-  const H = Math.round((W * (r.n1 - r.n0)) / (r.e1 - r.e0))
-  const data = new Uint8Array(W * H)
-  for (let y = 0; y < H; y++) {
-    // Row 0 is the south edge (texture v grows north… which is −z, flipped below).
-    const n = r.n0 + ((y + 0.5) / H) * (r.n1 - r.n0)
-    for (let x = 0; x < W; x++) {
-      const e = r.e0 + ((x + 0.5) / W) * (r.e1 - r.e0)
-      data[y * W + x] = Math.round(Math.min(1, Math.max(0, (terrainFtAt(e, n) + 80) / 100)) * 255)
-    }
-  }
-  const tex = new THREE.DataTexture(data, W, H, THREE.RedFormat, THREE.UnsignedByteType)
+/** A texture for one of the session's height maps (0 = 80 ft deep or deeper, 0.8 = sea level, 1 = 20 ft up). */
+function depthTexture(m: SeaMap) {
+  // Row 0 is the south edge (texture v grows north… which is −z, flipped below).
+  const tex = new THREE.DataTexture(m.data, m.width, m.height, THREE.RedFormat, THREE.UnsignedByteType)
   tex.magFilter = THREE.LinearFilter
   tex.minFilter = THREE.LinearFilter
   tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping
@@ -123,60 +114,78 @@ function makeDepthTexture(r: NmRect, W: number) {
   return tex
 }
 
-export function Ocean({ t, sky, size }: { t: ThemeTokens; sky: SkyState; size: number }) {
+/** World rect of a height map: x = east, z = −north (so v runs toward −z). */
+function worldRect(r: NmRect, out: THREE.Vector4) {
+  const [x0, , zSouth] = toFlight(r.e0, r.n0, 0)
+  const [x1, , zNorth] = toFlight(r.e1, r.n1, 0)
+  return out.set(x0, zSouth, x1 - x0, zNorth - zSouth)
+}
+
+/** Where an airport's detailed map is not built yet: a rect no point of the sea is in. */
+const NOWHERE = new THREE.Vector4(1e9, 1e9, 1, 1)
+
+export function Ocean({ t, sky, size, airports }: { t: ThemeTokens; sky: SkyState; size: number; airports: readonly string[] }) {
   const mesh = useRef<THREE.Mesh>(null)
-  const depth = useMemo(() => [makeDepthTexture(CORRIDOR, 2048), ...TERRAIN_PATCHES.map((p) => makeDepthTexture(p, 1024))], [])
-  const mat = useMemo(() => {
-    // World rect of a height map: x = east, z = −north (so v runs toward −z).
-    const rect = (r: NmRect) => {
-      const [x0, , zSouth] = toFlight(r.e0, r.n0, 0)
-      const [x1, , zNorth] = toFlight(r.e1, r.n1, 0)
-      return new THREE.Vector4(x0, zSouth, x1 - x0, zNorth - zSouth)
-    }
-    return new THREE.ShaderMaterial({
-      vertexShader: vertex,
-      fragmentShader: fragment,
-      fog: true,
-      polygonOffset: true,
-      polygonOffsetFactor: 2,
-      polygonOffsetUnits: 2,
-      uniforms: THREE.UniformsUtils.merge([
-        THREE.UniformsLib.fog,
-        {
-          uDeep: { value: new THREE.Color() },
-          uShallow: { value: new THREE.Color() },
-          uFoam: { value: new THREE.Color() },
-          uZenith: { value: new THREE.Color() },
-          uHorizon: { value: new THREE.Color() },
-          uSunCol: { value: new THREE.Color() },
-          uSun: { value: new THREE.Vector3(0, 1, 0) },
-          uDay: { value: 1 },
-          uTime: { value: 0 },
-          uDepth: { value: null },
-          uRect: { value: rect(CORRIDOR) },
-          uDepthA: { value: null },
-          uRectA: { value: rect(TERRAIN_PATCHES[0]) },
-          uDepthB: { value: null },
-          uRectB: { value: rect(TERRAIN_PATCHES[1]) },
-        },
-      ]),
-    })
-  }, [])
+  // Textures over the session's height maps, made for this visit and freed when it ends.
+  const corridor = useMemo(() => depthTexture(seaCorridor()), [])
+  const hasA = airports.includes(TERRAIN_PATCHES[0].id)
+  const hasB = airports.includes(TERRAIN_PATCHES[1].id)
+  const patchA = useMemo(() => (hasA ? depthTexture(seaPatch(TERRAIN_PATCHES[0].id)) : null), [hasA])
+  const patchB = useMemo(() => (hasB ? depthTexture(seaPatch(TERRAIN_PATCHES[1].id)) : null), [hasB])
+  const mat = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        vertexShader: vertex,
+        fragmentShader: fragment,
+        fog: true,
+        polygonOffset: true,
+        polygonOffsetFactor: 2,
+        polygonOffsetUnits: 2,
+        uniforms: THREE.UniformsUtils.merge([
+          THREE.UniformsLib.fog,
+          {
+            uDeep: { value: new THREE.Color() },
+            uShallow: { value: new THREE.Color() },
+            uFoam: { value: new THREE.Color() },
+            uZenith: { value: new THREE.Color() },
+            uHorizon: { value: new THREE.Color() },
+            uSunCol: { value: new THREE.Color() },
+            uSun: { value: new THREE.Vector3(0, 1, 0) },
+            uDay: { value: 1 },
+            uTime: { value: 0 },
+            uDepth: { value: null },
+            uRect: { value: worldRect(CORRIDOR, new THREE.Vector4()) },
+            uDepthA: { value: null },
+            uRectA: { value: NOWHERE.clone() },
+            uDepthB: { value: null },
+            uRectB: { value: NOWHERE.clone() },
+          },
+        ]),
+      }),
+    [],
+  )
   useLayoutEffect(() => {
-    mat.uniforms.uDepth.value = depth[0]
-    mat.uniforms.uDepthA.value = depth[1]
-    mat.uniforms.uDepthB.value = depth[2]
+    const u = mat.uniforms
+    u.uDepth.value = corridor
+    u.uDepthA.value = patchA
+    u.uDepthB.value = patchB
+    if (patchA) worldRect(TERRAIN_PATCHES[0], u.uRectA.value)
+    else u.uRectA.value.copy(NOWHERE)
+    if (patchB) worldRect(TERRAIN_PATCHES[1], u.uRectB.value)
+    else u.uRectB.value.copy(NOWHERE)
+  }, [mat, corridor, patchA, patchB])
+  const seaKey = [t['world-sea-deep'], t['world-sea-shallow'], t['world-foam']].join('|')
+  useLayoutEffect(() => {
     mat.uniforms.uDeep.value.copy(col(t, 'world-sea-deep'))
     mat.uniforms.uShallow.value.copy(col(t, 'world-sea-shallow'))
     mat.uniforms.uFoam.value.copy(col(t, 'world-foam'))
-  }, [mat, depth, t])
-  useLayoutEffect(
-    () => () => {
-      mat.dispose()
-      for (const d of depth) d.dispose()
-    },
-    [mat, depth],
-  )
+    // Keyed on the token values, not the tokens object.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mat, seaKey])
+  useLayoutEffect(() => () => mat.dispose(), [mat])
+  useLayoutEffect(() => () => corridor.dispose(), [corridor])
+  useLayoutEffect(() => () => patchA?.dispose(), [patchA])
+  useLayoutEffect(() => () => patchB?.dispose(), [patchB])
   useFrame(({ camera }) => {
     const u = mat.uniforms
     u.uZenith.value.copy(sky.zenith)

@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { memo, Suspense, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { PerformanceMonitor } from '@react-three/drei'
 import { Bloom, EffectComposer, Noise, Vignette } from '@react-three/postprocessing'
@@ -21,26 +21,82 @@ export { StudioFloor } from './StudioFloor'
 export function webglAvailable(): boolean {
   try {
     const c = document.createElement('canvas')
-    return Boolean(c.getContext('webgl2') || c.getContext('webgl'))
+    const gl = c.getContext('webgl2') || c.getContext('webgl')
+    // Browsers allow only a few live contexts: release the probe's at once.
+    gl?.getExtension('WEBGL_lose_context')?.loseContext()
+    return Boolean(gl)
   } catch {
     return false
   }
 }
 
-function Effects({ quality, reduced, scenery }: { quality: Quality; reduced: boolean; scenery: Scenery }) {
+function Effects({ quality, reduced, scenery, dpr }: { quality: Quality; reduced: boolean; scenery: Scenery; dpr: number }) {
   if (quality === 'low') return null
   // The studio look: strong bloom, grain and vignette. The world look (a daylight scene)
   // blooms only lamps and the sun, with light grain and a soft vignette.
   const world = scenery === 'world'
   return (
-    <EffectComposer multisampling={quality === 'high' ? 4 : 0} enableNormalPass={false}>
+    // MSAA only on 1x screens: at a pixel ratio of 2 the canvas is already supersampled,
+    // and 4x MSAA on top of it quadruples the fill cost for edges nobody can see.
+    <EffectComposer multisampling={quality === 'high' && dpr < 1.5 ? 4 : 0} enableNormalPass={false}>
       <Bloom mipmapBlur intensity={world ? 0.55 : 0.85} luminanceThreshold={world ? 0.92 : 0.62} luminanceSmoothing={0.2} radius={world ? 0.6 : 0.72} />
       {/* Moving grain is decorative motion: it stops with reduced motion. */}
-      <Noise premultiply opacity={reduced ? 0 : world ? 0.12 : 0.35} />
+      {!reduced && <Noise premultiply opacity={world ? 0.12 : 0.35} />}
       <Vignette eskil={false} offset={world ? 0.3 : 0.22} darkness={world ? 0.42 : 0.78} />
     </EffectComposer>
   )
 }
+
+const DEFAULT_FOG: [number, number] = [26, 90]
+
+/**
+ * Everything inside the Canvas. Memoised: the page re-renders about ten times a second
+ * for its text readouts, and the scene must not re-render (or rebuild its background and
+ * fog, which makes three.js re-check every material's shader) unless its inputs change.
+ */
+const StageScene = memo(function StageScene({
+  t,
+  quality,
+  reduced,
+  shot,
+  drift,
+  scenery,
+  fog,
+  dpr,
+  children,
+  onDecline,
+}: {
+  t: ThemeTokens
+  quality: Quality
+  reduced: boolean
+  shot: Shot
+  drift: boolean
+  scenery: Scenery
+  fog: [number, number]
+  dpr: number
+  children: (t: ThemeTokens, quality: Quality) => ReactNode
+  onDecline: () => void
+}) {
+  const background = useMemo(() => col(t, 'stage-bg'), [t])
+  const fogColor = useMemo(() => col(t, 'stage-fog'), [t])
+  const [near, far] = fog
+  return (
+    <>
+      <color attach="background" args={[background]} />
+      {/* A world scene brings its own fog, coloured like its sky's horizon. */}
+      {scenery === 'studio' && <fog attach="fog" args={[fogColor, near, far]} />}
+      <PerformanceMonitor onDecline={onDecline}>
+        <Suspense fallback={null}>
+          {scenery === 'studio' && <StudioLights t={t} />}
+          {children(t, quality)}
+        </Suspense>
+        <CameraRig shot={shot} drift={drift} reduced={reduced} />
+        {/* Reduced motion drops the high tier's extras, but a slow GPU still gets the low tier. */}
+        <Effects quality={reduced && quality === 'high' ? 'medium' : quality} reduced={reduced} scenery={scenery} dpr={dpr} />
+      </PerformanceMonitor>
+    </>
+  )
+})
 
 /**
  * The 3D stage used by every world view: WebGL check, performance tiers
@@ -57,7 +113,7 @@ export function Stage({
   drift = true,
   onCreated,
   interactive = false,
-  fog = [26, 90],
+  fog = DEFAULT_FOG,
   far = 400,
   paused = false,
   scenery = 'studio',
@@ -104,6 +160,11 @@ export function Stage({
   // never remount (and React never warns) when the scene first renders.
   const labels = useRef<HTMLDivElement>(null)
   const [onScreen, setOnScreen] = useState(true)
+  const onDecline = useMemo(() => () => setQuality((q) => (q === 'high' ? 'medium' : 'low')), [])
+  // A lost WebGL context (common on phones when the GPU is needed elsewhere) throws no
+  // error: show the poster, and start a fresh canvas when the browser gives it back.
+  const [contextLost, setContextLost] = useState(false)
+  const [canvasKey, setCanvasKey] = useState(0)
   useEffect(() => {
     const el = root.current
     if (!el || typeof IntersectionObserver === 'undefined') return
@@ -124,29 +185,40 @@ export function Stage({
           {fallback ?? '3D view needs WebGL.'}
         </div>
       ) : ok ? (
+        <>
+        {contextLost && (
+          <div className="absolute inset-0 z-[2] grid place-items-center bg-stage-bg p-6 text-center">
+            <p className="hud-label text-foreground/85">3D view paused: the graphics processor was reset. Resuming…</p>
+          </div>
+        )}
         <StageLabelsContext.Provider value={labels as RefObject<HTMLElement>}>
           <div ref={labels} className={cn('pointer-events-none absolute inset-0 z-[1] overflow-hidden', paused && 'invisible')} />
           <Canvas
-            frameloop={onScreen && !paused ? 'always' : 'never'}
+            key={canvasKey}
+            frameloop={onScreen && !paused && !contextLost ? 'always' : 'never'}
             dpr={dpr}
             gl={{ antialias: false, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
             camera={{ position: shot.position, fov: shot.fov ?? 30, near: 0.1, far }}
             style={{ position: 'absolute', inset: 0 }}
-            onCreated={() => onCreated?.()}
+            onCreated={({ gl }) => {
+              const canvas = gl.domElement
+              canvas.addEventListener('webglcontextlost', (e) => {
+                e.preventDefault() // lets the browser restore it
+                setContextLost(true)
+              })
+              canvas.addEventListener('webglcontextrestored', () => {
+                setContextLost(false)
+                setCanvasKey((k) => k + 1) // rebuild every GPU resource on a fresh canvas
+              })
+              onCreated?.()
+            }}
           >
-            <color attach="background" args={[col(t, 'stage-bg')]} />
-            {/* A world scene brings its own fog, coloured like its sky's horizon. */}
-            {scenery === 'studio' && <fog attach="fog" args={[col(t, 'stage-fog'), fog[0], fog[1]]} />}
-            <PerformanceMonitor onDecline={() => setQuality((q) => (q === 'high' ? 'medium' : 'low'))}>
-              <Suspense fallback={null}>
-                {scenery === 'studio' && <StudioLights t={t} />}
-                {children(t, quality)}
-              </Suspense>
-              <CameraRig shot={shot} drift={drift} reduced={reduced} />
-              <Effects quality={reduced ? 'medium' : quality} reduced={reduced} scenery={scenery} />
-            </PerformanceMonitor>
+            <StageScene t={t} quality={quality} reduced={reduced} shot={shot} drift={drift} scenery={scenery} fog={fog} dpr={dpr} onDecline={onDecline}>
+              {children}
+            </StageScene>
           </Canvas>
         </StageLabelsContext.Provider>
+        </>
       ) : null}
     </div>
   )

@@ -13,7 +13,7 @@ import { getJourney, useJourneyState } from '@/journey/store'
 import { PHASES } from '@/journey/phases'
 import { systemPrefersReducedMotion, usePrefs } from '@/stores/prefs'
 import type { StanfordPoint } from '@/instruments/StanfordChart'
-import { viewModel } from './model'
+import { viewModel, type ViewModel } from './model'
 import { BenefitCard, CockpitPanel, ControlsPanel, FlightCard, NowPanel, SignalsPanel, StatusPanel } from './panels'
 import { JourneyStage, type ViewChoice } from './JourneyStage'
 
@@ -33,14 +33,28 @@ export default function JourneyPage() {
   const stop = useJourneyState(engine, (s) => s.stop)
   const speedMode = useJourneyState(engine, (s) => s.speedMode)
   useJourneyState(engine, (s) => s.failures)
-  const m = useSampled(() => viewModel(engine), 100, () => false)
+  // The model is rebuilt only when the world has moved on (a tick, signal time or a
+  // discrete change), so a paused or stopped journey does not re-render the page.
+  const modelCache = useRef<{ tick: number; signalS: number; state: unknown; m: ViewModel } | null>(null)
+  const m = useSampled(
+    () => {
+      const c = modelCache.current
+      if (c && c.tick === engine.tick && c.signalS === engine.signalS && c.state === engine.state) return c.m
+      const next = viewModel(engine)
+      modelCache.current = { tick: engine.tick, signalS: engine.signalS, state: engine.state, m: next }
+      return next
+    },
+    100,
+    Object.is,
+  )
   const progress = useSampled(() => engine.progress, 200)
   const [viewChoice, setViewChoice] = useState<ViewChoice>('auto')
   const view = viewChoice === 'auto' ? directionFor(phase).view : viewChoice
   const wide = useMediaQuery('(min-width: 1024px)')
   const phone = useMediaQuery('(max-width: 767px)')
 
-  // The Stanford chart's points: one per second of the journey; cleared on a jump back or a reset.
+  // The Stanford chart's points: one per second of real time while the world moves; cleared
+  // when the journey goes back (a jump back or a reset seen at the next sample).
   const points = useRef<StanfordPoint[]>([])
   const lastTick = useRef(0)
   useEffect(() => {
@@ -141,7 +155,9 @@ export default function JourneyPage() {
           </div>
         ) : phone ? (
           <div className="flex flex-col gap-4 px-3 py-3">
-            <div className="sticky top-14 z-30">{stage}</div>
+            {/* Opaque, so the panels scrolling under it never show through the timeline; not
+                sticky on a phone held sideways, where the strip would fill the whole screen. */}
+            <div className="sticky top-14 z-30 -mx-3 bg-background px-3 pb-1 [@media(max-height:500px)]:static">{stage}</div>
             <Tabs defaultValue="now">
               <TabsList className="w-full">
                 <TabsTrigger value="now">Now</TabsTrigger>

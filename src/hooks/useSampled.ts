@@ -6,16 +6,19 @@ import { useEffect, useRef, useState } from 'react'
  * Values are compared with `equal` to avoid needless renders.
  */
 export function useSampled<T>(read: () => T, intervalMs = 100, equal: (a: T, b: T) => boolean = shallowEqual): T {
+  // Both in refs: callers pass inline functions, which must not restart the interval.
   const readRef = useRef(read)
   readRef.current = read
+  const equalRef = useRef(equal)
+  equalRef.current = equal
   const [value, setValue] = useState<T>(() => read())
   useEffect(() => {
     const id = window.setInterval(() => {
       const next = readRef.current()
-      setValue((prev) => (equal(prev, next) ? prev : next))
+      setValue((prev) => (equalRef.current(prev, next) ? prev : next))
     }, intervalMs)
     return () => window.clearInterval(id)
-  }, [intervalMs, equal])
+  }, [intervalMs])
   return value
 }
 

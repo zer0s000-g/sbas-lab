@@ -1,11 +1,13 @@
 import { useCallback, useRef } from 'react'
 import { Canvas2D, type DrawFn } from '@/components/Canvas2D'
+import type { ThemeTokens } from '@/hooks/useThemeTokens'
 import { localToGeodetic } from '@/core/geo'
+import type { GroundSnapshot } from '@/core/groundSegment'
 import { GIVEI_NOT_MONITORED } from '@/core/iono'
 import { GEO_SATS, geoLabel } from '@/core/orbits'
 import { AIRPORT_LIST, dipEquatorLatDeg, MASTER, REGION, STATIONS } from '@/core/region'
 import { ROUTE } from '@/core/flight'
-import { approachMode, groundFor, snapshot } from '@/core/sbasWorld'
+import { approachMode, groundFor, snapshot, type Conditions } from '@/core/sbasWorld'
 import { OPERATIONS } from '@/core/operations'
 import { withAlpha } from '@/lib/color'
 import type { JourneyEngine } from '@/journey/engine'
@@ -19,24 +21,160 @@ const LAND = decodeRings(indonesia)
 /** The route LAB201 flies, as latitude/longitude. */
 const ROUTE_LL = ROUTE.map((w) => localToGeodetic(REGION, w.eastNm, w.northNm, 0))
 
-/** LPV availability over the region (VPL ≤ VAL), on a coarse grid; slow, so cached per minute of world time. */
-function useAvailability(e: JourneyEngine) {
-  const cache = useRef<{ key: string; cells: { lat: number; lon: number; ok: boolean }[] } | null>(null)
-  return () => {
-    const key = `${Math.floor(e.worldS / 60)}|${JSON.stringify(e.state.failures)}|${e.state.times.geoLostS}`
-    if (cache.current?.key === key) return cache.current.cells
-    const cells: { lat: number; lon: number; ok: boolean }[] = []
-    const c = e.conditions()
-    // One ground solution serves every cell: the network sends the same messages to everyone.
-    const ground = groundFor(e.worldS, c)
-    for (let lat = BOX.lat0 + 1; lat < BOX.lat1; lat += 2)
-      for (let lon = BOX.lon0 + 1; lon < BOX.lon1; lon += 2) {
-        const s = snapshot(e.worldS, { latDeg: lat, lonDeg: lon, hM: 1000 }, c, ground)
-        cells.push({ lat, lon, ok: approachMode(s, OPERATIONS.apv1).mode === 'LPV' })
-      }
-    cache.current = { key, cells }
-    return cells
+/** The coarse availability grid: one cell every 2°, centred on odd degrees, south-west first. */
+export const AVAILABILITY_CELLS: readonly { lat: number; lon: number }[] = (() => {
+  const cells: { lat: number; lon: number }[] = []
+  for (let lat = BOX.lat0 + 1; lat < BOX.lat1; lat += 2) for (let lon = BOX.lon0 + 1; lon < BOX.lon1; lon += 2) cells.push({ lat, lon })
+  return cells
+})()
+
+/** The grid is worked out for one minute of world time at a time. */
+const AVAILABILITY_STEP_S = 60
+
+/**
+ * LPV availability over the region (VPL ≤ VAL) on the coarse grid. A whole grid is a few
+ * hundred receiver solutions, too slow for one frame on a phone, so it is worked out a
+ * few cells per frame, within a time budget, while the map keeps showing the last
+ * complete grid. A new grid starts each minute of world time and whenever a failure
+ * changes. The result depends only on its key (the minute and the failures with their
+ * times), never on how the work was split.
+ */
+export class AvailabilityGrid {
+  /** LPV available in each cell of AVAILABILITY_CELLS, from the last complete grid (null until the first). */
+  ok: readonly boolean[] | null = null
+  /** Goes up each time `ok` is replaced. */
+  version = 0
+  /** The key of `ok`. */
+  key = ''
+  private job: { key: string; failuresKey: string; tS: number; c: Conditions; ground: GroundSnapshot | null; ok: boolean[] } | null = null
+  private seenState: unknown = null
+  private failuresKey = ''
+
+  /** Work on the grid for the engine's current minute for about `budgetMs`. */
+  step(e: JourneyEngine, budgetMs = 4, clock: () => number = () => performance.now()) {
+    const t0 = clock()
+    const st = e.state
+    if (st !== this.seenState) {
+      this.seenState = st
+      // Every failure time (the clock jump's start and satellite too), not just the GEO loss.
+      this.failuresKey = `${JSON.stringify(st.failures)}|${JSON.stringify(st.times)}`
+    }
+    const minute = Math.floor(e.worldS / AVAILABILITY_STEP_S)
+    const key = `${minute}|${this.failuresKey}`
+    // A grid for an earlier minute is finished (so the map keeps up at any time-lapse);
+    // a grid for failures that no longer apply is dropped.
+    if (!this.job || this.job.failuresKey !== this.failuresKey) {
+      if (!this.job && key === this.key) return
+      this.job = { key, failuresKey: this.failuresKey, tS: gridTime(minute, st.times), c: e.conditions(), ground: null, ok: [] }
+    }
+    const job = this.job
+    if (!job.ground) {
+      // One ground solution serves every cell: the network sends the same messages to everyone.
+      job.ground = groundFor(job.tS, job.c)
+      if (clock() - t0 >= budgetMs) return
+    }
+    while (job.ok.length < AVAILABILITY_CELLS.length) {
+      const cell = AVAILABILITY_CELLS[job.ok.length]
+      const snap = snapshot(job.tS, { latDeg: cell.lat, lonDeg: cell.lon, hM: 1000 }, job.c, job.ground)
+      job.ok.push(approachMode(snap, OPERATIONS.apv1).mode === 'LPV')
+      if (clock() - t0 >= budgetMs) break
+    }
+    if (job.ok.length < AVAILABILITY_CELLS.length) return
+    this.ok = job.ok
+    this.key = job.key
+    this.version++
+    this.job = null
   }
+}
+
+/**
+ * The world time a grid is worked out for: the start of its minute, or a failure that
+ * started during that minute (so a clock jump or a GEO loss shows at once). A function
+ * of the grid's key only.
+ */
+function gridTime(minute: number, times: object): number {
+  const start = minute * AVAILABILITY_STEP_S
+  let t = start
+  for (const v of Object.values(times)) if (typeof v === 'number' && v >= start && v < start + AVAILABILITY_STEP_S) t = Math.max(t, v)
+  return t
+}
+
+/** One grid per journey, kept while the map is closed so that reopening it shows one at once. */
+const grids = new WeakMap<JourneyEngine, AvailabilityGrid>()
+function gridFor(e: JourneyEngine): AvailabilityGrid {
+  let g = grids.get(e)
+  if (!g) grids.set(e, (g = new AvailabilityGrid()))
+  return g
+}
+
+/** Map geometry for a canvas size: the box, scaled to fit and centred. */
+function mapFrame(width: number, height: number) {
+  const s = Math.min(width / (BOX.lon1 - BOX.lon0), height / (BOX.lat1 - BOX.lat0))
+  const ox = (width - s * (BOX.lon1 - BOX.lon0)) / 2
+  const oy = (height - s * (BOX.lat1 - BOX.lat0)) / 2
+  return { s, X: (lon: number) => ox + (lon - BOX.lon0) * s, Y: (lat: number) => oy + (BOX.lat1 - lat) * s }
+}
+
+/** Clip to the map box. */
+function clipBox(ctx: CanvasRenderingContext2D, { s, X, Y }: ReturnType<typeof mapFrame>) {
+  ctx.beginPath()
+  ctx.rect(X(BOX.lon0), Y(BOX.lat1), s * (BOX.lon1 - BOX.lon0), s * (BOX.lat1 - BOX.lat0))
+  ctx.clip()
+}
+
+/**
+ * The parts of the map that never move: land with its coastline, the graticule and the
+ * magnetic equator. Drawn inside the box clip, on a transparent layer that goes over
+ * the availability tint.
+ */
+function drawStatic(ctx: CanvasRenderingContext2D, f: ReturnType<typeof mapFrame>, t: ThemeTokens) {
+  const { X, Y } = f
+  clipBox(ctx, f)
+  // Land, with its coastline.
+  ctx.beginPath()
+  for (const r of LAND) {
+    for (let i = 0; i < r.length; i += 2) {
+      if (i === 0) ctx.moveTo(X(r[i]), Y(r[i + 1]))
+      else ctx.lineTo(X(r[i]), Y(r[i + 1]))
+    }
+    ctx.closePath()
+  }
+  ctx.fillStyle = withAlpha(t['sim-terrain'], 0.55)
+  ctx.fill('evenodd')
+  ctx.strokeStyle = t['sim-grid-strong']
+  ctx.lineWidth = 1
+  ctx.stroke()
+  // Graticule every 10° of longitude and 5° of latitude, from the box.
+  ctx.strokeStyle = t['sim-grid']
+  ctx.font = `10px ${t.fontMono}`
+  ctx.fillStyle = t['sim-muted']
+  for (let lon = Math.ceil(BOX.lon0 / 10) * 10; lon <= BOX.lon1; lon += 10) {
+    ctx.beginPath()
+    ctx.moveTo(X(lon), Y(BOX.lat1))
+    ctx.lineTo(X(lon), Y(BOX.lat0))
+    ctx.stroke()
+    ctx.fillText(`${lon}°E`, X(lon) + 2, Y(BOX.lat0) - 3)
+  }
+  for (let lat = Math.ceil(BOX.lat0 / 5) * 5; lat <= BOX.lat1; lat += 5) {
+    ctx.beginPath()
+    ctx.moveTo(X(BOX.lon0), Y(lat))
+    ctx.lineTo(X(BOX.lon1), Y(lat))
+    ctx.stroke()
+    ctx.fillText(lat === 0 ? 'EQ' : `${Math.abs(lat)}°${lat < 0 ? 'S' : 'N'}`, X(BOX.lon0) + 2, Y(lat) - 2)
+  }
+  // Magnetic equator (model).
+  ctx.strokeStyle = t['sim-signal-2']
+  ctx.lineWidth = 1.2
+  ctx.setLineDash([6, 4])
+  ctx.beginPath()
+  for (let lon = BOX.lon0; lon <= BOX.lon1; lon += 1) {
+    if (lon === BOX.lon0) ctx.moveTo(X(lon), Y(dipEquatorLatDeg(lon)))
+    else ctx.lineTo(X(lon), Y(dipEquatorLatDeg(lon)))
+  }
+  ctx.stroke()
+  ctx.setLineDash([])
+  ctx.fillStyle = t['sim-signal-2']
+  ctx.fillText('magnetic equator (model)', X(BOX.lon0) + 4, Y(dipEquatorLatDeg(BOX.lon0)) - 5)
 }
 
 /**
@@ -48,77 +186,58 @@ function useAvailability(e: JourneyEngine) {
  * the theme.
  */
 export function NetworkMap({ engine, label, className }: { engine: JourneyEngine; label: string; className?: string }) {
-  const availability = useAvailability(engine)
+  const grid = gridFor(engine)
+  /** The never-moving layer, kept until the size, the pixel ratio, the theme or the fonts change. */
+  const layer = useRef<{ key: unknown[]; canvas: HTMLCanvasElement } | null>(null)
+  // The map changes with the world tick, the journey state (phase, failures) and a newly
+  // finished availability grid: it redraws then, not every frame.
+  const frameKey = useCallback(() => {
+    grid.step(engine)
+    return [engine.tick, engine.state, grid.version]
+  }, [engine, grid])
   const draw = useCallback<DrawFn>(
-    (ctx, { width, height, tokens: t }) => {
-      const sx = width / (BOX.lon1 - BOX.lon0)
-      const sy = height / (BOX.lat1 - BOX.lat0)
-      const s = Math.min(sx, sy)
-      const ox = (width - s * (BOX.lon1 - BOX.lon0)) / 2
-      const oy = (height - s * (BOX.lat1 - BOX.lat0)) / 2
-      const X = (lon: number) => ox + (lon - BOX.lon0) * s
-      const Y = (lat: number) => oy + (BOX.lat1 - lat) * s
+    (ctx, { width, height, dpr, tokens: t, fontEpoch }) => {
+      const f = mapFrame(width, height)
+      const { s, X, Y } = f
       const wide = width >= 520
       ctx.fillStyle = t['sim-bg']
       ctx.fillRect(0, 0, width, height)
       ctx.save()
-      ctx.beginPath()
-      ctx.rect(X(BOX.lon0), Y(BOX.lat1), s * (BOX.lon1 - BOX.lon0), s * (BOX.lat1 - BOX.lat0))
-      ctx.clip()
+      clipBox(ctx, f)
       ctx.fillStyle = t['sim-water']
       ctx.fillRect(X(BOX.lon0), Y(BOX.lat1), s * (BOX.lon1 - BOX.lon0), s * (BOX.lat1 - BOX.lat0))
       // LPV availability, under the land so the coastline stays readable where it is available everywhere.
       ctx.fillStyle = withAlpha(t['sim-coverage'], 0.4)
-      for (const c of availability()) if (c.ok) ctx.fillRect(X(c.lon - 1), Y(c.lat + 1), 2 * s, 2 * s)
-      // Land, with its coastline.
-      ctx.beginPath()
-      for (const r of LAND) {
-        for (let i = 0; i < r.length; i += 2) {
-          if (i === 0) ctx.moveTo(X(r[i]), Y(r[i + 1]))
-          else ctx.lineTo(X(r[i]), Y(r[i + 1]))
+      if (grid.ok)
+        grid.ok.forEach((ok, i) => {
+          const c = AVAILABILITY_CELLS[i]
+          if (ok) ctx.fillRect(X(c.lon - 1), Y(c.lat + 1), 2 * s, 2 * s)
+        })
+      // Land, graticule and magnetic equator from their layer, pixel for pixel.
+      const cw = ctx.canvas.width
+      const ch = ctx.canvas.height
+      const key = [width, height, cw, ch, dpr, t, fontEpoch]
+      if (!layer.current || layer.current.key.some((v, i) => !Object.is(v, key[i]))) {
+        const canvas = layer.current?.canvas ?? document.createElement('canvas')
+        canvas.width = cw
+        canvas.height = ch
+        const lc = canvas.getContext('2d')
+        if (lc) {
+          lc.setTransform(dpr, 0, 0, dpr, 0, 0)
+          drawStatic(lc, f, t)
         }
-        ctx.closePath()
+        layer.current = { key, canvas }
       }
-      ctx.fillStyle = withAlpha(t['sim-terrain'], 0.55)
-      ctx.fill('evenodd')
-      ctx.strokeStyle = t['sim-grid-strong']
-      ctx.lineWidth = 1
-      ctx.stroke()
-      // Graticule every 10° of longitude and 5° of latitude, from the box.
-      ctx.strokeStyle = t['sim-grid']
+      ctx.save()
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.drawImage(layer.current.canvas, 0, 0)
+      ctx.restore()
       ctx.font = `10px ${t.fontMono}`
-      ctx.fillStyle = t['sim-muted']
-      for (let lon = Math.ceil(BOX.lon0 / 10) * 10; lon <= BOX.lon1; lon += 10) {
-        ctx.beginPath()
-        ctx.moveTo(X(lon), Y(BOX.lat1))
-        ctx.lineTo(X(lon), Y(BOX.lat0))
-        ctx.stroke()
-        ctx.fillText(`${lon}°E`, X(lon) + 2, Y(BOX.lat0) - 3)
-      }
-      for (let lat = Math.ceil(BOX.lat0 / 5) * 5; lat <= BOX.lat1; lat += 5) {
-        ctx.beginPath()
-        ctx.moveTo(X(BOX.lon0), Y(lat))
-        ctx.lineTo(X(BOX.lon1), Y(lat))
-        ctx.stroke()
-        ctx.fillText(lat === 0 ? 'EQ' : `${Math.abs(lat)}°${lat < 0 ? 'S' : 'N'}`, X(BOX.lon0) + 2, Y(lat) - 2)
-      }
-      // Magnetic equator (model).
-      ctx.strokeStyle = t['sim-signal-2']
-      ctx.lineWidth = 1.2
-      ctx.setLineDash([6, 4])
-      ctx.beginPath()
-      for (let lon = BOX.lon0; lon <= BOX.lon1; lon += 1) {
-        if (lon === BOX.lon0) ctx.moveTo(X(lon), Y(dipEquatorLatDeg(lon)))
-        else ctx.lineTo(X(lon), Y(dipEquatorLatDeg(lon)))
-      }
-      ctx.stroke()
-      ctx.setLineDash([])
-      ctx.fillStyle = t['sim-signal-2']
-      ctx.fillText('magnetic equator (model)', X(BOX.lon0) + 4, Y(dipEquatorLatDeg(BOX.lon0)) - 5)
       const snap = engine.snapshot()
       const phase = engine.state.phase
       // Ionospheric grid points: circle size = vertical delay; a cross when not monitored.
       ctx.lineWidth = 1
+      const igpFill = withAlpha(t['sim-signal'], 0.25)
       for (const igp of snap.ground.gridList) {
         const x = X(igp.lonDeg)
         const y = Y(igp.latDeg)
@@ -133,7 +252,7 @@ export function NetworkMap({ engine, label, className }: { engine: JourneyEngine
           continue
         }
         const r = Math.min(s * 1.6, 2 + igp.delayM * 0.6)
-        ctx.fillStyle = withAlpha(t['sim-signal'], 0.25)
+        ctx.fillStyle = igpFill
         ctx.strokeStyle = t['sim-signal']
         ctx.beginPath()
         ctx.arc(x, y, r, 0, Math.PI * 2)
@@ -266,7 +385,7 @@ export function NetworkMap({ engine, label, className }: { engine: JourneyEngine
         ly += 13
       }
     },
-    [engine, availability],
+    [engine, grid],
   )
-  return <Canvas2D draw={draw} label={label} className={className} />
+  return <Canvas2D draw={draw} frameKey={frameKey} label={label} className={className} />
 }

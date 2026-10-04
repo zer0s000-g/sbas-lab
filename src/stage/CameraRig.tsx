@@ -26,6 +26,12 @@ function useLookAround(shot: Shot) {
     }
     const move = (e: PointerEvent) => {
       if (!drag || e.pointerId !== drag.id) return
+      // Released outside the canvas before any move arrived: the drag is over.
+      if (e.buttons === 0 && e.pointerType !== 'touch') {
+        drag = null
+        el.style.cursor = ''
+        return
+      }
       const dx = e.clientX - drag.x
       const dy = e.clientY - drag.y
       if (drag.touch && Math.abs(dy) > Math.abs(dx)) return

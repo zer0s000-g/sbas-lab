@@ -29,7 +29,7 @@ export const FAILURES: readonly FailureDef[] = [
     id: 'clockJump',
     label: 'Satellite clock jump',
     explain: 'One GPS satellite clock suddenly jumps, so its range is wrong by tens of metres.',
-    notice: 'The master station sees it and sends "Do not use". The countdown shows the alarm reaching LAB201 inside the time to alert.',
+    notice: 'The master station sees it and sends "Do not use". The message log shows the alarm reaching LAB201 inside the time to alert.',
     crewAtc: 'Nothing to do: the receiver drops the satellite by itself and the approach continues.',
     source: 'Doc 9849 §2.2.4.4, §4.3.1.3',
   },

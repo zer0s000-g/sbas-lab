@@ -1,6 +1,7 @@
 import { Component, useEffect, type ReactNode } from 'react'
 import { RotateCw, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { SiteHeader } from '@/components/SiteHeader'
 import { CornerBrackets } from '@/hud/HudFrame'
 import { isChunkLoadError, resetFailedLazies } from '@/lib/lazyRetry'
 
@@ -51,6 +52,16 @@ export class PageBoundary extends Component<{ children: ReactNode }, { error: un
     if (import.meta.env.DEV) console.error(error)
   }
   render() {
-    return this.state.failed ? <RouteError error={this.state.error} /> : this.props.children
+    // The page renders its own header, so the error screen brings a plain one (wordmark and settings).
+    return this.state.failed ? (
+      <>
+        <SiteHeader />
+        <main id="main" className="flex-1">
+          <RouteError error={this.state.error} />
+        </main>
+      </>
+    ) : (
+      this.props.children
+    )
   }
 }

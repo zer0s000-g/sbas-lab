@@ -70,7 +70,7 @@ export const NARRATION: Readonly<Record<PhaseId, Narration>> = {
   },
   cruise: {
     title: 'En route with integrity',
-    now: 'At FL330 along the north coast of Java, the alert limit is 2 NM (3.7 km) with 5 minutes to alert. The SBAS protection level is hundreds of times smaller. Controllers in Jakarta hand LAB201 to Makassar.',
+    now: 'Climbing to FL330 along the north coast of Java, the alert limit is 2 NM (3.7 km) with 5 minutes to alert. The SBAS protection level is hundreds of times smaller. Controllers in Jakarta hand LAB201 to Makassar.',
     benefit: 'LAB201 broadcasts this position on ADS-B. Its integrity lets the controller trust the position shown on the screen.',
     source: 'Doc 9849 Table 2-1, §1.4.3, §2.2.4.6',
   },

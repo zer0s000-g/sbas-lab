@@ -44,6 +44,11 @@ export interface SatCorrection {
   /** Correction for clock + orbit along the line of sight, m (the aircraft subtracts it). */
   correctionM: number
   udrei: number
+  /**
+   * The UDREI broadcast before a "Do Not Use": an aircraft goes on using the satellite
+   * with it until the alarm message reaches it. Equal to `udrei` otherwise.
+   */
+  udreiBeforeAlarm: number
   /** How many reference stations see it. */
   seenBy: number
   status: 'ok' | 'not-monitored' | 'do-not-use'
@@ -94,24 +99,24 @@ export function groundSolution(c: GroundConditions): GroundSnapshot {
 }
 
 function correctionFor(sat: SatDef, seenBy: number, c: GroundConditions): SatCorrection {
-  if (seenBy < 2) return { satId: sat.id, correctionM: 0, udrei: UDREI_NOT_MONITORED, seenBy, status: 'not-monitored' }
+  if (seenBy < 2) return { satId: sat.id, correctionM: 0, udrei: UDREI_NOT_MONITORED, udreiBeforeAlarm: UDREI_NOT_MONITORED, seenBy, status: 'not-monitored' }
   // The truth the network sees (clock + orbit; the orbit part is taken along a typical line of sight).
   const truth = satErrors(sat.id, 45, 0, c.tS, c.seed, 0, null)
   const code = satCode(sat.id)
   const estErrSigma = 0.35 / Math.sqrt(seenBy)
   const estErr = smoothGauss(code, c.tS, 60, estErrSigma, c.seed + 5)
   let correctionM = truth.clockM + truth.orbitM + estErr
-  const f = c.fault
-  if (f && f.satId === sat.id && c.tS >= f.startS) {
-    // Before detection the old correction goes on being sent; once detected, "Do Not Use".
-    if (c.tS >= f.startS + ALARM_LATENCY.detectS) return { satId: sat.id, correctionM, udrei: UDREI_DO_NOT_USE, seenBy, status: 'do-not-use' }
-  }
+  correctionM = Number.isFinite(correctionM) ? correctionM : 0
   // UDRE: a 99.9 % bound on what the correction leaves, larger when few stations see the satellite.
   const udre = 3.29 * Math.hypot(estErrSigma * 1.6, 0.18) * (seenBy >= 4 ? 1 : 1.4)
   // A satellite occasionally flagged as not good enough for LPV (UDREI 13) keeps the rule visible.
   const udrei = hash2(code, Math.floor(c.tS / 600), c.seed) < 0.02 ? UDREI_NOT_FOR_LPV : udreIndex(udre)
-  correctionM = Number.isFinite(correctionM) ? correctionM : 0
-  return { satId: sat.id, correctionM, udrei, seenBy, status: 'ok' }
+  const f = c.fault
+  // Before detection the old correction goes on being sent; once detected, "Do Not Use".
+  if (f && f.satId === sat.id && c.tS >= f.startS + ALARM_LATENCY.detectS) {
+    return { satId: sat.id, correctionM, udrei: UDREI_DO_NOT_USE, udreiBeforeAlarm: udrei, seenBy, status: 'do-not-use' }
+  }
+  return { satId: sat.id, correctionM, udrei, udreiBeforeAlarm: udrei, seenBy, status: 'ok' }
 }
 
 /** ECEF positions of the ground stations, for the views. */

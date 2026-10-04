@@ -8,8 +8,8 @@
  * cyan for GPS, dashed brass for the SBAS GEOs. Truth is a cross, GPS alone a hollow
  * ring and SBAS a filled dot, their offsets drawn ×10. Loaded with the 3D chunk.
  */
-import { useLayoutEffect, useMemo, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { memo, useLayoutEffect, useMemo, useRef } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { ThemeTokens } from '@/hooks/useThemeTokens'
 import { DEPARTURE, DESTINATION, nearestAirport } from '@/core/region'
@@ -35,10 +35,19 @@ import { Ocean } from './world/Ocean'
 import { Sky } from './world/Sky'
 import { Terrain } from './world/Terrain'
 import { newSkyState, raToWorld, skyPalette, updateSky } from './world/skyState'
+import { useBuiltAirports } from './world/useGround'
 
 const MAX_RAYS = 14
 /** Camera far plane in this view (shots.ts), scene units: the sky dome sits just inside it. */
 const FAR_U = 3500
+/** How quickly the drawn pitch follows the climb or descent, s (the simulation steps it at level-offs). */
+const PITCH_TAU_S = 0.6
+
+// Scratch objects for the frame loops (no allocation per frame).
+const tmpColor = new THREE.Color()
+const rayDir: [number, number, number] = [0, 0, 0]
+const rayEnd: [number, number, number] = [0, 0, 0]
+const geoSeen = GEO_SATS.map(() => false)
 
 /** A wire cylinder: two rims and eight verticals (the alert limit). Unit size, scaled per frame. */
 function useUnitWireCylinder() {
@@ -63,9 +72,12 @@ function useUnitWireCylinder() {
   return geo
 }
 
-export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Quality }) {
+function FlightScene({ t, quality }: { t: ThemeTokens; quality: Quality }) {
   const engine = getJourney()
   const phase = useJourneyState(engine, (s) => s.phase)
+  // The ground around the airport LAB201 is nearest when the view opens is built first.
+  const first = useMemo(() => nearestAirport(engine.aircraft.eastNm, engine.aircraft.northNm).id, [engine])
+  const airports = useBuiltAirports(first)
   const reduced = useReducedMotion()
   const c = useMemo(
     () => ({
@@ -96,11 +108,25 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
   const geoRays = useRef<(WireHandle | null)[]>([])
   const geoTips = useRef<(THREE.Group | null)[]>([])
   const alLabel = useRef<THREE.Group>(null)
-  const fog = useRef<THREE.Fog>(null)
+  const geoLabels = useRef<(HTMLDivElement | null)[]>([])
+  const pitch = useRef(Number.NaN)
+  const pitchTick = useRef(-1)
   const sun = useRef<THREE.DirectionalLight>(null)
   const hemi = useRef<THREE.HemisphereLight>(null)
   const sunTarget = useMemo(() => new THREE.Object3D(), [])
   const op = operationFor(directionFor(phase).stage)
+
+  // Haze, coloured like the sky's horizon (updated every frame below). The scene's own fog:
+  // three reads fog only from the scene, never from a group.
+  const scene = useThree((s) => s.scene)
+  const fog = useMemo(() => new THREE.Fog(sky.horizon, 40, 750), [sky])
+  useLayoutEffect(() => {
+    const prev = scene.fog
+    scene.fog = fog
+    return () => {
+      if (scene.fog === fog) scene.fog = prev
+    }
+  }, [scene, fog])
 
   // The sky first, so everything drawn this frame sees the same time of day.
   useFrame((_s, dt) => {
@@ -110,12 +136,10 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
     lastTick.current = engine.tick
     night.value = 1 - sky.day
     const ac = aircraftFlight(engine)
-    if (fog.current) {
-      // The air is clearer from above: the haze reaches further the higher the aircraft (FL330: about 250 km).
-      fog.current.color.copy(sky.horizon)
-      fog.current.near = 40 + Math.max(0, ac[1]) * 4
-      fog.current.far = 750 + Math.max(0, ac[1]) * 17
-    }
+    // The air is clearer from above: the haze reaches further the higher the aircraft (FL330: about 250 km).
+    fog.color.copy(sky.horizon)
+    fog.near = 40 + Math.max(0, ac[1]) * 4
+    fog.far = 750 + Math.max(0, ac[1]) * 17
     sunTarget.position.set(...ac)
     sunTarget.updateMatrixWorld()
     if (sun.current) {
@@ -125,22 +149,26 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
     }
     if (hemi.current) {
       // Daylight from the sky; at night a dim, cool moonlight-level fill so the land stays readable.
-      hemi.current.color.copy(c.night).lerp(sky.zenith.clone().lerp(sky.horizon, 0.5), sky.day)
+      hemi.current.color.copy(c.night).lerp(tmpColor.copy(sky.zenith).lerp(sky.horizon, 0.5), sky.day)
       hemi.current.groundColor.copy(c.groundTint)
       hemi.current.intensity = 0.5 + 0.75 * sky.day
     }
   }, -1)
 
-  useFrame((state) => {
+  useFrame((state, dt) => {
     const a = engine.aircraft
     const ac = aircraftFlight(engine)
     const snap = engine.snapshot()
     acGroup.current?.position.set(...ac)
     if (plane.current) {
       plane.current.rotation.set(0, -(a.headingDeg - 90) * DEG, 0)
-      // Nose up in the climb, down on the descent.
-      const pitch = Math.atan2((a.vsFpm * M_PER_FT) / 60, Math.max((a.gsKt * 1852) / 3600, 1))
-      plane.current.rotateZ(pitch)
+      // Nose up in the climb, down on the descent, easing into each new attitude while the
+      // world moves (held when it is frozen; at once with reduced motion or on opening).
+      const target = Math.atan2((a.vsFpm * M_PER_FT) / 60, Math.max((a.gsKt * 1852) / 3600, 1))
+      if (!Number.isFinite(pitch.current) || reduced) pitch.current = target
+      else if (engine.tick !== pitchTick.current) pitch.current += (target - pitch.current) * (1 - Math.exp(-Math.min(dt, 0.1) / PITCH_TAU_S))
+      pitchTick.current = engine.tick
+      plane.current.rotateZ(pitch.current)
     }
     const fieldFt = nearestAirport(a.eastNm, a.northNm).elevationFt
     const agl = a.altFt - fieldFt
@@ -155,7 +183,7 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
       pl.current.visible = !!fix && Number.isFinite(fix.hplM)
       if (fix && Number.isFinite(fix.hplM)) {
         const r = Math.max(mToFlight(fix.hplM), 1e-3)
-        const h = fix.vplM !== null ? Math.max(mToFlight(fix.vplM), 1e-3) : 0.002
+        const h = fix.vplM !== null && Number.isFinite(fix.vplM) ? Math.max(mToFlight(fix.vplM), 1e-3) : 0.002
         pl.current.scale.set(r, h, r)
       }
     }
@@ -169,7 +197,8 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
     if (alLabel.current && op) alLabel.current.position.set(mToFlight(op.halM), op.valM !== null ? mToFlight(op.valM) : 0, 0)
     // A glow on the aircraft so it can be found when the camera is far out.
     if (beacon.current) {
-      const d = state.camera.position.distanceTo(new THREE.Vector3(...ac))
+      const cam = state.camera.position
+      const d = Math.hypot(cam.x - ac[0], cam.y - ac[1], cam.z - ac[2])
       beacon.current.visible = d > 12
       beacon.current.scale.setScalar(Math.max(d / 140, 0.02))
     }
@@ -181,35 +210,49 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
     place(abasMark.current, snap.abas, true)
     place(sbasMark.current, snap.sbasFix, engine.sbasShown)
     // Signal rays toward the satellites (true directions).
-    const used = new Set(fix?.used ?? [])
+    const used = fix?.used
     let k = 0
-    const geoSeen = new Set<number>()
+    geoSeen.fill(false)
     for (const s of snap.sats) {
       if (!s.tracked) continue
       const el = s.elDeg * DEG
       const az = s.azDeg * DEG
-      const dir: [number, number, number] = [Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el)]
-      const end: [number, number, number] = [ac[0] + dir[0] * SKY_DOME_U, ac[1] + dir[1] * SKY_DOME_U, ac[2] + dir[2] * SKY_DOME_U]
+      const dir = rayDir
+      dir[0] = Math.sin(az) * Math.cos(el)
+      dir[1] = Math.sin(el)
+      dir[2] = -Math.cos(az) * Math.cos(el)
+      const end = rayEnd
+      end[0] = ac[0] + dir[0] * SKY_DOME_U
+      end[1] = ac[1] + dir[1] * SKY_DOME_U
+      end[2] = ac[2] + dir[2] * SKY_DOME_U
       if (s.kind === 'geo') {
         // Each GEO keeps its own ray and label.
         const g = GEO_SATS.findIndex((x) => x.id === s.id)
+        if (g < 0) continue
         const w = geoRays.current[g]
         w?.set(ac, end)
         w?.setVisible(true)
         geoTips.current[g]?.position.set(...end)
-        geoSeen.add(g)
+        geoSeen[g] = true
       } else if (k < MAX_RAYS) {
         const w = rays.current[k++]
         w?.set(ac, end)
         w?.setVisible(true)
-        w?.setOpacity(used.has(s.id) ? 0.8 : 0.25)
+        w?.setOpacity(used?.includes(s.id) ? 0.8 : 0.25)
       }
     }
     for (; k < MAX_RAYS; k++) rays.current[k]?.setVisible(false)
     for (let g = 0; g < GEO_SATS.length; g++) {
-      if (geoSeen.has(g)) continue
-      geoRays.current[g]?.setVisible(false)
-      geoTips.current[g]?.position.set(0, -1e4, 0)
+      // An untracked GEO: no ray, no marker, no label (its label is DOM, which ignores the
+      // scene graph's visibility, so it is faded out directly).
+      if (!geoSeen[g]) geoRays.current[g]?.setVisible(false)
+      const tip = geoTips.current[g]
+      if (tip) tip.visible = geoSeen[g]
+      const label = geoLabels.current[g]
+      if (label) {
+        label.style.opacity = geoSeen[g] ? '1' : '0'
+        label.ariaHidden = geoSeen[g] ? null : 'true'
+      }
     }
   })
 
@@ -218,15 +261,14 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
   const depThr = raToWorld(JAKARTA, 0, 0, 0)
   return (
     <group>
-      <fog ref={fog} attach="fog" args={[sky.horizon, 40, 750]} />
       <hemisphereLight ref={hemi} />
       <directionalLight ref={sun} target={sunTarget} />
       <primitive object={sunTarget} />
       <Sky sky={sky} radius={FAR_U * 0.86} />
-      <Ocean t={t} sky={sky} size={FAR_U * 2.2} />
-      <Terrain t={t} lowDetail={quality === 'low'} />
-      <AirportModel l={JAKARTA} t={t} sky={sky} engine={engine} blink={blink} />
-      <AirportModel l={BALI} t={t} sky={sky} engine={engine} blink={blink} />
+      <Ocean t={t} sky={sky} size={FAR_U * 2.2} airports={airports} />
+      <Terrain t={t} lowDetail={quality === 'low'} airports={airports} />
+      <AirportModel l={JAKARTA} t={t} sky={sky} engine={engine} />
+      <AirportModel l={BALI} t={t} sky={sky} engine={engine} />
       <Clouds t={t} sky={sky} />
       <GroundShadow t={t} sky={sky} engine={engine} />
       <group ref={acGroup}>
@@ -280,12 +322,13 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
       {GEO_SATS.map((geo, i) => (
         <group key={geo.id}>
           <Wire3D ref={(h) => void (geoRays.current[i] = h)} color={c.brass} px={1.8} dash={1.5} opacity={0.95} />
-          <group ref={(m) => void (geoTips.current[i] = m)} position={[0, -1e4, 0]}>
+          <group ref={(m) => void (geoTips.current[i] = m)} position={[0, -1e4, 0]} visible={false}>
             <mesh>
               <octahedronGeometry args={[0.8]} />
               <meshBasicMaterial color={c.brass} toneMapped={false} />
             </mesh>
-            <Callout3D position={[0, 0, 0]} tone="brass" side={i === 0 ? 'left' : 'right'}>
+            {/* Hidden until the GEO is tracked; the frame loop shows it. */}
+            <Callout3D position={[0, 0, 0]} tone="brass" side={i === 0 ? 'left' : 'right'} hidden rootRef={(el) => void (geoLabels.current[i] = el)}>
               {geoLabel(geo)} · SBAS
             </Callout3D>
           </group>
@@ -300,3 +343,6 @@ export default function FlightScene({ t, quality }: { t: ThemeTokens; quality: Q
     </group>
   )
 }
+
+/** Memoised: it reads the engine in its frame loops and re-renders only for its own props and the phase. */
+export default memo(FlightScene)

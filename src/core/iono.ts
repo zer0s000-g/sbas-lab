@@ -199,6 +199,7 @@ export interface IonoObservation {
 }
 
 const PP_RADIUS_DEG = 9
+let weightScratch = new Float64Array(256)
 
 /**
  * The master station's grid: each IGP's delay is a distance-weighted mean of the
@@ -208,21 +209,35 @@ const PP_RADIUS_DEG = 9
  * few measurements nearby is "not monitored".
  */
 export function estimateIgps(obs: readonly IonoObservation[], c: IonoConditions): IgpEstimate[] {
+  // Runs for every snapshot (each frame of a moving view), so it allocates nothing per
+  // measurement: the weights go into one shared scratch array.
+  if (weightScratch.length < obs.length) weightScratch = new Float64Array(obs.length)
+  const weights = weightScratch
   return IGPS.map((igp) => {
     let wSum = 0
     let dSum = 0
-    const near: { d: number; w: number }[] = []
-    for (const o of obs) {
-      const dist = Math.hypot(o.latDeg - igp.latDeg, (o.lonDeg - igp.lonDeg) * Math.cos(igp.latDeg * DEG))
-      if (dist > PP_RADIUS_DEG) continue
-      const w = 1 / (1 + dist * dist)
+    let nNear = 0
+    const cosLat = Math.cos(igp.latDeg * DEG)
+    for (let i = 0; i < obs.length; i++) {
+      const o = obs[i]
+      const dLat = o.latDeg - igp.latDeg
+      const dLon = (o.lonDeg - igp.lonDeg) * cosLat
+      const dist2 = dLat * dLat + dLon * dLon
+      if (dist2 > PP_RADIUS_DEG * PP_RADIUS_DEG) {
+        weights[i] = 0
+        continue
+      }
+      const w = 1 / (1 + dist2)
+      weights[i] = w
       wSum += w
       dSum += w * o.delayM
-      near.push({ d: o.delayM, w })
+      nNear++
     }
-    if (near.length < 3 || !(wSum > 0)) return { ...igp, delayM: 0, givei: GIVEI_NOT_MONITORED }
+    if (nNear < 3 || !(wSum > 0)) return { ...igp, delayM: 0, givei: GIVEI_NOT_MONITORED }
     const mean = dSum / wSum
-    const spread = Math.sqrt(near.reduce((s, n) => s + n.w * (n.d - mean) ** 2, 0) / wSum)
+    let varSum = 0
+    for (let i = 0; i < obs.length; i++) if (weights[i] > 0) varSum += weights[i] * (obs[i].delayM - mean) ** 2
+    const spread = Math.sqrt(varSum / wSum)
     const h = localSolarHour(c.tS, igp.lonDeg, c.startLocalHour)
     const magLat = Math.abs(magLatDeg(igp.latDeg, igp.lonDeg))
     // After sunset in the equatorial bands, bubbles smaller than the station spacing can hide

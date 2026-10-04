@@ -6,14 +6,13 @@
  * signals LAB201 receives: a solid cyan wire from each GPS satellite it tracks and a
  * dashed brass wire from each GEO (design.md §2 "SBAS meanings"). Loaded with the 3D chunk.
  */
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { memo, useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { ThemeTokens } from '@/hooks/useThemeTokens'
 import { GPS_SATS, GEO_SATS, geoLabel, satEcef, GPS_RADIUS_M, GPS_PERIOD_S, type SatDef } from '@/core/orbits'
 import { IONO_SHELL_HEIGHT_M } from '@/core/iono'
 import { DIP_EQUATOR_TABLE, REGION, localSolarHour } from '@/core/region'
-import { toThreeStyle } from '@/lib/color'
 import { decodeRings, type CoastData } from './geo/coast'
 import { indonesia } from './geo/indonesia.data'
 import { world } from './geo/world.data'
@@ -54,7 +53,14 @@ const earthFragment = `
     float lon = atan(-d.z, d.x);
     float day = smoothstep(-0.12, 0.3, dot(d, uSun));
     vec2 uv = vec2(lon / 6.2831853 + 0.5, lat / 3.1415927 + 0.5);
-    float land = texture2D(uLandMask, uv).a;
+    // The mip level comes from the screen-space change of uv, which jumps by a whole turn
+    // at the ±180° meridian; a copy of u wrapped half a turn away is smooth there, so the
+    // smaller of the two changes is used (no seam of blurred land along the date line).
+    float u2 = fract(uv.x + 0.5) - 0.5;
+    vec2 du = vec2(dFdx(uv.x), dFdy(uv.x));
+    vec2 du2 = vec2(dFdx(u2), dFdy(u2));
+    vec2 g = dot(du, du) <= dot(du2, du2) ? du : du2;
+    float land = textureGrad(uLandMask, uv, vec2(g.x, dFdx(uv.y)), vec2(g.y, dFdy(uv.y))).r;
     vec3 surface = mix(uOcean, uLand, land);
     vec3 base = mix(uNight + uLand * land * 0.12, surface, day);
     float stepR = radians(15.0);
@@ -73,18 +79,24 @@ const earthFragment = `
 const MAX_GPS_WIRES = 14
 
 /**
- * The continents as an alpha mask in an equirectangular texture (longitude across,
- * latitude up), drawn once from the coastline data: the coarse world, then Indonesia in
- * more detail so Java, Bali and the smaller islands show.
+ * The continents as a mask (one byte a pixel, 255 on land) in an equirectangular map,
+ * longitude across and latitude up, row 0 at the south pole: drawn once per session from
+ * the coastline data, the coarse world first, then Indonesia in more detail so Java, Bali
+ * and the smaller islands show. 1024 × 512 is about one pixel per screen pixel when the
+ * whole Earth is in view.
  */
-function landMask(t: ThemeTokens): THREE.CanvasTexture {
-  const W = 2048
-  const H = 1024
+let maskData: Uint8Array | null = null
+const MASK_W = 1024
+const MASK_H = 512
+function landMaskData(): Uint8Array {
+  if (maskData) return maskData
+  const W = MASK_W
+  const H = MASK_H
   const cv = document.createElement('canvas')
   cv.width = W
   cv.height = H
-  const g = cv.getContext('2d')!
-  g.fillStyle = toThreeStyle(t['stage-terrain'])
+  const g = cv.getContext('2d', { willReadFrequently: true })!
+  // Only the alpha is read: the default fill (opaque) is all the mask needs, no colour.
   const draw = (d: CoastData) => {
     g.beginPath()
     for (const r of decodeRings(d)) {
@@ -103,19 +115,37 @@ function landMask(t: ThemeTokens): THREE.CanvasTexture {
   const b = indonesia.box
   g.clearRect(((b.lon0 + 180) / 360) * W, ((90 - b.lat1) / 180) * H, ((b.lon1 - b.lon0) / 360) * W, ((b.lat1 - b.lat0) / 180) * H)
   draw(indonesia)
-  const tex = new THREE.CanvasTexture(cv)
+  const rgba = g.getImageData(0, 0, W, H).data
+  const out = new Uint8Array(W * H)
+  // Canvas rows run north to south; the texture's run south to north.
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) out[(H - 1 - y) * W + x] = rgba[(y * W + x) * 4 + 3]
+  maskData = out
+  return out
+}
+
+/** A texture over the session's land mask (made per visit, freed when the view closes). */
+function landMask(): THREE.DataTexture {
+  const tex = new THREE.DataTexture(landMaskData(), MASK_W, MASK_H, THREE.RedFormat, THREE.UnsignedByteType)
   tex.wrapS = THREE.RepeatWrapping
+  tex.magFilter = THREE.LinearFilter
+  tex.minFilter = THREE.LinearMipmapLinearFilter
+  tex.generateMipmaps = true
   tex.anisotropy = 4
-  tex.flipY = true
+  tex.needsUpdate = true
   return tex
 }
 
 /** The Sun's direction in space-view units: over the equator (an equinox), at the longitude where it is noon. */
-function sunDir(tS: number, startHour: number): THREE.Vector3 {
+function sunDir(tS: number, startHour: number, out: THREE.Vector3): THREE.Vector3 {
   const h = localSolarHour(tS, REGION.origin.lonDeg, startHour)
   const lon = (REGION.origin.lonDeg + (12 - h) * 15) * DEG
-  return new THREE.Vector3(Math.cos(lon), 0, -Math.sin(lon))
+  return out.set(Math.cos(lon), 0, -Math.sin(lon))
 }
+
+// Scratch objects for the frame loop (no allocation per frame).
+const tracked = new Map<string, boolean>()
+const pulseFrom = new THREE.Vector3()
+const pulseTo = new THREE.Vector3()
 
 function useOrbitRings() {
   const geo = useMemo(() => {
@@ -148,9 +178,10 @@ function inertial(s: SatDef, t: number): V3 {
   return ecefToSpace([x * Math.cos(th) - y * Math.sin(th), x * Math.sin(th) + y * Math.cos(th), z])
 }
 
-export default function SpaceScene({ t, quality }: { t: ThemeTokens; quality: Quality }) {
+function SpaceScene({ t, quality }: { t: ThemeTokens; quality: Quality }) {
   const engine = getJourney()
   const phase = useJourneyState(engine, (s) => s.phase)
+  const storm = useJourneyState(engine, () => engine.conditions().storm > 0)
   const reduced = useReducedMotion()
   const c = useMemo(
     () => ({
@@ -167,7 +198,7 @@ export default function SpaceScene({ t, quality }: { t: ThemeTokens; quality: Qu
     }),
     [t],
   )
-  const mask = useMemo(() => landMask(t), [t])
+  const mask = useMemo(landMask, [])
   const earthMat = useMemo(
     () =>
       new THREE.ShaderMaterial({
@@ -175,17 +206,26 @@ export default function SpaceScene({ t, quality }: { t: ThemeTokens; quality: Qu
         fragmentShader: earthFragment,
         uniforms: {
           uSun: { value: new THREE.Vector3(1, 0, 0) },
-          uOcean: { value: c.ocean.clone().multiplyScalar(1.6) },
-          uLand: { value: c.land.clone() },
-          uNight: { value: c.night.clone().lerp(c.ocean, 0.35) },
-          uLine: { value: c.line },
-          uBrass: { value: c.brass },
+          uOcean: { value: new THREE.Color() },
+          uLand: { value: new THREE.Color() },
+          uNight: { value: new THREE.Color() },
+          uLine: { value: new THREE.Color() },
+          uBrass: { value: new THREE.Color() },
           uDip: { value: [...DIP_EQUATOR_TABLE] },
           uLandMask: { value: mask },
         },
       }),
-    [c, mask],
+    [mask],
   )
+  useLayoutEffect(() => {
+    // A theme change only recolours the Earth.
+    const u = earthMat.uniforms
+    u.uOcean.value.copy(c.ocean).multiplyScalar(1.6)
+    u.uLand.value.copy(c.land)
+    u.uNight.value.copy(c.night).lerp(c.ocean, 0.35)
+    u.uLine.value.copy(c.line)
+    u.uBrass.value.copy(c.brass)
+  }, [earthMat, c])
   useLayoutEffect(
     () => () => {
       earthMat.dispose()
@@ -203,6 +243,7 @@ export default function SpaceScene({ t, quality }: { t: ThemeTokens; quality: Qu
   const pulse = useRef<THREE.Mesh>(null)
   const acRef = useRef<THREE.Group>(null)
   const focusRef = useRef<THREE.Group>(null)
+  const focusText = useRef<HTMLSpanElement>(null)
   const geoLabelRefs = useRef<(THREE.Group | null)[]>([])
   const stations = useMemo(() => stationsSpace(), [])
   // Each GEO's uplink station (core/region: one GUS per GEO).
@@ -225,66 +266,72 @@ export default function SpaceScene({ t, quality }: { t: ThemeTokens; quality: Qu
     const snap = engine.snapshot()
     const phase = engine.state.phase
     const ac = aircraftSpace(engine)
-    earthMat.uniforms.uSun.value.copy(sunDir(tS, engine.conditions().startLocalHour))
+    sunDir(tS, engine.conditions().startLocalHour, earthMat.uniforms.uSun.value)
     if (ringGroup.current) ringGroup.current.rotation.y = -WGS84_OMEGA_E_RAD_S * tS
     acRef.current?.position.set(...ac)
     const nav = engine.sbasShown ? (snap.sbasFix ?? snap.abas) : snap.abas
-    const used = new Set(nav?.used ?? [])
-    const tracked = new Map(snap.sats.map((s) => [s.id, s]))
+    const used = nav?.used
+    tracked.clear()
+    for (const s of snap.sats) tracked.set(s.id, s.tracked)
+    const focus = focusSatId(engine)
+    let focusPos: V3 | null = null
     let w = 0
-    GPS_SATS.forEach((sat, i) => {
+    for (let i = 0; i < GPS_SATS.length; i++) {
+      const sat = GPS_SATS[i]
       const p = ecefToSpace(satEcef(sat, tS))
+      if (sat.id === focus) focusPos = p
+      const isUsed = used?.includes(sat.id) ?? false
       const m = gpsRefs.current[i]
       if (m) {
         m.position.set(...p)
-        m.material = used.has(sat.id) ? matUsed : matIdle
+        m.material = isUsed ? matUsed : matIdle
       }
-      const v = tracked.get(sat.id)
-      if (v?.tracked && w < MAX_GPS_WIRES) {
+      if (tracked.get(sat.id) && w < MAX_GPS_WIRES) {
         const wire = gpsWires.current[w++]
         wire?.set(p, ac)
         wire?.setVisible(true)
-        wire?.setOpacity(used.has(sat.id) ? 0.9 : 0.25)
+        wire?.setOpacity(isUsed ? 0.9 : 0.25)
       }
-    })
+    }
     for (; w < MAX_GPS_WIRES; w++) gpsWires.current[w]?.setVisible(false)
-    const focus = focusSatId(engine)
-    const fs = GPS_SATS.find((s) => s.id === focus)
-    if (fs && focusRef.current) {
-      focusRef.current.position.set(...ecefToSpace(satEcef(fs, tS)))
+    if (focusPos && focusRef.current) {
+      focusRef.current.position.set(...focusPos)
       focusRef.current.visible = phase === 'errors'
     }
-    GEO_SATS.forEach((g, i) => {
-      const p = ecefToSpace(satEcef(g, tS))
+    // The label names the satellite the story follows (it changes with the fix, not the phase).
+    const focusLabel = `Satellite ${focus}`
+    if (focusText.current && focusText.current.textContent !== focusLabel) focusText.current.textContent = focusLabel
+    let geoA: V3 | null = null
+    for (let i = 0; i < GEO_SATS.length; i++) {
+      const p = ecefToSpace(satEcef(GEO_SATS[i], tS))
+      if (i === 0) geoA = p
       geoRefs.current[i]?.position.set(...p)
       geoLabelRefs.current[i]?.position.set(...p)
-      const tr = tracked.get(g.id)?.tracked ?? false
       const wire = geoWires.current[i]
       wire?.set(p, ac)
-      wire?.setVisible(tr && (engine.sbasShown || phase === 'broadcast'))
-    })
-    const geoA = ecefToSpace(satEcef(GEO_SATS[0], tS))
-    GEO_SATS.forEach((g, i) => {
-      const w = uplinkWires.current[i]
-      w?.set(uplinks[i].space, ecefToSpace(satEcef(g, tS)))
-      w?.setVisible(phase === 'uplink' || phase === 'broadcast')
-    })
+      wire?.setVisible((tracked.get(GEO_SATS[i].id) ?? false) && (engine.sbasShown || phase === 'broadcast'))
+      const up = uplinkWires.current[i]
+      up?.set(uplinks[i].space, p)
+      up?.setVisible(phase === 'uplink' || phase === 'broadcast')
+    }
     const uplink = uplinks[0]
     // A message travelling: up to the GEO in the uplink phase, down to LAB201 in the broadcast phase.
-    if (pulse.current) {
+    if (pulse.current && geoA) {
       const moving = phase === 'uplink' || phase === 'broadcast' || phase === 'errors'
       pulse.current.visible = moving && !reduced
       if (moving) {
         const f = (state.clock.elapsedTime % 2.4) / 2.4
-        const from = phase === 'uplink' ? new THREE.Vector3(...uplink.space) : phase === 'errors' && fs ? new THREE.Vector3(...ecefToSpace(satEcef(fs, tS))) : new THREE.Vector3(...geoA)
-        const to = phase === 'uplink' ? new THREE.Vector3(...geoA) : new THREE.Vector3(...ac)
-        pulse.current.position.copy(from).lerp(to, f)
+        if (phase === 'uplink') pulseFrom.set(...uplink.space)
+        else if (phase === 'errors' && focusPos) pulseFrom.set(...focusPos)
+        else pulseFrom.set(...geoA)
+        if (phase === 'uplink') pulseTo.set(...geoA)
+        else pulseTo.set(...ac)
+        pulse.current.position.copy(pulseFrom).lerp(pulseTo, f)
       }
     }
   })
 
   const shellR = 1 + IONO_SHELL_HEIGHT_M / WGS84_A_M
-  const storm = engine.conditions().storm > 0
   const segs = quality === 'low' ? 48 : 96
   return (
     <group>
@@ -339,7 +386,8 @@ export default function SpaceScene({ t, quality }: { t: ThemeTokens; quality: Qu
       </group>
       <group ref={focusRef} visible={false}>
         <Callout3D position={[0, 0, 0]} tone="signal" side="left" hidden={phase !== 'errors'}>
-          Satellite {focusSatId(engine)}
+          {/* Kept current by the frame loop. */}
+          <span ref={focusText}>Satellite {focusSatId(engine)}</span>
         </Callout3D>
       </group>
       {GEO_SATS.map((g, i) => (
@@ -354,3 +402,6 @@ export default function SpaceScene({ t, quality }: { t: ThemeTokens; quality: Qu
     </group>
   )
 }
+
+/** Memoised: it reads the engine in its frame loop and re-renders only for its own props, the phase and a storm. */
+export default memo(SpaceScene)

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Crosshair, Maximize2, RotateCcw, ZoomIn } from 'lucide-react'
 import type { ThemeTokens } from '@/hooks/useThemeTokens'
 import { HudButton, Segmented } from '@/hud/Controls'
@@ -6,26 +6,38 @@ import { CornerBrackets } from '@/hud/HudFrame'
 import { PhaseTimeline } from '@/hud/PhaseTimeline'
 import { SkyPlot } from '@/instruments/SkyPlot'
 import { lazyRetry } from '@/lib/lazyRetry'
+import { formatNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { useReducedMotion } from '@/stores/prefs'
-import { LazyStage } from '@/stage/LazyStage'
+import { DeferredStage, StageFailurePoster, useWhenIdle } from '@/stage/LazyStage'
+import { StageBoundary } from '@/stage/StageBoundary'
 import type { Quality } from '@/stage/types'
 import type { ViewId } from '@/journey/director'
 import type { JourneyEngine, StopId } from '@/journey/engine'
 import { NARRATION } from '@/journey/narration'
 import { useJourneyState } from '@/journey/store'
 import { PHASES, type PhaseId } from '@/journey/phases'
-import { NetworkMap } from '@/views/NetworkMap'
 import { FLIGHT_HONESTY, NETWORK_HONESTY, spaceHonesty } from '@/views/scales'
-import { shotFor, type CameraButton } from '@/views/shots'
+import type { CameraButton } from '@/views/shots'
 import { describe, type ViewModel } from './model'
 import { StopCard } from './panels'
 
 // Each scene holds all of its three.js code and loads with the 3D chunk (design.md §7).
 const SpaceScene = lazyRetry(() => import('@/views/SpaceScene'))
 const FlightScene = lazyRetry(() => import('@/views/FlightScene'))
+// The stage and its camera shots (terrain, airports, the flight's track) load with the 3D chunk.
+const JourneyScene = lazyRetry(() => import('./JourneyScene'))
+// The network map and its coastline data are needed only for two phases: they load once
+// the page is idle, before the journey gets there, instead of with the first page load.
+const loadNetworkMap = () => import('@/views/NetworkMap')
+const NetworkMap = lazyRetry(() => loadNetworkMap().then((m) => ({ default: m.NetworkMap })))
 
 export type ViewChoice = 'auto' | ViewId
+
+const STAGE_FOG: [number, number] = [40, 120]
+
+/** Where the network map sits on the stage: between the scrims (and the glass columns on wide screens). */
+const MAP_BOX = 'absolute inset-x-0 top-24 bottom-28 md:top-28 md:bottom-32 lg:right-[calc(var(--col)+2rem)] lg:bottom-36 lg:left-[calc(var(--col)+2rem)]'
 
 export function JourneyStage({
   engine,
@@ -52,20 +64,28 @@ export function JourneyStage({
   stop: StopId | null
 }) {
   const reduced = useReducedMotion()
+  const idle = useWhenIdle()
+  useEffect(() => {
+    if (idle) loadNetworkMap().catch(() => {}) // a failure shows when the map is opened
+  }, [idle])
   // The timeline follows the engine at once (the sampled model can lag by 100 ms).
   const phase = useJourneyState(engine, (s) => s.phase)
   const [camera, setCamera] = useState<CameraButton | 'auto'>('auto')
   const [resetKey, setResetKey] = useState(0)
   // A new phase or view goes back to the director's shot.
   useEffect(() => setCamera('auto'), [m.phase, view])
-  const shot = useMemo(() => shotFor(engine, view, camera), [engine, view, camera, m.phase, resetKey]) // eslint-disable-line react-hooks/exhaustive-deps
   // A short fade covers each view switch.
   const [fade, setFade] = useState(false)
   const lastView = useRef(view)
   useEffect(() => {
+    if (reduced) {
+      // Also ends a fade that reduced motion interrupted.
+      setFade(false)
+      lastView.current = view
+      return
+    }
     if (lastView.current === view) return
     lastView.current = view
-    if (reduced) return
     setFade(true)
     const id = window.setTimeout(() => setFade(false), 260)
     return () => window.clearTimeout(id)
@@ -83,18 +103,30 @@ export function JourneyStage({
   return (
     <div className="flex flex-col gap-2">
       <div data-view={view} data-phase={m.phase} className={cn('dark relative overflow-hidden bg-stage-bg text-foreground', className)}>
-        <LazyStage
-          shot={shot}
-          label={label}
-          className="absolute inset-0"
-          fog={[40, 120]}
-          scenery={threeView === 'space' ? 'studio' : 'world'}
-          paused={view === 'network'}
-          drift={threeView === 'space'}
-        >
-          {scene}
-        </LazyStage>
-        {view === 'network' && <NetworkMap engine={engine} label={label} className="absolute inset-x-0 top-24 bottom-28 md:top-28 md:bottom-32 lg:right-[calc(var(--col)+2rem)] lg:bottom-36 lg:left-[calc(var(--col)+2rem)]" />}
+        <DeferredStage label={label} className="absolute inset-0">
+          <JourneyScene
+            engine={engine}
+            view={view}
+            camera={camera}
+            phase={m.phase}
+            resetKey={resetKey}
+            label={label}
+            className="absolute inset-0"
+            fog={STAGE_FOG}
+            scenery={threeView === 'space' ? 'studio' : 'world'}
+            paused={view === 'network'}
+            drift={threeView === 'space'}
+          >
+            {scene}
+          </JourneyScene>
+        </DeferredStage>
+        {view === 'network' && (
+          <StageBoundary fallback={(f) => <StageFailurePoster {...f} className={MAP_BOX} label={label} subject="Network map" />}>
+            <Suspense fallback={null}>
+              <NetworkMap engine={engine} label={label} className={MAP_BOX} />
+            </Suspense>
+          </StageBoundary>
+        )}
         <div aria-hidden className={cn('pointer-events-none absolute inset-0 z-20 bg-stage-bg transition-opacity duration-200', fade ? 'opacity-100' : 'opacity-0')} />
         <CornerBrackets />
         {/* Top scrim: the phase, and slow motion. */}
@@ -106,7 +138,7 @@ export function JourneyStage({
           <h1 className="hud-title mt-1 text-[13px] leading-5 text-foreground sm:text-[16px] md:text-[18px] md:leading-6">{narration.title}</h1>
           {m.frozen && (
             <p className="hud-label mt-1 text-brass">
-              Slowed down so you can see it · world frozen · {Math.max(0, Math.ceil(m.signalTotalS - m.signalS))} s
+              Slowed down so you can see it · world frozen · {formatNumber(Math.max(0, Math.ceil(m.signalTotalS - m.signalS)), 0)} s
             </p>
           )}
         </div>

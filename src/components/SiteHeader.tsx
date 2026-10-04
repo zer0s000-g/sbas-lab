@@ -4,7 +4,7 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 /** The SBAS LAB wordmark: a GEO diamond over a hairline square. */
 export function Wordmark() {
   return (
-    <a href={import.meta.env.BASE_URL} className="flex shrink-0 items-center gap-2.5 rounded-sm" aria-label="SBAS Lab, start of the page">
+    <a href={import.meta.env.BASE_URL} className="flex min-h-10 shrink-0 items-center gap-2.5 rounded-sm" aria-label="SBAS Lab, start of the page">
       <span className="relative grid size-6 place-items-center border border-foreground/60" aria-hidden>
         <span className="size-2 rotate-45 border border-brass" />
         <span className="absolute size-1 rounded-full bg-signal shadow-[0_0_6px_var(--signal)]" />

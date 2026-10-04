@@ -8,7 +8,7 @@ import { lookAngles, type Geodetic, type Vec3 } from './geo'
 import { ALL_SATS, satEcef, type SatDef } from './orbits'
 import { broadcastModelSlantL1, interpolateGrid, piercePoint, scintillationLoss, verticalDelayL1, type PiercePoint } from './iono'
 import { satErrors, tropoModelM, sigmaAirL1M, SIGMA_CLOCK_M, SIGMA_ORBIT_M, SIGMA_TROPO_VERTICAL_M, tropoMapping, IF_GAMMA, IF_NOISE_FACTOR, type FaultInjection } from './errors'
-import { groundSolution, MASK_DEG, sigmaUdreM, UDREI_NOT_FOR_LPV, UDREI_NOT_MONITORED, type GroundSnapshot } from './groundSegment'
+import { groundSolution, MASK_DEG, sigmaUdreM, UDREI_DO_NOT_USE, UDREI_NOT_FOR_LPV, UDREI_NOT_MONITORED, type GroundSnapshot } from './groundSegment'
 import { solveFix, type ApproachMode, type FixResult, type Measurement } from './receiver'
 import { alarmBroadcastS, TIMEOUTS_S } from './messages'
 import { OPERATIONS, type Operation } from './operations'
@@ -78,6 +78,8 @@ export interface Snapshot {
   /** L1 SBAS restricted to satellites whose ionosphere comes from the grid (for vertical guidance). */
   l1sbasPa: FixResult
   dfmc: FixResult
+  /** DFMC with the non-precision K factor: en route, terminal and LNAV. */
+  dfmcNpa: FixResult
   /** The solution the aircraft navigates with for its service choice. */
   sbasFix: FixResult
   sbasPaFix: FixResult
@@ -146,13 +148,16 @@ export function snapshot(tS: number, aircraft: Geodetic, c: Conditions, ground: 
     const corr = ground.corrections.get(sat.id)
     const aircraftDnu = alarmReceived(c.fault, sat.id, tS)
     if (aircraftDnu) alarmed.push(sat.id)
-    if (!corr || corr.udrei >= UDREI_NOT_MONITORED || aircraftDnu) continue
+    // The ground's "Do Not Use" takes effect on board only when the alarm message has
+    // arrived; until then the aircraft keeps the satellite with the UDREI it last received.
+    const udrei = aircraftDnu ? UDREI_DO_NOT_USE : corr ? corr.udreiBeforeAlarm : UDREI_NOT_MONITORED
+    if (!corr || udrei >= UDREI_NOT_MONITORED) continue
     const clockOrbitResid = e.clockM + e.orbitM - corr.correctionM
-    const sigUdre = sigmaUdreM(corr.udrei)
+    const sigUdre = sigmaUdreM(udrei)
 
     // L1 SBAS: the grid where it is monitored, otherwise the broadcast model (not for vertical guidance).
     const grid = interpolateGrid(ground.grid, pp)
-    const lpvOk = corr.udrei !== UDREI_NOT_FOR_LPV
+    const lpvOk = udrei !== UDREI_NOT_FOR_LPV
     if (grid) {
       const m: Measurement = {
         satId: sat.id,
@@ -188,9 +193,11 @@ export function snapshot(tS: number, aircraft: Geodetic, c: Conditions, ground: 
   const fixL1 = solveFix('l1sbas', l1)
   const fixL1Pa = solveFix('l1sbas', l1Pa, { pa: true })
   const fixDf = solveFix('dfmc', df, { pa: true })
-  const sbasFix = c.service === 'dfmc' ? fixDf : c.service === 'l1' ? fixL1 : null
+  // En route, terminal and LNAV use the non-precision K factor (K_H,NPA), as the L1 path does.
+  const fixDfNpa = solveFix('dfmc', df)
+  const sbasFix = c.service === 'dfmc' ? fixDfNpa : c.service === 'l1' ? fixL1 : null
   const sbasPaFix = c.service === 'dfmc' ? fixDf : c.service === 'l1' ? fixL1Pa : null
-  return { tS, sats, ground, service, abas: fixAbas, l1sbas: fixL1, l1sbasPa: fixL1Pa, dfmc: fixDf, sbasFix: service.npaValid ? sbasFix : null, sbasPaFix: service.paValid ? sbasPaFix : null, alarmedSats: alarmed }
+  return { tS, sats, ground, service, abas: fixAbas, l1sbas: fixL1, l1sbasPa: fixL1Pa, dfmc: fixDf, dfmcNpa: fixDfNpa, sbasFix: service.npaValid ? sbasFix : null, sbasPaFix: service.paValid ? sbasPaFix : null, alarmedSats: alarmed }
 }
 
 export interface NavStatus {

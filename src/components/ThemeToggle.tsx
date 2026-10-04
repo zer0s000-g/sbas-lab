@@ -7,27 +7,28 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { usePrefs, useReducedMotion, type ThemeChoice } from '@/stores/prefs'
+import { usePrefs, type ThemeChoice } from '@/stores/prefs'
 
-/** Theme, sound, captions and motion preferences. */
+const MOTION = { system: null, reduce: true, full: false } as const
+
+/**
+ * Theme and motion preferences. (Sound and its captions join this menu when the page
+ * plays sound: src/lib/audio.ts is not wired in yet, and a switch that does nothing
+ * would mislead.)
+ */
 export function ThemeToggle() {
   const theme = usePrefs((s) => s.theme)
   const setTheme = usePrefs((s) => s.setTheme)
-  const soundOn = usePrefs((s) => s.soundOn)
-  const setSoundOn = usePrefs((s) => s.setSoundOn)
-  const captionsOn = usePrefs((s) => s.captionsOn)
-  const setCaptionsOn = usePrefs((s) => s.setCaptionsOn)
-  const reduced = useReducedMotion()
-  const setReduced = usePrefs((s) => s.setReducedMotion)
+  const motion = usePrefs((s) => s.reducedMotionOverride)
+  const setMotion = usePrefs((s) => s.setReducedMotion)
   const Icon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Display and sound settings">
+        <Button variant="ghost" size="icon" aria-label="Display and motion settings">
           <Icon className="size-5" aria-hidden />
         </Button>
       </DropdownMenuTrigger>
@@ -45,16 +46,15 @@ export function ThemeToggle() {
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuLabel>Accessibility</DropdownMenuLabel>
-        <DropdownMenuCheckboxItem checked={soundOn} onCheckedChange={(v) => setSoundOn(Boolean(v))}>
-          Sound
-        </DropdownMenuCheckboxItem>
-        <DropdownMenuCheckboxItem checked={captionsOn} onCheckedChange={(v) => setCaptionsOn(Boolean(v))}>
-          Sound captions
-        </DropdownMenuCheckboxItem>
-        <DropdownMenuCheckboxItem checked={reduced} onCheckedChange={(v) => setReduced(Boolean(v))}>
-          Reduce motion
-        </DropdownMenuCheckboxItem>
+        <DropdownMenuLabel>Motion</DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={motion === null ? 'system' : motion ? 'reduce' : 'full'}
+          onValueChange={(v) => setMotion(MOTION[v as keyof typeof MOTION])}
+        >
+          <DropdownMenuRadioItem value="system">Same as device</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="reduce">Reduce motion</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="full">Full motion</DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { Canvas2D, type DrawFn } from '@/components/Canvas2D'
 import { withAlpha } from '@/lib/color'
 import type { SatDot } from '@/page/model'
@@ -10,6 +10,16 @@ import { cn } from '@/lib/utils'
  * lost or excluded = crossed, SBAS GEO = diamond. North up, horizon at the rim.
  */
 export function SkyPlot({ getSats, label, className }: { getSats: () => SatDot[]; label: string; className?: string }) {
+  // The satellites change about ten times a second at most and not at all while the
+  // world is frozen: redraw when what they show changes, not every frame.
+  const getRef = useRef(getSats)
+  getRef.current = getSats
+  const seen = useRef<{ sats: SatDot[] | null; key: string }>({ sats: null, key: '' })
+  const frameKey = useCallback(() => {
+    const sats = getRef.current()
+    if (sats !== seen.current.sats) seen.current = { sats, key: skyKey(sats) }
+    return seen.current.key
+  }, [])
   const draw = useCallback<DrawFn>(
     (ctx, { width, height, tokens }) => {
       const r = Math.max(4, Math.min(width, height) / 2 - 14)
@@ -34,7 +44,7 @@ export function SkyPlot({ getSats, label, className }: { getSats: () => SatDot[]
       ctx.font = `9px ${tokens.fontMono}`
       ctx.textAlign = 'center'
       ctx.fillText('N', cx, cy - r - 4)
-      for (const s of getSats()) {
+      for (const s of getRef.current()) {
         const d = r * (1 - Math.max(0, s.elDeg) / 90)
         const a = (s.azDeg * Math.PI) / 180
         const x = cx + Math.sin(a) * d
@@ -68,7 +78,14 @@ export function SkyPlot({ getSats, label, className }: { getSats: () => SatDot[]
         }
       }
     },
-    [getSats],
+    [],
   )
-  return <Canvas2D draw={draw} label={label} className={cn('aspect-square', className)} />
+  return <Canvas2D draw={draw} frameKey={frameKey} label={label} className={cn('aspect-square', className)} />
+}
+
+/** Everything the plot shows of the satellites, as one string (hundredths of a degree are far below a pixel). */
+function skyKey(sats: SatDot[]): string {
+  let k = ''
+  for (const s of sats) k += `${s.id}:${s.kind}:${s.state}:${s.azDeg.toFixed(2)}:${s.elDeg.toFixed(2)};`
+  return k
 }

@@ -194,14 +194,19 @@ export class JourneyEngine {
     if (this.s.failures[id] === on) return
     const failures = { ...this.s.failures, [id]: on }
     const times = { ...this.s.times }
-    if (id === 'clockJump') {
-      // The jump hits a satellite LAB201 is using right now.
-      const used = on ? (this.snapshot().dfmc?.used[0] ?? this.snapshot().abas?.used[0] ?? null) : null
-      times.clockJumpSat = used
-      times.clockJumpS = on && used ? this.worldS : null
-    }
+    if (id === 'clockJump') Object.assign(times, on ? this.clockJumpNow() : { clockJumpSat: null, clockJumpS: null })
     if (id === 'geoLost') times.geoLostS = on ? this.worldS : null
     this.set({ failures, times })
+  }
+
+  /**
+   * A clock jump starting now: it hits a satellite LAB201 is using, or, with no fix (all
+   * signals jammed), one above its horizon, so the failure is never switched on without effect.
+   */
+  private clockJumpNow(): Pick<FailureTimes, 'clockJumpSat' | 'clockJumpS'> {
+    const s = this.snapshot()
+    const sat = s.dfmc?.used[0] ?? s.abas?.used[0] ?? s.sats.find((v) => v.kind === 'gps' && v.visible)?.id ?? null
+    return { clockJumpSat: sat, clockJumpS: sat ? this.worldS : null }
   }
 
   /** Jump to the start of a phase. The result equals playing up to it. */
@@ -212,7 +217,12 @@ export class JourneyEngine {
     this.acc = 0
     this.tickN = this.index.startTick[phase]
     this.signal = 0
-    this.set({ stop: null, fired, done: false })
+    // Timed failures that are on start again at the new moment (their times are absolute
+    // world times, so after a jump back they would otherwise lie in the future).
+    const times = { ...this.s.times }
+    if (this.s.failures.geoLost) times.geoLostS = this.worldS
+    if (this.s.failures.clockJump) Object.assign(times, this.clockJumpNow())
+    this.set({ stop: null, fired, done: false, times })
     this.enter(phase)
   }
 

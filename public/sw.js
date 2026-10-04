@@ -40,8 +40,10 @@ self.addEventListener('install', (event) => {
     caches
       .open(CACHE)
       // `reload` skips the browser's HTTP cache, so the shell is this build's, never a stale copy.
-      .then((c) => c.addAll([...SHELL, ...SHELL_ASSETS].map((u) => new Request(u, { cache: 'reload' }))))
-      .then(() => self.skipWaiting()),
+      .then((c) => c.addAll([...SHELL, ...SHELL_ASSETS].map((u) => new Request(u, { cache: 'reload' })))),
+    // No skipWaiting(): a tab still running the previous build keeps its worker and its
+    // cache (activate deletes it) until that tab closes, so the lazy chunks it has cached
+    // stay available. Pages are network first, so a new visit gets the new build at once.
   )
 })
 

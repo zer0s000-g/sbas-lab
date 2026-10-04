@@ -47,7 +47,11 @@ export function PhaseTimeline({
         className="mt-2 grid grid-cols-[repeat(var(--half),minmax(0,1fr))] gap-y-1 sm:grid-cols-[repeat(var(--n),minmax(0,1fr))] sm:gap-y-0"
         style={{ '--n': phases.length, '--half': Math.ceil(phases.length / 2) } as CSSProperties}
         onKeyDown={(e) => {
-          const moves: Record<string, number> = { ArrowRight: idx + 1, ArrowLeft: idx - 1, Home: 0, End: phases.length - 1 }
+          // Step from the tick that has focus (the active one unless the journey moved on since).
+          const buttons = [...e.currentTarget.querySelectorAll('button')]
+          const at = buttons.indexOf(e.target as HTMLButtonElement)
+          const from = at >= 0 ? at : idx
+          const moves: Record<string, number> = { ArrowRight: from + 1, ArrowLeft: from - 1, Home: 0, End: phases.length - 1 }
           if (e.key in moves) {
             e.preventDefault()
             go(moves[e.key], e.currentTarget)
@@ -63,7 +67,7 @@ export function PhaseTimeline({
               aria-label={`Phase ${i + 1}: ${ph.label}`}
               title={ph.label}
               className={cn(
-                'hud-label flex min-h-10 min-w-0 flex-col items-center justify-start gap-1 rounded-sm px-0.5 pt-1 transition-colors hover:text-foreground',
+                'hud-label flex min-h-10 w-full min-w-0 flex-col items-center justify-start gap-1 rounded-sm px-0.5 pt-1 transition-colors hover:text-foreground',
                 ph.id === active ? 'text-signal' : 'text-muted-foreground',
               )}
             >

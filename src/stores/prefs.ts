@@ -74,11 +74,27 @@ export function systemPrefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-/** Apply the theme class to <html>. */
+/**
+ * Apply the theme class to <html>, and colour the browser's own chrome to match.
+ * (index.html runs the same first step inline, before the page's script has loaded.)
+ */
 export function applyTheme(choice: ThemeChoice) {
+  const root = document.documentElement
   const dark = choice === 'dark' || (choice === 'system' && systemPrefersDark())
-  document.documentElement.classList.toggle('dark', dark)
-  document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+  root.classList.toggle('dark', dark)
+  root.style.colorScheme = dark ? 'dark' : 'light'
+  const background = getComputedStyle(root).getPropertyValue('--background').trim()
+  if (background) document.querySelector('meta[name="theme-color"]')?.setAttribute('content', background)
+}
+
+/**
+ * The learner's motion choice on <html> (`data-motion`), so CSS transitions and
+ * animations follow it too, not only the operating system setting.
+ */
+export function applyMotion(override: boolean | null) {
+  const root = document.documentElement
+  if (override === null) delete root.dataset.motion
+  else root.dataset.motion = override ? 'reduce' : 'full'
 }
 
 const REDUCED_QUERY = '(prefers-reduced-motion: reduce)'
