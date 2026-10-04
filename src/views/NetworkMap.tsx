@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { use, useCallback, useRef } from 'react'
 import { Canvas2D, type DrawFn } from '@/components/Canvas2D'
 import type { ThemeTokens } from '@/hooks/useThemeTokens'
 import { localToGeodetic } from '@/core/geo'
@@ -11,20 +11,35 @@ import { approachMode, groundFor, snapshot, type Conditions } from '@/core/sbasW
 import { OPERATIONS } from '@/core/operations'
 import { withAlpha } from '@/lib/color'
 import type { JourneyEngine } from '@/journey/engine'
-import { decodeRings } from './geo/coast'
-import { indonesia } from './geo/indonesia.data'
+import { SCENARIO } from '@/scenarios/active'
+import { decodeRings, type Ring } from './geo/coast'
+import { mapLand } from './geo/scenarioCoast'
 
-/** The map box: the Indonesian archipelago and the magnetic equator north of it, 92–144°E, 16°S–12°N. */
-const BOX = { lat0: -16, lat1: 12, lon0: 92, lon1: 144 }
-/** Land outlines (Natural Earth 1:50m), decoded once. */
-const LAND = decodeRings(indonesia)
+const MAP = SCENARIO.map
+/**
+ * The map box: the Indonesian archipelago and the magnetic equator north of it
+ * (92–144°E, 16°S–12°N), or Europe from the Azores to Finland (28°W–36°E, 26–68°N).
+ */
+const BOX = MAP.box
+/** A degree of longitude against one of latitude on the map (1 near the equator). */
+const K = MAP.lonScale
+/** Land outlines (Natural Earth 1:50m), loaded with the map and decoded once (read with `use`). */
+let landRings: Promise<Ring[]> | null = null
+const loadLand = () => (landRings ??= mapLand().then(decodeRings, (error: unknown) => {
+  landRings = null // the map's error boundary offers a retry
+  throw error
+}))
+/** The LPV operation the tint shows: the one the scenario's approach is flown to. */
+const LPV_OP = OPERATIONS[SCENARIO.approach.op]
+const lonText = (lon: number) => (lon < 0 ? `${-lon}°W` : `${lon}°E`)
 /** The route LAB201 flies, as latitude/longitude. */
 const ROUTE_LL = ROUTE.map((w) => localToGeodetic(REGION, w.eastNm, w.northNm, 0))
 
-/** The coarse availability grid: one cell every 2°, centred on odd degrees, south-west first. */
+/** The coarse availability grid: one cell every `availabilityCellDeg` (the scenario's), south-west first. */
+const CELL_DEG = MAP.availabilityCellDeg
 export const AVAILABILITY_CELLS: readonly { lat: number; lon: number }[] = (() => {
   const cells: { lat: number; lon: number }[] = []
-  for (let lat = BOX.lat0 + 1; lat < BOX.lat1; lat += 2) for (let lon = BOX.lon0 + 1; lon < BOX.lon1; lon += 2) cells.push({ lat, lon })
+  for (let lat = BOX.lat0 + CELL_DEG / 2; lat < BOX.lat1; lat += CELL_DEG) for (let lon = BOX.lon0 + CELL_DEG / 2; lon < BOX.lon1; lon += CELL_DEG) cells.push({ lat, lon })
   return cells
 })()
 
@@ -76,7 +91,7 @@ export class AvailabilityGrid {
     while (job.ok.length < AVAILABILITY_CELLS.length) {
       const cell = AVAILABILITY_CELLS[job.ok.length]
       const snap = snapshot(job.tS, { latDeg: cell.lat, lonDeg: cell.lon, hM: 1000 }, job.c, job.ground)
-      job.ok.push(approachMode(snap, OPERATIONS.apv1).mode === 'LPV')
+      job.ok.push(approachMode(snap, LPV_OP).mode === 'LPV')
       if (clock() - t0 >= budgetMs) break
     }
     if (job.ok.length < AVAILABILITY_CELLS.length) return
@@ -107,18 +122,18 @@ function gridFor(e: JourneyEngine): AvailabilityGrid {
   return g
 }
 
-/** Map geometry for a canvas size: the box, scaled to fit and centred. */
+/** Map geometry for a canvas size: the box, scaled to fit and centred (a degree of longitude is K of latitude's). */
 function mapFrame(width: number, height: number) {
-  const s = Math.min(width / (BOX.lon1 - BOX.lon0), height / (BOX.lat1 - BOX.lat0))
-  const ox = (width - s * (BOX.lon1 - BOX.lon0)) / 2
+  const s = Math.min(width / ((BOX.lon1 - BOX.lon0) * K), height / (BOX.lat1 - BOX.lat0))
+  const ox = (width - s * K * (BOX.lon1 - BOX.lon0)) / 2
   const oy = (height - s * (BOX.lat1 - BOX.lat0)) / 2
-  return { s, X: (lon: number) => ox + (lon - BOX.lon0) * s, Y: (lat: number) => oy + (BOX.lat1 - lat) * s }
+  return { s, X: (lon: number) => ox + (lon - BOX.lon0) * s * K, Y: (lat: number) => oy + (BOX.lat1 - lat) * s }
 }
 
 /** Clip to the map box. */
 function clipBox(ctx: CanvasRenderingContext2D, { s, X, Y }: ReturnType<typeof mapFrame>) {
   ctx.beginPath()
-  ctx.rect(X(BOX.lon0), Y(BOX.lat1), s * (BOX.lon1 - BOX.lon0), s * (BOX.lat1 - BOX.lat0))
+  ctx.rect(X(BOX.lon0), Y(BOX.lat1), s * K * (BOX.lon1 - BOX.lon0), s * (BOX.lat1 - BOX.lat0))
   ctx.clip()
 }
 
@@ -127,12 +142,12 @@ function clipBox(ctx: CanvasRenderingContext2D, { s, X, Y }: ReturnType<typeof m
  * magnetic equator. Drawn inside the box clip, on a transparent layer that goes over
  * the availability tint.
  */
-function drawStatic(ctx: CanvasRenderingContext2D, f: ReturnType<typeof mapFrame>, t: ThemeTokens) {
+function drawStatic(ctx: CanvasRenderingContext2D, f: ReturnType<typeof mapFrame>, t: ThemeTokens, land: readonly Ring[]) {
   const { X, Y } = f
   clipBox(ctx, f)
   // Land, with its coastline.
   ctx.beginPath()
-  for (const r of LAND) {
+  for (const r of land) {
     for (let i = 0; i < r.length; i += 2) {
       if (i === 0) ctx.moveTo(X(r[i]), Y(r[i + 1]))
       else ctx.lineTo(X(r[i]), Y(r[i + 1]))
@@ -144,18 +159,18 @@ function drawStatic(ctx: CanvasRenderingContext2D, f: ReturnType<typeof mapFrame
   ctx.strokeStyle = t['sim-grid-strong']
   ctx.lineWidth = 1
   ctx.stroke()
-  // Graticule every 10° of longitude and 5° of latitude, from the box.
+  // Graticule (every 10° of longitude and 5° of latitude over Indonesia), from the box.
   ctx.strokeStyle = t['sim-grid']
   ctx.font = `10px ${t.fontMono}`
   ctx.fillStyle = t['sim-muted']
-  for (let lon = Math.ceil(BOX.lon0 / 10) * 10; lon <= BOX.lon1; lon += 10) {
+  for (let lon = Math.ceil(BOX.lon0 / MAP.lonStep) * MAP.lonStep; lon <= BOX.lon1; lon += MAP.lonStep) {
     ctx.beginPath()
     ctx.moveTo(X(lon), Y(BOX.lat1))
     ctx.lineTo(X(lon), Y(BOX.lat0))
     ctx.stroke()
-    ctx.fillText(`${lon}°E`, X(lon) + 2, Y(BOX.lat0) - 3)
+    ctx.fillText(lonText(lon), X(lon) + 2, Y(BOX.lat0) - 3)
   }
-  for (let lat = Math.ceil(BOX.lat0 / 5) * 5; lat <= BOX.lat1; lat += 5) {
+  for (let lat = Math.ceil(BOX.lat0 / MAP.latStep) * MAP.latStep; lat <= BOX.lat1; lat += MAP.latStep) {
     ctx.beginPath()
     ctx.moveTo(X(BOX.lon0), Y(lat))
     ctx.lineTo(X(BOX.lon1), Y(lat))
@@ -178,14 +193,15 @@ function drawStatic(ctx: CanvasRenderingContext2D, f: ReturnType<typeof mapFrame
 }
 
 /**
- * The network map of Indonesia: the hypothetical SBAS ground segment at illustrative
- * sites (RIMS reference stations, the primary and backup master control centres, the
- * uplink stations and the links between them), where the Michibiki GEOs stand above
- * the equator, the ionospheric grid points with their delays, the magnetic equator, the
- * LPV-availability area, the route from Jakarta to Bali and LAB201. Map colours follow
- * the theme.
+ * The network map of the scenario's region: the SBAS ground segment (RIMS reference
+ * stations, the primary and backup master control centres, the uplink stations and the
+ * links between them; hypothetical, at illustrative sites, in Indonesia; the EGNOS sites
+ * named in public sources, in Europe), where the GEOs stand above the equator, the
+ * ionospheric grid points with their delays, the magnetic equator, the LPV-availability
+ * area, LAB201's route and LAB201. Map colours follow the theme.
  */
 export function NetworkMap({ engine, label, className }: { engine: JourneyEngine; label: string; className?: string }) {
+  const land = use(loadLand())
   const grid = gridFor(engine)
   /** The never-moving layer, kept until the size, the pixel ratio, the theme or the fonts change. */
   const layer = useRef<{ key: unknown[]; canvas: HTMLCanvasElement } | null>(null)
@@ -205,13 +221,13 @@ export function NetworkMap({ engine, label, className }: { engine: JourneyEngine
       ctx.save()
       clipBox(ctx, f)
       ctx.fillStyle = t['sim-water']
-      ctx.fillRect(X(BOX.lon0), Y(BOX.lat1), s * (BOX.lon1 - BOX.lon0), s * (BOX.lat1 - BOX.lat0))
+      ctx.fillRect(X(BOX.lon0), Y(BOX.lat1), s * K * (BOX.lon1 - BOX.lon0), s * (BOX.lat1 - BOX.lat0))
       // LPV availability, under the land so the coastline stays readable where it is available everywhere.
       ctx.fillStyle = withAlpha(t['sim-coverage'], 0.4)
       if (grid.ok)
         grid.ok.forEach((ok, i) => {
           const c = AVAILABILITY_CELLS[i]
-          if (ok) ctx.fillRect(X(c.lon - 1), Y(c.lat + 1), 2 * s, 2 * s)
+          if (ok) ctx.fillRect(X(c.lon - CELL_DEG / 2), Y(c.lat + CELL_DEG / 2), CELL_DEG * s * K, CELL_DEG * s)
         })
       // Land, graticule and magnetic equator from their layer, pixel for pixel.
       const cw = ctx.canvas.width
@@ -224,7 +240,7 @@ export function NetworkMap({ engine, label, className }: { engine: JourneyEngine
         const lc = canvas.getContext('2d')
         if (lc) {
           lc.setTransform(dpr, 0, 0, dpr, 0, 0)
-          drawStatic(lc, f, t)
+          drawStatic(lc, f, t, land)
         }
         layer.current = { key, canvas }
       }
@@ -270,7 +286,7 @@ export function NetworkMap({ engine, label, className }: { engine: JourneyEngine
         ctx.fillStyle = t['sim-signal']
         for (const o of snap.ground.ionoObs) ctx.fillRect(X(o.lonDeg) - 1, Y(o.latDeg) - 1, 2, 2)
       }
-      // The route, Jakarta to Bali.
+      // LAB201's route.
       ctx.strokeStyle = t['sim-ink']
       ctx.lineWidth = 1.2
       ctx.setLineDash([2, 3])
@@ -302,12 +318,40 @@ export function NetworkMap({ engine, label, className }: { engine: JourneyEngine
       }
       ctx.stroke()
       ctx.setLineDash([])
-      // Where the GEOs stand: above the equator at their longitude (an arrow when off the map).
+      // Where the GEOs stand: above the equator at their longitude (an arrow when off the map;
+      // at the bottom edge, pointing south, when the equator is south of the map).
       ctx.font = `10px ${t.fontMono}`
+      const equatorShown = BOX.lat0 < 0 && BOX.lat1 > 0
       for (const g of GEO_SATS) {
         const lon = g.lonDeg ?? 0
         const inside = lon >= BOX.lon0 && lon <= BOX.lon1
         const x = X(Math.min(Math.max(lon, BOX.lon0 + 0.6), BOX.lon1 - 0.6))
+        if (!equatorShown && inside) {
+          // At the bottom edge, pointing south to the equator, above the longitude labels;
+          // labelled to the side of the arrow, on a plate so it reads over the grid. A narrow
+          // map shows only the PRN (the arrow stands at the longitude), kept inside the map.
+          const yb = Y(BOX.lat0) - 20
+          ctx.fillStyle = t['sim-signal-2']
+          ctx.beginPath()
+          ctx.moveTo(x, yb + 7)
+          ctx.lineTo(x + 5, yb)
+          ctx.lineTo(x - 5, yb)
+          ctx.closePath()
+          ctx.fill()
+          const text = wide || !g.prn ? `${geoLabel(g)} · ${lonText(lon)}` : `PRN ${g.prn}`
+          const w = ctx.measureText(text).width
+          const left = X(BOX.lon0) + 2
+          const right = X(BOX.lon1) - 2
+          // West of the arrow for a western GEO, east for an eastern one, unless that runs off the map.
+          let tx = lon < 0 ? x - 8 - w : x + 8
+          if (tx < left) tx = x + 8
+          if (tx + w > right) tx = Math.max(left, x - 8 - w)
+          ctx.fillStyle = withAlpha(t['sim-bg'], 0.8)
+          ctx.fillRect(tx - 2, yb - 4, w + 4, 13)
+          ctx.fillStyle = t['sim-signal-2']
+          ctx.fillText(text, tx, yb + 6)
+          continue
+        }
         const y = Y(0)
         ctx.fillStyle = t['sim-signal-2']
         ctx.beginPath()
@@ -325,7 +369,7 @@ export function NetworkMap({ engine, label, className }: { engine: JourneyEngine
         ctx.closePath()
         ctx.fill()
         // Labelled clear of the station labels: below the diamond, or above the arrow at the map edge.
-        const text = `${geoLabel(g)}${inside ? '' : ` (${lon}°E)`}`
+        const text = `${geoLabel(g)}${inside ? '' : ` (${lonText(lon)})`}`
         ctx.textAlign = !inside && lon < BOX.lon0 ? 'left' : 'center'
         ctx.fillText(text, !inside && lon < BOX.lon0 ? x + 8 : x, inside ? y + 18 : y - 10)
         ctx.textAlign = 'left'
@@ -351,9 +395,10 @@ export function NetworkMap({ engine, label, className }: { engine: JourneyEngine
         ctx.fillStyle = t['sim-ink']
         if (st.kind === 'rims' && (wide || off)) ctx.fillText(off ? `${st.code} offline` : st.code, x + 8, y + 4)
         if (st.kind === 'mcc' && wide) {
-          // To the left, clear of the RIMS label at the same city.
-          ctx.textAlign = 'right'
-          ctx.fillText(st.role === 'backup' ? 'MCC (backup)' : 'MCC', x - 8, y - 6)
+          // To the left, clear of the RIMS label at the same city (or to the right where the left is busy).
+          const right = st.labelSide === 'right'
+          ctx.textAlign = right ? 'left' : 'right'
+          ctx.fillText(st.role === 'backup' ? 'MCC (backup)' : 'MCC', right ? x + 8 : x - 8, y - 6)
           ctx.textAlign = 'left'
         }
       }
@@ -370,14 +415,14 @@ export function NetworkMap({ engine, label, className }: { engine: JourneyEngine
       if (!wide) return
       ctx.font = `10px ${t.fontMono}`
       const lx = X(BOX.lon0) + 40
-      let ly = Y(BOX.lat0) - 77
+      let ly = MAP.legendCorner === 'top-left' ? Y(BOX.lat1) + 18 : Y(BOX.lat0) - 77
       const legend: [string, string][] = [
         ['sim-signal', '○ grid point: size = vertical delay'],
         ['sim-muted', '× grid point not monitored'],
-        ['sim-signal-2', '▲ RIMS  ■ master centre  ◠ uplink station'],
-        ['sim-signal-2', '◆ GEO above the equator'],
-        ['sim-signal', '▦ LPV available (tinted area)'],
-        ['sim-ink', '┄ LAB201 route, Jakarta to Bali'],
+        ['sim-signal-2', SCENARIO.texts.stationsLegend],
+        ['sim-signal-2', equatorShown ? '◆ GEO above the equator' : '▼ GEO, far south above the equator'],
+        ['sim-signal', SCENARIO.texts.availabilityLegend],
+        ['sim-ink', SCENARIO.texts.routeLegend],
       ]
       for (const [tok, text] of legend) {
         ctx.fillStyle = t[tok as 'sim-signal']
@@ -385,7 +430,7 @@ export function NetworkMap({ engine, label, className }: { engine: JourneyEngine
         ly += 13
       }
     },
-    [engine, grid],
+    [engine, grid, land],
   )
   return <Canvas2D draw={draw} frameKey={frameKey} label={label} className={className} />
 }

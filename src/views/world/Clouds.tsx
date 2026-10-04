@@ -68,7 +68,7 @@ function cloudField() {
       const ce = gx * 9 + (hash2(gx, gy, 302) - 0.5) * 7
       const cn = gy * 9 + (hash2(gx, gy, 303) - 0.5) * 7
       if (AIRPORT_LIST.some((a) => Math.hypot(ce - a.thresholdEastNm, cn - a.thresholdNorthNm) < 11)) continue
-      // Not on the final approach course into Bali (22 NM out, 4 NM either side).
+      // Not on the final approach course into the destination (22 NM out, 4 NM either side).
       const [along, right] = localNmToRunway(DESTINATION, ce, cn)
       if (along > -22 * M_PER_NM && along < 0 && Math.abs(right) < 4 * M_PER_NM) continue
       const n = 5 + Math.floor(hash2(gx, gy, 304) * 6)

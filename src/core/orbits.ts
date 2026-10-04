@@ -7,13 +7,14 @@
  * The model uses exactly circular orbits and evenly spaced slots (a Walker 24/6/1
  * pattern); the real slots are not evenly spaced.
  *
- * SBAS GEOs sit over the equator at a fixed longitude (Doc 9849 §4.3.1.2). The two
- * here are real: Japan's Michibiki satellites QZS-3 and QZS-6, which broadcast the MSAS
- * SBAS signal (JCAB, EGNOS Workshop 2025; PRNs per the GPS L1 C/A PRN assignment list).
- * In this page they carry a hypothetical Indonesian SBAS service.
+ * SBAS GEOs sit over the equator at a fixed longitude (Doc 9849 §4.3.1.2). Which GEOs
+ * the receiver tracks is the scenario's (src/scenarios/<id>/geos.ts): Japan's Michibiki
+ * satellites QZS-3 and QZS-6 in the AirNav Indonesia scenario, the EGNOS GEOs in the
+ * ESSP-SAS scenario.
  */
 import { DEG, GPS_MU_M3_S2, WGS84_A_M, WGS84_OMEGA_E_RAD_S } from './units'
 import type { Vec3 } from './geo'
+import { SCENARIO } from '@/scenarios/active'
 
 /** GPS nominal altitude, m (Doc 9849 §3.2.2). */
 export const GPS_ALTITUDE_M = 20_200e3
@@ -33,7 +34,7 @@ export const GEO_ALTITUDE_M = GEO_RADIUS_M - WGS84_A_M
 export type SatKind = 'gps' | 'geo'
 
 export interface SatDef {
-  /** Stable id: "G01".."G24" for GPS, "QZS-3"/"QZS-6" for the SBAS GEOs. */
+  /** Stable id: "G01".."G24" for GPS; the SBAS GEOs by name, e.g. "QZS-3" or "PRN 136". */
   id: string
   /** GEO: the name shown, and the SBAS PRN it broadcasts. */
   name?: string
@@ -51,8 +52,8 @@ export interface SatDef {
 
 // TODO(expert-review): real GPS slot phasing is uneven (IS-GPS / SPS PS almanac); an even Walker 24/6/1 pattern is used here.
 const PLANE_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
-/** Rotates the whole constellation so the journey starts with a typical geometry over Indonesia. */
-const EPOCH_RAAN_DEG = 37
+/** Rotates the whole constellation so the journey starts with a typical geometry over the scenario's region. */
+const EPOCH_RAAN_DEG = SCENARIO.gpsEpochRaanDeg
 
 export const GPS_SATS: readonly SatDef[] = PLANE_LETTERS.flatMap((plane, p) =>
   Array.from({ length: GPS_SLOTS_PER_PLANE }, (_, s): SatDef => ({
@@ -67,13 +68,8 @@ export const GPS_SATS: readonly SatDef[] = PLANE_LETTERS.flatMap((plane, p) =>
   })),
 )
 
-// TODO(expert-review): QZS-6 (PRN 129) was launched on 2 Feb 2025 and was still under test in late 2025 (JCAB); its
-// SBAS service-in date and the L5 (DFMC) broadcast of both satellites (the L5S signal, in R&D) need confirming.
-/** The two SBAS GEOs: Michibiki QZS-6 over the Indian Ocean and QZS-3 over Sulawesi's longitude. */
-export const GEO_SATS: readonly SatDef[] = [
-  { id: 'QZS-3', name: 'QZS-3 Michibiki', prn: 137, kind: 'geo', lonDeg: 127, l5: true },
-  { id: 'QZS-6', name: 'QZS-6 Michibiki', prn: 129, kind: 'geo', lonDeg: 90.5, l5: true },
-]
+/** The SBAS GEOs of the active scenario. */
+export const GEO_SATS: readonly SatDef[] = SCENARIO.geos
 
 /** A GEO's short label, e.g. "QZS-3 · PRN 137". */
 export const geoLabel = (g: SatDef) => (g.prn ? `${g.id} · PRN ${g.prn}` : g.id)

@@ -145,6 +145,11 @@ There is one WebGL canvas: the space and flight scenes swap inside it, and the n
 covers it while the stage pauses. The camera snaps when the scale changes and eases within a view.
 
 **Chrome:**
+- **Scenario tabs** under the top bar: "AirNav Indonesia" and "ESSP-SAS", each a link
+  (a scenario is a page load of its own), the active one with a cyan underline and
+  `aria-current="page"`. 40 px tall; the hint ("Toulouse → Nice · EGNOS") shows from 1024 px.
+- **Sources** button in the top bar (both scenarios): a Sheet with every claim the scenario
+  makes, its sources and its review status (icon and words, never colour alone).
 - **Top bar:** the SBAS LAB wordmark and the phase name, plus a badge. Before the descent the
   badge says what LAB201 navigates with (GPS ALONE / SBAS). From the descent it is the
   approach mode annunciator (LPV ARMED, LPV, LNAV/VNAV, LNAV, NO APPR). Then the journey
@@ -260,6 +265,10 @@ controller would do.
   (`views/shots`, which read the terrain and the flight's track) load with the 3D chunk
   through `page/JourneyScene`, and the network map and its coastline load when the page
   is idle.
+- Coastline data is the bulk of a scenario: a scenario holds loaders for it
+  (`map.land`, `globeDetail`, `terrain.coast`), so only the active scenario's coastlines
+  are downloaded, and only with the views that draw them (`views/geo/scenarioCoast`).
+  No top-level `await` in app code: it splits the shared code into many small chunks.
 - The Stage's Canvas subtree is memoised: the page's 10 Hz readouts never re-render the
   scene. 4× MSAA is used only at a pixel ratio below 1.5.
 - Nothing costly runs on the main thread when a view mounts: scenery data is built once
@@ -313,3 +322,23 @@ Before calling any UI change done:
   - use `max(fwidth(x), 1e-4)` for edge widths;
   - use `pow(max(b, 0.0), k)`;
   - never divide by a value that can reach zero.
+
+## 10. The ESSP-SAS scenario
+
+The same page, journey, views and kit, with EGNOS over southern France
+(`?scenario=essp`). What differs:
+
+- **World.** The flight view shows southern France from Toulouse to Nice (Natural Earth
+  1:10m coast, an inland plain at about 150 m, a few summits as cones); the network map
+  shows Europe (1:50m, east–west scaled by cos 47°, legend over the Atlantic, the GEOs as
+  arrows at the southern edge because the equator is off the map); the globe draws Europe in detail.
+- **Panels** (one lazy chunk, only in this scenario): left column 08 Break something and
+  11 Assessment; right column 09 Service provision and 10 Real EGNOS signal (its recording
+  is a chunk of its own); on phones a fourth tab, "EGNOS".
+- **Honesty labels.** Network: "Map of Europe · EGNOS sites named in public sources, at
+  city level, not all of them · uplink pairing illustrative". Replay: "Recorded EGNOS
+  broadcast · PRN 124 · 29 March 2011 …", real data, not the simulated world nor today's
+  EGNOS. Proposed NOTAMs: illustrative wording. The footer says the page is not published
+  or endorsed by ESSP or EUSPA.
+- **Colour.** The forecast chart uses `--success` for available and a hatched
+  `--destructive` for not available, with a text legend; nothing new.

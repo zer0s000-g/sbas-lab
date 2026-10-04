@@ -12,6 +12,7 @@
  */
 import * as THREE from 'three'
 import { hash2, valueNoise } from '@/core/random'
+import { SCENARIO } from '@/scenarios/active'
 import { AIRPORT_LIST, runwayToLocalNm } from '@/core/region'
 import { M_PER_FT } from '@/core/units'
 import { anyAirfieldFlat, seaHeightMap, terrainGridFt, type NmRect } from '../terrain'
@@ -22,7 +23,7 @@ export type { NmRect }
 /** Corridor cell size, NM. */
 const CELL_NM = 1.2
 /** The corridor along the route, local NM (multiples of the cell). */
-export const CORRIDOR: NmRect = { e0: -300, e1: 300, n0: -120, n1: 126 }
+export const CORRIDOR: NmRect = SCENARIO.terrain.corridor
 const PATCH_CELLS = 10
 /** Grid cells across each airport patch. */
 const PATCH_GRID = 240

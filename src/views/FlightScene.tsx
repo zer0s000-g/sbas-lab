@@ -1,7 +1,7 @@
 /**
  * The Flight view: LAB201 at true scale in a real-looking world, at the journey's local
- * time of day: the sky and sun, the sea with its shallows and surf, Java, Madura and Bali
- * with their coastline, plains and volcanoes, both airports with their runways,
+ * time of day: the sky and sun, the sea with its shallows and surf, the scenario's land
+ * with its coastline, plains and summits, both airports with their runways,
  * taxiways, terminals and lights, and fair-weather clouds. Around the aircraft: its
  * protection-level cylinder (glass, cyan) and the alert-limit wireframe (brass) of the
  * current operation. Signal rays point the true way to every satellite it tracks: solid
@@ -24,7 +24,7 @@ import { Callout3D } from '@/stage/Callout3D'
 import { Wire3D, type WireHandle } from '@/stage/Wire3D'
 import { col } from '@/stage/col'
 import type { Quality } from '@/stage/types'
-import { BALI, JAKARTA } from './airports'
+import { DEPARTURE_LAYOUT, DESTINATION_LAYOUT } from './airports'
 import { ERROR_MARKER_SCALE, mToFlight, SKY_DOME_U } from './scales'
 import { aircraftFlight } from './shots'
 import { AirportModel } from './world/AirportModel'
@@ -257,8 +257,8 @@ function FlightScene({ t, quality }: { t: ThemeTokens; quality: Quality }) {
   })
 
   const blink = !reduced
-  const arrThr = raToWorld(BALI, 0, 0, 0)
-  const depThr = raToWorld(JAKARTA, 0, 0, 0)
+  const arrThr = raToWorld(DESTINATION_LAYOUT, 0, 0, 0)
+  const depThr = raToWorld(DEPARTURE_LAYOUT, 0, 0, 0)
   return (
     <group>
       <hemisphereLight ref={hemi} />
@@ -267,8 +267,8 @@ function FlightScene({ t, quality }: { t: ThemeTokens; quality: Quality }) {
       <Sky sky={sky} radius={FAR_U * 0.86} />
       <Ocean t={t} sky={sky} size={FAR_U * 2.2} airports={airports} />
       <Terrain t={t} lowDetail={quality === 'low'} airports={airports} />
-      <AirportModel l={JAKARTA} t={t} sky={sky} engine={engine} />
-      <AirportModel l={BALI} t={t} sky={sky} engine={engine} />
+      <AirportModel l={DEPARTURE_LAYOUT} t={t} sky={sky} engine={engine} />
+      <AirportModel l={DESTINATION_LAYOUT} t={t} sky={sky} engine={engine} />
       <Clouds t={t} sky={sky} />
       <GroundShadow t={t} sky={sky} engine={engine} />
       <group ref={acGroup}>

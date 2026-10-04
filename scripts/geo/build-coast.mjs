@@ -2,7 +2,10 @@
 // land polygons (public domain, naturalearthdata.com). The source files are not kept in
 // the repo; download and unzip them, then run:
 //
-//   node scripts/geo/build-coast.mjs <dir with 10m/ 50m/ 110m/ subfolders>
+//   node scripts/geo/build-coast.mjs <dir with 10m/ 50m/ 110m/ subfolders> [name,name,…]
+//
+// The optional list builds only those datasets (for example `southFrance,europe` for
+// the ESSP-SAS scenario), leaving the others as they are.
 //
 // Each dataset is clipped to a box, simplified (Douglas–Peucker) and stored as
 // delta-encoded integer rings, so the page ships a few kilobytes, not megabytes.
@@ -22,6 +25,10 @@ const DATASETS = [
   { name: 'javaBali', file: '10m/ne_10m_land.shp', box: { lon0: 104.5, lon1: 116.5, lat0: -9.5, lat1: -5.0 }, tolDeg: 0.001, resDeg: 0.0005, minAreaDeg2: 0.00002, out: 'javaBali.data.ts', note: '1:10m, Java to Lombok' },
   // Network map: the Indonesian archipelago and its neighbours.
   { name: 'indonesia', file: '50m/ne_50m_land.shp', box: { lon0: 88, lon1: 148, lat0: -18, lat1: 14 }, tolDeg: 0.04, resDeg: 0.01, minAreaDeg2: 0.01, out: 'indonesia.data.ts', note: '1:50m, 88–148°E, 18°S–14°N' },
+  // ESSP-SAS flight view: the French Mediterranean coast from Toulouse to Nice, in detail.
+  { name: 'southFrance', file: '10m/ne_10m_land.shp', box: { lon0: 0.4, lon1: 8.2, lat0: 42.5, lat1: 44.7 }, tolDeg: 0.001, resDeg: 0.0005, minAreaDeg2: 0.00002, out: 'southFrance.data.ts', note: '1:10m, Toulouse to Nice' },
+  // ESSP-SAS network map and globe: Europe and its neighbours, from the Azores to Finland.
+  { name: 'europe', file: '50m/ne_50m_land.shp', box: { lon0: -28, lon1: 36, lat0: 26, lat1: 68 }, tolDeg: 0.05, resDeg: 0.01, minAreaDeg2: 0.02, out: 'europe.data.ts', note: '1:50m, 28°W–36°E, 26–68°N' },
   // Globe: the whole world, coarse.
   { name: 'world', file: '110m/ne_110m_land.shp', box: { lon0: -180, lon1: 180, lat0: -90, lat1: 90 }, tolDeg: 0.35, resDeg: 0.05, minAreaDeg2: 1, out: 'world.data.ts', note: '1:110m, whole world' },
 ]
@@ -124,8 +131,9 @@ const area = (ring) => {
 
 const outDir = join(root, 'src', 'views', 'geo')
 mkdirSync(outDir, { recursive: true })
+const only = process.argv[3] ? new Set(process.argv[3].split(',')) : null
 
-for (const d of DATASETS) {
+for (const d of DATASETS.filter((x) => !only || only.has(x.name))) {
   const rings = readShpRings(join(src, d.file))
   const encoded = []
   let points = 0

@@ -1,0 +1,103 @@
+/** Claims about operations, air traffic management and the ionosphere, shared by both scenarios. */
+import { OPERATIONS } from '@/core/operations'
+import { IF_NOISE_FACTOR } from '@/core/errors'
+import type { Claim } from './types'
+
+const BOTH = ['indonesia', 'essp'] as const
+const D9849 = (section: string) => ({ source: 'icao-doc9849' as const, section })
+const T = OPERATIONS
+
+export const OPERATIONS_CLAIMS: readonly Claim[] = [
+  {
+    id: 'ops.alert-limits',
+    topic: 'Operations and ATM',
+    scenarios: BOTH,
+    text: 'Alert limits and time to alert per operation: oceanic en route HAL 7.4 km, continental en route 3.7 km (5 min); terminal 1.85 km (15 s); NPA 556 m (10 s); APV-I HAL 40 m, VAL 50 m (10 s); APV-II 40 m / 20 m (6 s); Category I 40 m / 35–10 m (6 s; SBAS uses 35 m).',
+    refs: [D9849('Table 2-1'), { source: 'icao-annex10', section: 'Table 3.7.2.4-1' }],
+    status: 'sourced',
+    value: [7408, 3704, 1852, 555.6, 40, 50, 40, 20, 40, 35, 300, 15, 10, 10, 6, 6],
+    unit: 'm, s',
+    actual: () => [T.oceanic.halM, T.enroute.halM, T.terminal.halM, T.npa.halM, T.apv1.halM, T.apv1.valM!, T.apv2.halM, T.apv2.valM!, T.cat1.halM, T.cat1.valM!, T.enroute.ttaS, T.terminal.ttaS, T.npa.ttaS, T.apv1.ttaS, T.apv2.ttaS, T.cat1.ttaS],
+    code: 'src/core/operations.ts',
+  },
+  {
+    id: 'ops.departure-row',
+    topic: 'Operations and ATM',
+    scenarios: BOTH,
+    text: 'Departure shares the row of initial, intermediate and non-precision approach: HAL 0.3 NM (556 m), 10 s to alert.',
+    refs: [{ source: 'icao-annex10', section: 'Table 3.7.2.4-1' }],
+    status: 'sourced',
+    value: [555.6, 10],
+    unit: 'm, s',
+    actual: () => [T.departure.halM, T.departure.ttaS],
+    code: 'src/core/operations.ts',
+    note: 'Corrected in this build: the takeoff phase used the terminal limits (1.85 km, 15 s) before.',
+  },
+  {
+    id: 'ops.lnavvnav',
+    topic: 'Operations and ATM',
+    scenarios: BOTH,
+    text: 'SBAS LNAV/VNAV alert limits: HAL 556 m, VAL 50 m.',
+    refs: [{ source: 'rtca-do229' }],
+    status: 'to-confirm',
+    value: [555.6, 50],
+    unit: 'm',
+    actual: () => [T.lnavvnav.halM, T.lnavvnav.valM!],
+    code: 'src/core/operations.ts',
+    todo: 'SBAS LNAV/VNAV alert limits',
+  },
+  { id: 'ops.time-to-alert', topic: 'Operations and ATM', scenarios: BOTH, text: 'The time to alert is the longest time allowed from a fault to the alert in the cockpit.', refs: [D9849('§2.2.4.4')], status: 'sourced', code: 'src/core/messages.ts' },
+  { id: 'ops.adsb', topic: 'Operations and ATM', scenarios: BOTH, text: 'ADS-B broadcasts the GNSS position; its integrity, linked to the GNSS alert limits, lets the controller trust the position on the screen.', refs: [D9849('§1.4.3'), D9849('§2.2.4.6')], status: 'sourced' },
+  { id: 'ops.notam', topic: 'Operations and ATM', scenarios: BOTH, text: 'States verify SBAS performance and issue NOTAMs for degradations, using a service volume model.', refs: [D9849('§4.3.3.4.1')], status: 'sourced' },
+  { id: 'ops.gnss-loss-fallback', topic: 'Operations and ATM', scenarios: BOTH, text: 'On loss of GNSS: inertial systems, DME, VOR/DME, ILS and procedural control by ATC.', refs: [D9849('§7.13.2')], status: 'sourced' },
+  { id: 'ops.space-weather', topic: 'Operations and ATM', scenarios: BOTH, text: 'ICAO space weather advisories cover the ionosphere (total electron content and scintillation).', refs: [D9849('§7.13.3')], status: 'sourced' },
+  { id: 'ops.abas-lnav', topic: 'Operations and ATM', scenarios: BOTH, text: 'With GPS alone (ABAS) approaches go down to LNAV minima; there is no vertical protection level.', refs: [D9849('§1.4.2.2'), D9849('§4.2')], status: 'sourced' },
+  {
+    id: 'atc.phraseology',
+    topic: 'Operations and ATM',
+    scenarios: ['essp'],
+    text: 'Radiotelephony for GNSS problems, as PANS-ATM gives it: a controller warns "GNSS REPORTED UNRELIABLE" (or "GNSS MAY NOT BE AVAILABLE [DUE TO INTERFERENCE]"); a crew that cannot fly an RNP procedure reports "UNABLE RNP".',
+    refs: [{ source: 'icao-doc4444', section: 'Chapter 12' }],
+    status: 'to-confirm',
+    note: 'Quoted from memory of PANS-ATM, not from the document: the build could not reach it. Check the exact words and their section in the current edition before use.',
+  },
+  // The ionosphere.
+  { id: 'iono.storm', topic: 'Ionosphere', scenarios: BOTH, text: 'The ionospheric delay follows the sun; storms make the ionosphere thicker and less even.', refs: [D9849('§5.2.1.1'), D9849('§5.2.1.2')], status: 'sourced', code: 'src/core/iono.ts' },
+  { id: 'iono.equatorial-l1', topic: 'Ionosphere', scenarios: BOTH, text: 'Near the magnetic equator, dense bands about 15° either side and post-sunset bubbles make single-frequency SBAS vertical guidance (APV, Category I) impractical.', refs: [D9849('§5.2.1.5'), D9849('§4.3.1.4')], status: 'sourced', code: 'src/core/iono.ts' },
+  { id: 'iono.scintillation', topic: 'Ionosphere', scenarios: ['indonesia'], text: 'Severe scintillation is common near the equator after sunset; it is patchy, takes out a few satellites at a time and affects every frequency.', refs: [D9849('§5.2.1.3'), D9849('§5.2.1.4')], status: 'sourced', code: 'src/core/iono.ts' },
+  {
+    id: 'iono.dfmc-removes-delay',
+    topic: 'Ionosphere',
+    scenarios: BOTH,
+    text: 'The dual-frequency ionosphere-free combination removes the (first-order) ionospheric delay but amplifies noise and multipath by about 2.6.',
+    refs: [D9849('§4.3.1.4.1'), D9849('§5.2.1.6')],
+    status: 'sourced',
+    value: 2.6,
+    tolerance: 0.01,
+    actual: () => IF_NOISE_FACTOR,
+    code: 'src/core/errors.ts',
+  },
+  { id: 'iono.broadcast-model', topic: 'Ionosphere', scenarios: BOTH, text: 'The GPS broadcast ionospheric model removes about half of the delay; SBAS reduces the error to a few metres and bounds it.', refs: [D9849('§5.2.1.6')], status: 'sourced', code: 'src/core/iono.ts' },
+  {
+    id: 'iono.threat-model',
+    topic: 'Ionosphere',
+    scenarios: BOTH,
+    text: 'The sizes of the ionospheric threat terms (the daytime band margin, the post-sunset threat, the storm) are illustrative, chosen to reproduce Doc 9849’s conclusions qualitatively.',
+    refs: [D9849('§5.2.1.5')],
+    status: 'to-confirm',
+    code: 'src/core/iono.ts',
+    todo: 'threat-model sizes are illustrative',
+  },
+  {
+    id: 'iono.dip-equator',
+    topic: 'Ionosphere',
+    scenarios: BOTH,
+    text: 'The magnetic (dip) equator is read approximately from IGRF maps every 15° of longitude (about 9–10°N over Indonesia).',
+    refs: [D9849('§5.2.1.5')],
+    status: 'to-confirm',
+    code: 'src/core/region.ts',
+    todo: 'dip-equator latitudes are read approximately from IGRF maps',
+  },
+  { id: 'dfmc.planned', topic: 'SBAS', scenarios: BOTH, text: 'Dual-frequency multi-constellation (DFMC) SBAS services are planned, not yet operational (WAAS about 2026, EGNOS from 2028).', refs: [D9849('§4.3.4.5')], status: 'sourced' },
+  { id: 'dfmc.equatorial-apv', topic: 'SBAS', scenarios: ['indonesia'], text: 'Dual-frequency SBAS makes approaches with vertical guidance possible in equatorial States.', refs: [D9849('§6.8.2')], status: 'sourced' },
+]

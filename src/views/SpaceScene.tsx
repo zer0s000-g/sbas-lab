@@ -1,12 +1,12 @@
 /**
  * The Space view: the Earth to scale with its continents (Natural Earth 1:110m, and
- * 1:50m over Indonesia), the GPS constellation and the Michibiki SBAS GEOs where the
+ * 1:50m over the scenario's region), the GPS constellation and the SBAS GEOs where the
  * engine says they are, the ionosphere shell, the SBAS ground sites with an uplink beam
  * from each uplink station to its GEO, and the
  * signals LAB201 receives: a solid cyan wire from each GPS satellite it tracks and a
  * dashed brass wire from each GEO (design.md §2 "SBAS meanings"). Loaded with the 3D chunk.
  */
-import { memo, useLayoutEffect, useMemo, useRef } from 'react'
+import { memo, use, useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { ThemeTokens } from '@/hooks/useThemeTokens'
@@ -14,8 +14,9 @@ import { GPS_SATS, GEO_SATS, geoLabel, satEcef, GPS_RADIUS_M, GPS_PERIOD_S, type
 import { IONO_SHELL_HEIGHT_M } from '@/core/iono'
 import { DIP_EQUATOR_TABLE, REGION, localSolarHour } from '@/core/region'
 import { decodeRings, type CoastData } from './geo/coast'
-import { indonesia } from './geo/indonesia.data'
 import { world } from './geo/world.data'
+import { globeDetail } from './geo/scenarioCoast'
+
 import { DEG, WGS84_A_M, WGS84_OMEGA_E_RAD_S } from '@/core/units'
 import { getJourney, useJourneyState } from '@/journey/store'
 import { useReducedMotion } from '@/stores/prefs'
@@ -81,14 +82,14 @@ const MAX_GPS_WIRES = 14
 /**
  * The continents as a mask (one byte a pixel, 255 on land) in an equirectangular map,
  * longitude across and latitude up, row 0 at the south pole: drawn once per session from
- * the coastline data, the coarse world first, then Indonesia in more detail so Java, Bali
- * and the smaller islands show. 1024 × 512 is about one pixel per screen pixel when the
- * whole Earth is in view.
+ * the coastline data, the coarse world first, then the scenario's region in more detail
+ * (Indonesia's smaller islands, Europe's coasts). 1024 × 512 is about one pixel per
+ * screen pixel when the whole Earth is in view.
  */
 let maskData: Uint8Array | null = null
 const MASK_W = 1024
 const MASK_H = 512
-function landMaskData(): Uint8Array {
+function landMaskData(detail: CoastData): Uint8Array {
   if (maskData) return maskData
   const W = MASK_W
   const H = MASK_H
@@ -112,9 +113,9 @@ function landMaskData(): Uint8Array {
   }
   draw(world)
   // Clear the detailed box first, so its coastline replaces the coarse one.
-  const b = indonesia.box
+  const b = detail.box
   g.clearRect(((b.lon0 + 180) / 360) * W, ((90 - b.lat1) / 180) * H, ((b.lon1 - b.lon0) / 360) * W, ((b.lat1 - b.lat0) / 180) * H)
-  draw(indonesia)
+  draw(detail)
   const rgba = g.getImageData(0, 0, W, H).data
   const out = new Uint8Array(W * H)
   // Canvas rows run north to south; the texture's run south to north.
@@ -124,8 +125,8 @@ function landMaskData(): Uint8Array {
 }
 
 /** A texture over the session's land mask (made per visit, freed when the view closes). */
-function landMask(): THREE.DataTexture {
-  const tex = new THREE.DataTexture(landMaskData(), MASK_W, MASK_H, THREE.RedFormat, THREE.UnsignedByteType)
+function landMask(detail: CoastData): THREE.DataTexture {
+  const tex = new THREE.DataTexture(landMaskData(detail), MASK_W, MASK_H, THREE.RedFormat, THREE.UnsignedByteType)
   tex.wrapS = THREE.RepeatWrapping
   tex.magFilter = THREE.LinearFilter
   tex.minFilter = THREE.LinearMipmapLinearFilter
@@ -198,7 +199,9 @@ function SpaceScene({ t, quality }: { t: ThemeTokens; quality: Quality }) {
     }),
     [t],
   )
-  const mask = useMemo(landMask, [])
+  // The scenario's detailed coastline, downloaded with this view (the Stage's Suspense waits for it).
+  const detail = use(globeDetail())
+  const mask = useMemo(() => landMask(detail), [detail])
   const earthMat = useMemo(
     () =>
       new THREE.ShaderMaterial({

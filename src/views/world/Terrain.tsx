@@ -1,7 +1,8 @@
 /**
- * Java, Madura and Bali at true scale, from views/terrain (the same surface the sea's
- * shallows, the camera and the ground shadow use): rice-field green on the coastal
- * plain, forest on the hills, bare rock on the volcano summits and sand at the shore,
+ * The scenario's land at true scale (Java, Madura and Bali; or southern France), from
+ * views/terrain (the same surface the sea's shallows, the camera and the ground shadow
+ * use): field green on the coastal plain, forest on the hills, bare rock on the
+ * summits and sand at the shore,
  * mown grass on the levelled airfields and instanced trees around the airports.
  *
  * The grids, colour weights and tree positions come from world/terrainData, built once

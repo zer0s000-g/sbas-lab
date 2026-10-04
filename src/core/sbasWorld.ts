@@ -14,6 +14,7 @@ import { alarmBroadcastS, TIMEOUTS_S } from './messages'
 import { OPERATIONS, type Operation } from './operations'
 import { DEG } from './units'
 import { START_LOCAL_HOUR } from './region'
+import { SCENARIO } from '@/scenarios/active'
 
 export type SbasService = 'dfmc' | 'l1' | 'off'
 
@@ -37,7 +38,8 @@ export const NOMINAL: Conditions = {
   startLocalHour: START_LOCAL_HOUR,
   storm: 0,
   scintillation: false,
-  service: 'dfmc',
+  // The scenario's service: DFMC in the what-if Indonesian SBAS, L1 SBAS for EGNOS today.
+  service: SCENARIO.nominalService,
   geoLostFromS: null,
   offlineStations: [],
   fault: null,
@@ -221,7 +223,7 @@ export function navStatus(s: Snapshot, op: Operation): NavStatus {
  * and the receiver support (Doc 9849 §4.3.2.5). LPV needs SBAS vertical guidance within
  * the procedure's alert limits (stored in the FAS data block, §4.3.3.2).
  */
-export function approachMode(s: Snapshot, lpvOp: Operation = OPERATIONS.apv1): { mode: ApproachMode; fix: FixResult } {
+export function approachMode(s: Snapshot, lpvOp: Operation = OPERATIONS[SCENARIO.approach.op]): { mode: ApproachMode; fix: FixResult } {
   const pa = s.sbasPaFix
   if (pa && pa.vplM !== null && pa.hplM <= lpvOp.halM && pa.vplM <= (lpvOp.valM ?? 0)) return { mode: 'LPV', fix: pa }
   const vnav = OPERATIONS.lnavvnav

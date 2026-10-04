@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { Pause, Play } from 'lucide-react'
 import { useAnimationFrame } from '@/hooks/useAnimationFrame'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
@@ -7,6 +7,10 @@ import { HudButton } from '@/hud/Controls'
 import { MissionClock } from '@/hud/MissionClock'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SiteHeader } from '@/components/SiteHeader'
+import { ScenarioBar } from '@/components/ScenarioBar'
+import { SourcesButton, SourcesSheet } from './sources/SourcesSheet'
+import { lazyRetry } from '@/lib/lazyRetry'
+import { SCENARIO } from '@/scenarios/active'
 import { cn } from '@/lib/utils'
 import { directionFor } from '@/journey/director'
 import { getJourney, useJourneyState } from '@/journey/store'
@@ -16,6 +20,10 @@ import type { StanfordPoint } from '@/instruments/StanfordChart'
 import { viewModel, type ViewModel } from './model'
 import { BenefitCard, CockpitPanel, ControlsPanel, FlightCard, NowPanel, SignalsPanel, StatusPanel } from './panels'
 import { JourneyStage, type ViewChoice } from './JourneyStage'
+
+// The ESSP-SAS scenario's own panels (Break something, Service provision, real signal,
+// assessment) load as one chunk, only in that scenario.
+const EsspToolkit = SCENARIO.id === 'essp' ? lazyRetry(() => import('./essp/Toolkit')) : null
 
 /** The one page: LAB201 gate to gate (design.md §4). */
 export default function JourneyPage() {
@@ -76,6 +84,7 @@ export default function JourneyPage() {
       actions={
         <>
           <MissionClock className="mr-2 hidden sm:flex" getTimeS={() => engine.worldS} speed={engine.speed} frozen={m.frozen} auto={speedMode === 'auto'} running={running && !stop} />
+          <SourcesButton />
           <HudButton variant="solid" onClick={() => engine.toggle()} aria-label={playLabel}>
             {running && !stop ? <Pause aria-hidden /> : <Play aria-hidden />}
             <span className="hidden md:inline">{running && !stop ? 'Pause' : stop ? 'Continue' : 'Play'}</span>
@@ -108,10 +117,17 @@ export default function JourneyPage() {
     </SiteHeader>
   )
 
+  const toolkit = (part: 'left' | 'right' | 'all') =>
+    EsspToolkit && (
+      <Suspense fallback={null}>
+        <EsspToolkit engine={engine} nowS={m.worldS} part={part} />
+      </Suspense>
+    )
   const left = (
     <>
       <FlightCard m={m} />
       <NowPanel m={m} />
+      {toolkit('left')}
     </>
   )
   const right = (
@@ -121,6 +137,7 @@ export default function JourneyPage() {
       <CockpitPanel m={m} />
       <SignalsPanel m={m} getPoints={() => points.current} />
       <ControlsPanel engine={engine} speedMode={speedMode} guidedStops={guidedStops} onGuidedStops={setGuidedStops} />
+      {toolkit('right')}
     </>
   )
   const stage = (
@@ -134,13 +151,15 @@ export default function JourneyPage() {
       speed={engine.speed}
       stop={stop}
       inlineTimeline={!phone}
-      className={wide ? 'h-[calc(100svh-3.5rem)] min-h-[640px]' : phone ? 'h-[56svh] min-h-[300px] rounded-md border border-hud-line' : 'h-[520px] rounded-md border border-hud-line'}
+      className={wide ? 'h-[calc(100svh-6rem)] min-h-[640px]' : phone ? 'h-[56svh] min-h-[300px] rounded-md border border-hud-line' : 'h-[520px] rounded-md border border-hud-line'}
     />
   )
 
   return (
     <>
       {header}
+      <ScenarioBar />
+      <SourcesSheet />
       <main id="main" className="flex-1">
         {wide ? (
           <div className="relative [--col:300px] min-[1440px]:[--col:340px]">
@@ -163,6 +182,7 @@ export default function JourneyPage() {
                 <TabsTrigger value="now">Now</TabsTrigger>
                 <TabsTrigger value="cockpit">Cockpit</TabsTrigger>
                 <TabsTrigger value="signals">Signals</TabsTrigger>
+                {EsspToolkit && <TabsTrigger value="egnos">EGNOS</TabsTrigger>}
               </TabsList>
               <TabsContent value="now" className="mt-3 flex flex-col gap-3">
                 <NowPanel m={m} />
@@ -177,6 +197,11 @@ export default function JourneyPage() {
               <TabsContent value="signals" className="mt-3 flex flex-col gap-3">
                 <SignalsPanel m={m} getPoints={() => points.current} />
               </TabsContent>
+              {EsspToolkit && (
+                <TabsContent value="egnos" className="mt-3 flex flex-col gap-3">
+                  {toolkit('all')}
+                </TabsContent>
+              )}
             </Tabs>
           </div>
         ) : (

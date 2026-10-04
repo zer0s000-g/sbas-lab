@@ -8,6 +8,7 @@
  */
 import type { Vec3 } from '@/core/geo'
 import { M_PER_FT, M_PER_NM, WGS84_A_M } from '@/core/units'
+import { SCENARIO } from '@/scenarios/active'
 
 export type V3 = [number, number, number]
 
@@ -40,4 +41,4 @@ export const ERROR_MARKER_SCALE = 10
 export const SKY_DOME_U = 60
 
 export const FLIGHT_HONESTY = `Coast, runways and aircraft to scale · terrain and route simplified · signal directions true, distances not · errors ×${ERROR_MARKER_SCALE}`
-export const NETWORK_HONESTY = 'Map of Indonesia to scale · ground sites illustrative · hypothetical Indonesian SBAS'
+export const NETWORK_HONESTY = SCENARIO.texts.networkHonesty

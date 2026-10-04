@@ -27,3 +27,4 @@ dist-ssr
 # Verify-script screenshots
 e2e-shots
 gpu-shots
+dist-scorm

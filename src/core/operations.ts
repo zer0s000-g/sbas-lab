@@ -8,8 +8,9 @@
  * exceeds its alert limit the avionics must alert the crew (Doc 9849 §2.2.4.3).
  */
 import { M_PER_NM } from './units'
+import { SCENARIO } from '@/scenarios/active'
 
-export type OperationId = 'oceanic' | 'enroute' | 'terminal' | 'npa' | 'lnavvnav' | 'apv1' | 'apv2' | 'cat1'
+export type OperationId = 'oceanic' | 'enroute' | 'terminal' | 'departure' | 'npa' | 'lnavvnav' | 'apv1' | 'apv2' | 'cat1'
 
 export interface Operation {
   id: OperationId
@@ -30,6 +31,8 @@ export const OPERATIONS: Record<OperationId, Operation> = {
   oceanic: { id: 'oceanic', name: 'Oceanic en route', halM: 4 * M_PER_NM, valM: null, ttaS: 300, source: T21 },
   enroute: { id: 'enroute', name: 'Continental en route', halM: 2 * M_PER_NM, valM: null, ttaS: 300, source: T21 },
   terminal: { id: 'terminal', name: 'Terminal', halM: 1 * M_PER_NM, valM: null, ttaS: 15, source: T21 },
+  // Annex 10 Table 3.7.2.4-1 puts departure in one row with initial, intermediate and non-precision approach.
+  departure: { id: 'departure', name: 'Departure', halM: 0.3 * M_PER_NM, valM: null, ttaS: 10, source: T21 },
   npa: { id: 'npa', name: 'Non-precision approach (LNAV)', halM: 0.3 * M_PER_NM, valM: null, ttaS: 10, source: T21 },
   // TODO(expert-review): SBAS LNAV/VNAV alert limits (HAL 556 m, VAL 50 m) follow RTCA DO-229, not Table 2-1 (Note 3 there covers Baro VNAV).
   lnavvnav: { id: 'lnavvnav', name: 'LNAV/VNAV (SBAS vertical)', halM: 0.3 * M_PER_NM, valM: 50, ttaS: 10, source: 'RTCA DO-229 (to confirm)' },
@@ -42,9 +45,11 @@ export const OPERATIONS: Record<OperationId, Operation> = {
 /** The operation that sets the alert limits in each part of the journey. */
 export type FlightStage = 'ground' | 'departure' | 'terminal' | 'enroute' | 'approach' | 'final' | 'landed'
 
-export function operationFor(stage: FlightStage, finalOp: OperationId = 'apv1'): Operation | null {
+/** The operation on final is the one the scenario's FAS data block carries (APV-I at Bali, LPV-200 at Nice). */
+export function operationFor(stage: FlightStage, finalOp: OperationId = SCENARIO.approach.op): Operation | null {
   switch (stage) {
     case 'departure':
+      return OPERATIONS.departure
     case 'terminal':
       return OPERATIONS.terminal
     case 'enroute':

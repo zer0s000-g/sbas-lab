@@ -15,6 +15,7 @@ import type { Quality } from '@/stage/types'
 import type { ViewId } from '@/journey/director'
 import type { JourneyEngine, StopId } from '@/journey/engine'
 import { NARRATION } from '@/journey/narration'
+import { loadTerrainCoast } from '@/views/geo/scenarioCoast'
 import { useJourneyState } from '@/journey/store'
 import { PHASES, type PhaseId } from '@/journey/phases'
 import { FLIGHT_HONESTY, NETWORK_HONESTY, spaceHonesty } from '@/views/scales'
@@ -24,9 +25,11 @@ import { StopCard } from './panels'
 
 // Each scene holds all of its three.js code and loads with the 3D chunk (design.md §7).
 const SpaceScene = lazyRetry(() => import('@/views/SpaceScene'))
-const FlightScene = lazyRetry(() => import('@/views/FlightScene'))
+// The terrain's coastline downloads alongside the scene code (views/geo/scenarioCoast).
+const withCoast = <T,>(load: Promise<T>) => Promise.all([load, loadTerrainCoast()]).then(([m]) => m)
+const FlightScene = lazyRetry(() => withCoast(import('@/views/FlightScene')))
 // The stage and its camera shots (terrain, airports, the flight's track) load with the 3D chunk.
-const JourneyScene = lazyRetry(() => import('./JourneyScene'))
+const JourneyScene = lazyRetry(() => withCoast(import('./JourneyScene')))
 // The network map and its coastline data are needed only for two phases: they load once
 // the page is idle, before the journey gets there, instead of with the first page load.
 const loadNetworkMap = () => import('@/views/NetworkMap')
