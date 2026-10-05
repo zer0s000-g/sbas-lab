@@ -40,6 +40,20 @@ export const GNSS_CLAIMS: readonly Claim[] = [
     note: 'A simplification the page keeps; it changes the geometry, not the principles.',
   },
   {
+    id: 'gnss.constellation-size',
+    topic: 'GNSS',
+    scenarios: BOTH,
+    text: 'The model flies the nominal 24 satellites; the operational GPS constellation has more (about 31 in recent years). With GPS alone, gaps in RAIM coverage are therefore more frequent in the model than in reality, so each scenario starts its constellation where its approach has typical geometry: RAIM supports LNAV, as it does on almost every real approach.',
+    refs: [
+      { source: 'icao-doc9849', section: '§3.2.2' },
+      { source: 'icao-doc9849', section: '§4.3.4.3' },
+    ],
+    status: 'to-confirm',
+    code: 'src/core/orbits.ts',
+    todo: 'the operational constellation has about 31 satellites',
+    note: 'Modelling the operational constellation would be more faithful; it would change the recorded AirNav Indonesia results (tests/golden).',
+  },
+  {
     id: 'gnss.l5-everywhere',
     topic: 'GNSS',
     scenarios: BOTH,

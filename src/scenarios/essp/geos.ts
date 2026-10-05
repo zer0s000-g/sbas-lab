@@ -20,5 +20,12 @@ export const GEOS: readonly SatDef[] = [
   { id: 'E5WB', name: 'Eutelsat 5 West B · EGNOS GEO-3', prn: 121, kind: 'geo', lonDeg: -5, l5: false },
 ]
 
-/** Rotates the GPS constellation so the journey starts with a typical geometry over southern France. */
-export const GPS_EPOCH_RAAN_DEG = 37
+/**
+ * Rotates the GPS constellation so the journey starts with a typical geometry over southern France.
+ * Chosen by sweeping the whole circle against what the scenario shows on the approach into Nice:
+ * with GPS alone, RAIM supports LNAV (as it does on almost every real approach, Doc 9849 §4.3.4.3),
+ * and with EGNOS, LPV-200, which LNAV replaces under a storm or with RIMS offline. 288 of 360 values
+ * do all of that; 172° is the middle of a wide good band (all pass within ±10°). The 37° this
+ * scenario first copied from AirNav Indonesia lies in a band where GPS alone gives no approach.
+ */
+export const GPS_EPOCH_RAAN_DEG = 172

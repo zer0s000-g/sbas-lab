@@ -218,6 +218,24 @@ describe('failures over Europe', () => {
     expect(approachMode(snapshot(x.t + 5, pos(x), c)).mode).toBe('LPV')
     expect(approachMode(snapshot(x.t + 13, pos(x), c)).mode).toBe('LNAV')
     expect(snapshot(x.t + 30, pos(x), c).sbasFix).toBeNull()
+    // After the full time-out the receiver is on GPS alone, and RAIM still supports LNAV,
+    // as the failure notice, the role notes and the exam's answer say (Doc 9849 §4.3.4.3).
+    for (const later of finals(nominal).filter((y) => y.t >= x.t + 30)) {
+      const after = snapshot(later.t, pos(later), c)
+      expect(after.sbasFix).toBeNull()
+      expect(approachMode(after)).toMatchObject({ mode: 'LNAV', fix: after.abas })
+    }
+  })
+  it('SBAS off: GPS alone with RAIM supports LNAV all the way down the approach into Nice', () => {
+    const near = run({ ...NOMINAL, service: 'off' }).filter(
+      (x) => segmentOf(x.s) === 'final' || (segmentOf(x.s) === 'air' && Math.hypot(x.s.eastNm - DESTINATION.thresholdEastNm, x.s.northNm - DESTINATION.thresholdNorthNm) < 40),
+    )
+    expect(near.length).toBeGreaterThan(40)
+    for (const x of near) {
+      expect(x.snap.abas!.alarm).toBe(false)
+      expect(x.snap.abas!.hplM).toBeLessThanOrEqual(OPERATIONS.npa.halM)
+      expect(approachMode(x.snap).mode).toBe('LNAV')
+    }
   })
   it('RIMS offline: the grid near the route loses its monitoring and LPV goes; LNAV stays', () => {
     const r = finals(run({ ...NOMINAL, offlineStations: OFFLINE_SET }))

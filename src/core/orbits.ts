@@ -53,6 +53,8 @@ export interface SatDef {
 // TODO(expert-review): real GPS slot phasing is uneven (IS-GPS / SPS PS almanac); an even Walker 24/6/1 pattern is used here.
 const PLANE_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
 /** Rotates the whole constellation so the journey starts with a typical geometry over the scenario's region. */
+// TODO(expert-review): the operational constellation has about 31 satellites; with the nominal 24, GPS-alone RAIM
+// gaps are more frequent than in reality, so each scenario's epoch is chosen for a typical approach (scenarios/*/geos.ts).
 const EPOCH_RAAN_DEG = SCENARIO.gpsEpochRaanDeg
 
 export const GPS_SATS: readonly SatDef[] = PLANE_LETTERS.flatMap((plane, p) =>

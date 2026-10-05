@@ -15,6 +15,7 @@ export const OPEN_QUESTIONS: readonly string[] = [
   '**DFMC services.** DFMC SBAS services are planned rather than operational (Doc 9849 §4.3.4.5: WAAS around 2026, EGNOS from 2028). The hypothetical Indonesian SBAS offers one; the ESSP-SAS scenario shows EGNOS v3 DFMC only as a labelled preview.',
   '**The ESSP-SAS scenario.** Check the EGNOS facts against the current EGNOS SoL SDD and service notices: the operational GEOs, the RIMS, MCC and NLES sites shown, ESSP’s role, the NOTAM proposal service and the EWA figures. The build could not reach the EGNOS user support site and used search results quoting it.',
   '**RIMS in the model.** The ESSP-SAS ground segment computes its corrections from the 11 RIMS it shows, not EGNOS’s full network, so the "RIMS offline" failure has a far larger effect than it would in reality; the page says so. Check the wording.',
+  '**GPS alone at Nice.** With 24 evenly spaced satellites, whether RAIM supports LNAV on an approach depends on where the constellation starts. The ESSP-SAS scenario starts it at 172° (`scenarios/essp/geos.ts`): of all 360 start positions, 288 give RAIM LNAV on the approach into Nice together with LPV-200 through EGNOS, and 172° sits in the middle of a wide band of them. Confirm that showing LNAV with GPS alone is the representative case.',
   '**Nice LPV-200 at 200 ft.** The illustrative RNP RWY 04L approach is flown to LPV-200 minima with a 200 ft decision height over the Baie des Anges; the published procedure, its minima and its FAS data block are not used.',
 ]
 

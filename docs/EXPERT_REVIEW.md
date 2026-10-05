@@ -18,13 +18,14 @@ narration cites exists; and this file must be regenerated when the registry chan
 |---|---|---|
 | Reviewed | 0 | Confirmed by a named reviewer against the primary source |
 | Sourced, awaiting review | 54 | Source and section identified; not yet signed off |
-| To confirm | 41 | Not yet traced to a primary source, or an illustrative value the page labels as such |
+| To confirm | 42 | Not yet traced to a primary source, or an illustrative value the page labels as such |
 
 ## To confirm
 
 | Claim | Scenario | What the page says | Value | Source | Code |
 |---|---|---|---|---|---|
 | `gnss.slot-phasing` | both | The model spaces the 24 satellites evenly (a Walker 24/6/1 pattern); the real slots are not evenly spaced. *A simplification the page keeps; it changes the geometry, not the principles.* |  | US Space Force IS-GPS-200 | `src/core/orbits.ts` |
+| `gnss.constellation-size` | both | The model flies the nominal 24 satellites; the operational GPS constellation has more (about 31 in recent years). With GPS alone, gaps in RAIM coverage are therefore more frequent in the model than in reality, so each scenario starts its constellation where its approach has typical geometry: RAIM supports LNAV, as it does on almost every real approach. *Modelling the operational constellation would be more faithful; it would change the recorded AirNav Indonesia results (tests/golden).* |  | ICAO Doc 9849 §3.2.2; ICAO Doc 9849 §4.3.4.3 | `src/core/orbits.ts` |
 | `gnss.l5-everywhere` | both | The model lets every GPS satellite broadcast L5; not every GPS satellite does today. |  | ICAO Doc 9849 §3.2.4 | `src/core/orbits.ts` |
 | `gnss.earth-rotation` | both | The Earth rotates at 7.292115 × 10⁻⁵ rad/s (WGS-84; IS-GPS-200 uses 7.2921151467 × 10⁻⁵ rad/s). The model uses the WGS-84 value; which the orbits should use is to confirm. | 0.00007292115 rad/s | NIMA (now NGA) TR8350.2; US Space Force IS-GPS-200 | `src/core/units.ts` |
 | `gnss.error-sizes` | both | Illustrative 1σ sizes of the GPS broadcast clock (1.1 m) and orbit (0.8 m) errors along the line of sight. | 1.1, 0.8 m | US Space Force IS-GPS-200 | `src/core/errors.ts` |
@@ -170,6 +171,7 @@ None yet.
 - **DFMC services.** DFMC SBAS services are planned rather than operational (Doc 9849 §4.3.4.5: WAAS around 2026, EGNOS from 2028). The hypothetical Indonesian SBAS offers one; the ESSP-SAS scenario shows EGNOS v3 DFMC only as a labelled preview.
 - **The ESSP-SAS scenario.** Check the EGNOS facts against the current EGNOS SoL SDD and service notices: the operational GEOs, the RIMS, MCC and NLES sites shown, ESSP’s role, the NOTAM proposal service and the EWA figures. The build could not reach the EGNOS user support site and used search results quoting it.
 - **RIMS in the model.** The ESSP-SAS ground segment computes its corrections from the 11 RIMS it shows, not EGNOS’s full network, so the "RIMS offline" failure has a far larger effect than it would in reality; the page says so. Check the wording.
+- **GPS alone at Nice.** With 24 evenly spaced satellites, whether RAIM supports LNAV on an approach depends on where the constellation starts. The ESSP-SAS scenario starts it at 172° (`scenarios/essp/geos.ts`): of all 360 start positions, 288 give RAIM LNAV on the approach into Nice together with LPV-200 through EGNOS, and 172° sits in the middle of a wide band of them. Confirm that showing LNAV with GPS alone is the representative case.
 - **Nice LPV-200 at 200 ft.** The illustrative RNP RWY 04L approach is flown to LPV-200 minima with a 200 ft decision height over the Baie des Anges; the published procedure, its minima and its FAS data block are not used.
 
 ## Signing a claim off
