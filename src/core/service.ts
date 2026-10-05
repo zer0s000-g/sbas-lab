@@ -2,11 +2,15 @@
  * SBAS service provision, as an air navigation service provider and the SBAS service
  * provider see it: will LPV be available at an airport over the next hours, and what
  * NOTAM should be proposed if not (Doc 9849 §4.3.3.4.1; ESSP's NOTAM proposal service
- * predicts APV-I unavailability at airports and proposes NOTAMs to the NOTAM offices).
+ * predicts when an EGNOS service level will be unavailable at airports and proposes
+ * NOTAMs to the NOTAM offices, EGNOS SoL SDD §3.4.4). The page proposes NOTAMs for APV-I
+ * only, a simplification.
  *
  * The prediction runs the same deterministic SBAS world forward in time at the airport,
- * with the conditions in force (a storm, a lost GEO, RIMS offline), so the forecast, the
- * map and the cockpit always agree. A real prediction uses the almanac, the planned
+ * with the conditions it is given, so the forecast, the map and the cockpit always agree.
+ * The service panel gives it only what is known in advance (a storm forecast, a planned
+ * RIMS outage: scenarios/essp/provision FORECASTABLE); a sudden failure such as a lost
+ * GEO is not in a forecast. A real prediction uses the almanac, the planned
  * outages and the service volume model; this one is the page's own model.
  */
 import { approachMode, groundFor, snapshot, type Conditions } from './sbasWorld'

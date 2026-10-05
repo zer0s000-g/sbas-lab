@@ -35,7 +35,7 @@ describe('LPV availability at Nice', () => {
     expect(f.samples.filter((x) => x.tS >= H + 60).every((x) => !x.available)).toBe(true)
     expect(f.outages[0].fromS).toBeGreaterThanOrEqual(H)
   })
-  it('RIMS offline: the model loses LPV at Nice (its 11 RIMS only; the page says the real network would fare better)', () => {
+  it('RIMS offline: the model loses LPV at Nice (its 9 RIMS only; the page says the real network would fare better)', () => {
     expect(forecastAt(DESTINATION, 'apv1', 0, H, 600, { ...NOMINAL, offlineStations: OFFLINE_SET }).availability).toBe(0)
   })
 })

@@ -45,7 +45,7 @@ Entries are paraphrased, not quoted. Values that need a specification beyond Doc
 | Reference stations over a large area monitor the satellites and send data to master stations | §4.3.1.1 | `groundSegment.ts` |
 | Master stations compute clock and orbit corrections and ionospheric grid delays, and bound what is left | §4.3.1.1, §4.3.1.4.2 | `groundSegment.ts`, `iono.ts` |
 | UDRE bounds the residual clock/orbit error per satellite; GIVE bounds the grid's ionospheric error | §4.3.1.4.2 | `groundSegment.ts`, `iono.ts` |
-| "Do Not Use" and "Not Monitored" satellites cannot be used with SBAS integrity; LPV also needs UDREI ≠ 13 | §4.3.1.3 | `groundSegment.ts`, `sbasWorld.ts` |
+| "Do Not Use" and "Not Monitored" satellites cannot be used with SBAS integrity; precision approach and APV need UDREI below 12 (Annex 10 App B 3.5.8.1.2.12) | §4.3.1.3 | `groundSegment.ts`, `sbasWorld.ts` |
 | Uplink stations send the messages to the SBAS GEOs, which rebroadcast them; a GEO stays over the equator at a fixed longitude | §4.3.1.2 | `orbits.ts`, `messages.ts` |
 | With status and clock/orbit corrections, SBAS supports departure to NPA; with the ionospheric grid too, up to CAT I | §4.3.1.5 | `sbasWorld.ts` `navStatus` |
 | The receiver combines UDRE, GIVE and its own error estimates into HPL and VPL and compares them with HAL and VAL | §4.3.2.4 | `receiver.ts` |

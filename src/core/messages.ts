@@ -89,12 +89,16 @@ export function scheduledMessage(second: number, geoIndex: number, signal: SbasS
 }
 
 /**
- * Time-outs: how long data may be used after it was last received, s, for approaches
- * with vertical guidance (PA) and for en-route to non-precision approach (NPA).
+ * Time-outs: how long data may be used after it was last received, s, for precision
+ * approach and APV (PA: LNAV/VNAV, LPV) and for en route, terminal and non-precision
+ * approach (NPA) (Annex 10 Vol I App B Table B-94). `udrei` is the integrity data (UDREI,
+ * Message Types 2–6, 24); the fast corrections themselves time out after I_fc, set by
+ * the degradation factor in Message Type 7 (Table B-95), which the page does not model
+ * separately.
  */
-// TODO(expert-review): message time-outs (RTCA DO-229, Table A-25); DFMC time-outs (ED-259).
+// TODO(expert-review): message time-outs: Annex 10 App B Table B-94 for L1 (RTCA DO-229 has the same table); the DFMC time-outs (ED-259) are to confirm.
 export const TIMEOUTS_S = {
-  fastCorrections: { PA: 12, NPA: 18 },
+  udrei: { PA: 12, NPA: 18 },
   longTerm: { PA: 240, NPA: 360 },
   iono: { PA: 600, NPA: 600 },
 } as const

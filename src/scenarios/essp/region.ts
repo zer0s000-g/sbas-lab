@@ -9,8 +9,8 @@
  *   databases reproducing AIP France; to confirm against the AIRAC AIP), the EGNOS
  *   service and its GEOs (./geos), and the EGNOS ground sites shown, each named in a
  *   public source (docs/SOURCES.md, src/content/claims);
- * - simplified: only the ground sites this build could source are shown (EGNOS has
- *   about 40 RIMS); their positions are city-level, not the antenna sites;
+ * - simplified: only some of the ground sites are shown (EGNOS has 38 RIMS, SoL SDD
+ *   v3.6 §3.3.2.1); their positions are city-level, not the antenna sites;
  * - illustrative, and labelled so: the route's waypoints, the LPV procedure (RNP RWY 04L
  *   with LPV-200 minima, channel and FAS data as an example, not the published one) and
  *   which uplink station feeds which GEO.
@@ -85,14 +85,15 @@ const site = (kind: Station['kind'], code: string, name: string, latDeg: number,
   ...extra,
 })
 
-// TODO(expert-review): EGNOS ground sites. Only sites named in public sources this build could reach are shown
-// (search results quoting the EU Implementing Decision 2017/1406 on the location of the EGNOS ground infrastructure,
-// ESA, EUSPA and the EGNOS SoL SDD v3.6); confirm the list against the current EGNOS SoL SDD. Positions are the
-// cities', not the antennas'. The Azores site's island is not stated in those sources (shown at Ponta Delgada).
+// TODO(expert-review): EGNOS ground sites. The RIMS shown are in the 38-site network of the EGNOS SoL SDD v3.6
+// (Figure 3); the MCC and NLES sites are those of EU Implementing Decision 2017/1406. Positions are the cities', not
+// the antennas'. The Azores site's island is not stated in those sources (shown at Ponta Delgada).
 /**
- * The EGNOS ground segment shown: 11 RIMS (EGNOS has about 40), the two mission control
+ * The EGNOS ground segment shown: 9 RIMS (EGNOS has 38), the two mission control
  * centres (Torrejón, Spain, and Ciampino, Italy) and the navigation land earth stations
- * (NLES) that uplink the messages to the GEOs.
+ * (NLES) that uplink the messages to the GEOs. Alexandria and Kourou, named in the
+ * 2017 decision, are not in the current network (SoL SDD v3.5 removed the Egyptian
+ * RIMS; v3.6 Figure 3 has no Kourou), and the Finnish site is Lappeenranta (LAP).
  */
 export const STATIONS: readonly Station[] = [
   site('rims', 'TLS', 'Toulouse', 43.6, 1.44),
@@ -102,10 +103,8 @@ export const STATIONS: readonly Station[] = [
   site('rims', 'AZO', 'Azores', 37.74, -25.67),
   site('rims', 'SPC', 'La Palma', 28.68, -17.76),
   site('rims', 'ATH', 'Athens', 37.98, 23.73),
-  site('rims', 'ALY', 'Alexandria', 31.2, 29.92),
-  site('rims', 'VIR', 'Virolahti', 60.58, 27.7),
+  site('rims', 'LAP', 'Lappeenranta', 61.06, 28.19),
   site('rims', 'KUU', 'Kuusamo', 65.97, 29.18),
-  site('rims', 'KOU', 'Kourou', 5.16, -52.65),
   // Two MCCs; one leads at a time. Which one leads is the story's choice.
   site('mcc', 'TRJ', 'Torrejón', 40.46, -3.45, { role: 'primary' }),
   site('mcc', 'CIA', 'Ciampino', 41.8, 12.58, { role: 'backup', labelSide: 'right' }),

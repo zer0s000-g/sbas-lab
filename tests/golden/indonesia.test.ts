@@ -24,7 +24,8 @@ import { describe as describeView, viewModel } from '@/page/model'
 import { AIRPORTS } from '@/views/airports'
 import { terrainFtAt } from '@/views/terrain'
 import { OPERATIONS } from '@/core/operations'
-import { K_H_NPA, K_H_PA } from '@/core/receiver'
+import { K_H_NPA, K_H_PA, PBIAS } from '@/core/receiver'
+import { lateralFullScaleM } from '@/core/approach'
 import { formatMetres } from '@/lib/format'
 
 const round = (v: unknown): unknown => {
@@ -129,6 +130,87 @@ const GOLDEN_CHANGES: { why: string; apply: (g: Golden, now: Golden) => void }[]
   {
     why: 'Taxiway edge lights restarted their 60 m spacing on every segment of a taxi route (a pair about every 12 m along LAB201\'s tracks); the spacing now runs along the whole route.',
     apply: (g) => void (g.airports = 'ed3f51e99768a995518cb7d9245361095e7e5eed60a188284a509b7bb407df2e'),
+  },
+  // The AI check of the claims registry (src/content/claims/aiChecks.ts), October 2026.
+  {
+    why: 'sbas.raim: the RAIM protection-level factors are now √λ for a missed-detection probability of 1e-3 (7.51 … 8.92 for 1–10 degrees of freedom; the old 5.4 … 7.2 gave 0.08–0.16), so the GPS-alone HPL grows by the ratio of the two at its degrees of freedom: +30 % with the 8 satellites LAB201 tracks (8.20/6.3). Rule: recorded HPL × new/old factor (checked to 1e-9).',
+    apply: (g, now) => {
+      const OLD = [0, 5.4, 5.8, 6.1, 6.3, 6.5, 6.7, 6.8, 7.0, 7.1, 7.2]
+      type F = { hplM: number | string; used: string[]; mode: string } | null
+      for (const [id, p] of Object.entries(g.phases)) {
+        const m = p.model as { abas: F; nav: F }
+        const fresh = (now.phases[id].model as { abas: F }).abas?.hplM
+        if (!m.abas || typeof m.abas.hplM !== 'number') continue
+        const before = m.abas.hplM
+        const dof = Math.min(Math.max(m.abas.used.length - 4, 1), OLD.length - 1)
+        const want = (before * PBIAS[dof]) / OLD[dof]
+        const hpl = typeof fresh === 'number' && Math.abs(fresh - want) <= 1e-9 * want ? fresh : want
+        m.abas = { ...m.abas, hplM: hpl }
+        if (m.nav?.mode === 'abas' && m.nav.hplM === before) {
+          m.nav = { ...m.nav, hplM: hpl }
+          p.text = p.text.map((t) => t.replace(`Using GPS alone: HPL ${formatMetres(before)}.`, `Using GPS alone: HPL ${formatMetres(hpl)}.`))
+        }
+      }
+    },
+  },
+  {
+    why: 'sbas.abas-iono-sigma: the broadcast-model ionospheric σ is now Annex 10 App B 3.5.5.6.3.2 (max of T_iono/5 and F_pp·τ_vert, τ_vert by pierce-point latitude). Over Indonesia every pierce point LAB201 uses is within 20° of the equator and the T_iono/5 floor does not bind, so τ_vert stays 9 m and nothing recorded changes (no rewrite).',
+    apply: () => {},
+  },
+  {
+    why: 'iono.dip-equator: the magnetic equator is now IGRF-14 (2025.0), 2.5–3.3° further south over Indonesia than the map-read table, so the equatorial bands and every L1 ionospheric delay move. Changed: the GPS-alone and L1 SBAS position errors (by at most about 2 m), the L1 SBAS (PA) protection levels (by at most about 25 %), the ionospheric part of the error breakdown and the ground solution. Rule: those numbers only, each within those bounds, are taken from the fresh record; DFMC (ionosphere-free), the geometry, the GPS-alone HPL, the modes and every text stay as recorded.',
+    apply: (g, now) => {
+      g.ground = 'e72421082b59e75d78b9dbd15774eebabeb1479d267c1cd2a4184ed5720db7cf'
+      type Fix = Record<string, unknown> | null
+      const ERR = ['horizontalErrorM', 'verticalErrorM'] as const
+      // A fresh number within `ok` of the recorded one replaces it; otherwise the record keeps its value and the test fails.
+      const take = (rec: Record<string, unknown>, fresh: Record<string, unknown>, key: string, ok: (a: number, b: number) => boolean) => {
+        const a = rec[key]
+        const b = fresh[key]
+        if (typeof a === 'number' && typeof b === 'number' && ok(a, b)) rec[key] = b
+      }
+      const metres = (a: number, b: number) => Math.abs(a - b) <= 2.5
+      const share = (a: number, b: number) => Math.abs(a - b) <= 0.3 * Math.abs(a)
+      const errors = (rec: Fix, fresh: Fix) => {
+        if (!rec || !fresh) return
+        const e = rec.errorEnu as number[]
+        const f = fresh.errorEnu as number[]
+        rec.errorEnu = e.map((v, i) => (metres(v, f[i]) ? f[i] : v))
+        for (const k of ERR) take(rec, fresh, k, metres)
+      }
+      for (const [id, p] of Object.entries(g.phases)) {
+        const m = p.model as { abas: Fix; nav: Fix; l1Pa: Fix; detail?: { kind: string; parts?: { name: string; m: number }[] } }
+        const n = now.phases[id].model as typeof m
+        m.abas = m.abas && { ...m.abas }
+        errors(m.abas, n.abas)
+        if (m.nav?.mode === 'abas') {
+          m.nav = { ...m.nav }
+          errors(m.nav, n.nav)
+        }
+        m.l1Pa = m.l1Pa && { ...m.l1Pa }
+        errors(m.l1Pa, n.l1Pa)
+        if (m.l1Pa && n.l1Pa) for (const k of ['hplM', 'vplM']) take(m.l1Pa, n.l1Pa, k, share)
+        if (m.detail?.kind === 'errors' && m.detail.parts && n.detail?.parts) {
+          m.detail.parts = m.detail.parts.map((x, i) => (x.name === 'Ionosphere' && metres(x.m, n.detail!.parts![i].m) ? { ...x, m: n.detail!.parts![i].m } : x))
+        }
+      }
+    },
+  },
+  {
+    why: 'sbas.lpv-deviations: the LPV lateral full scale now widens at the constant angle the course width subtends at the azimuth reference point (305 m beyond the far end of the runway), not linearly at tan 2°/2 from the threshold; at 5 NM out on final it is about 1.5 times wider. Rule: recorded cross-track over the new full scale (checked to 1e-9).',
+    apply: (g, now) => {
+      for (const [id, p] of Object.entries(g.phases)) {
+        const d = p.model.dev as { alongTrackM: number; crossTrackM: number; lateralFs: number } | null | undefined
+        if (!d) continue
+        const want = Math.max(-1, Math.min(1, d.crossTrackM / lateralFullScaleM(105, d.alongTrackM)))
+        const fresh = (now.phases[id].model.dev as { lateralFs: number } | null)?.lateralFs
+        p.model.dev = { ...d, lateralFs: fresh !== undefined && Math.abs(fresh - want) <= 1e-9 * Math.max(Math.abs(want), 1e-12) ? fresh : want }
+      }
+    },
+  },
+  {
+    why: 'iono.storm: the storm failure no longer says the ionosphere gets "thicker" (a storm can lower the electron content as well as raise it); it says the delay changes fast and unevenly over a wide area.',
+    apply: (g) => void (g.failures = 'c926214afde04f965224225a1dcf30c901c2a7834ee5262f86af2ce52795984f'),
   },
 ]
 

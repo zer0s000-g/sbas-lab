@@ -27,7 +27,7 @@ export const ROLE_NOTES: Readonly<Record<Situation, Readonly<Record<Role, RoleNo
     pilot: { text: 'Before the flight, check the NOTAMs for LPV availability at the destination and the alternate. On final, the avionics annunciate LPV when EGNOS vertical guidance is within the alert limits.', claims: ['ops.notam', 'sbas.mode-annunciation'] },
     atco: { text: 'Clear LAB201 for the RNP approach as for any other. The ADS-B position it broadcasts carries its integrity, so the position on the screen can be trusted.', claims: ['ops.adsb'] },
     atsep: { text: 'An LPV approach needs no landing aid at the airport to maintain or flight-check. The conventional aids kept for reversion (ILS, DME, VOR) still need to be serviceable.', claims: ['sbas.no-airport-equipment', 'ops.gnss-loss-fallback'] },
-    provider: { text: 'ESSP monitors the EGNOS service, publishes service notices for changes such as a GEO entering service, and proposes NOTAMs to the NOTAM offices where APV-I is predicted unavailable.', claims: ['essp.provider', 'essp.notam-proposal', 'egnos.geos'] },
+    provider: { text: 'ESSP monitors the EGNOS service, publishes service notices for changes such as a GEO entering service, and proposes NOTAMs to the NOTAM offices where an EGNOS service level (here APV-I, for LPV) is predicted unavailable.', claims: ['essp.provider', 'essp.notam-proposal', 'egnos.geos'] },
   },
   storm: {
     pilot: { text: 'Expect LNAV minima instead of LPV at Nice. Plan with the higher minima, and check the alternate.', claims: ['iono.storm', 'ops.abas-lnav'] },
@@ -51,7 +51,7 @@ export const ROLE_NOTES: Readonly<Record<Situation, Readonly<Record<Role, RoleNo
     pilot: { text: 'If the outage takes LPV away at the destination, NOTAMs say so before the flight: plan LNAV minima.', claims: ['ops.notam'] },
     atco: { text: 'Expect LNAV approaches where the NOTAMs report LPV not available.', claims: ['ops.notam'] },
     atsep: { text: 'Nothing to do at the airport.', claims: ['sbas.no-airport-equipment'] },
-    provider: { text: 'ESSP publishes a service notice for the outage and proposes NOTAMs where APV-I is predicted unavailable.', claims: ['essp.notam-proposal'] },
+    provider: { text: 'ESSP publishes a service notice for the outage and proposes NOTAMs where an EGNOS service level (here APV-I) is predicted unavailable.', claims: ['essp.notam-proposal'] },
   },
   jamming: {
     pilot: { text: 'No GNSS position: report the interference to ATC and navigate with the inertial system, DME or an ILS where one exists.', claims: ['ops.gnss-loss-fallback'] },
@@ -69,7 +69,7 @@ export const ROLE_NOTES: Readonly<Record<Situation, Readonly<Record<Role, RoleNo
     pilot: { text: 'Nothing yet: EGNOS v3 DFMC is planned, not operational.', claims: ['egnos.v3-dfmc'] },
     atco: { text: 'Nothing yet: EGNOS v3 DFMC is planned, not operational.', claims: ['egnos.v3-dfmc'] },
     atsep: { text: 'Nothing yet: EGNOS v3 DFMC is planned, not operational.', claims: ['egnos.v3-dfmc'] },
-    provider: { text: 'EGNOS v3 is planned to add a dual-frequency multi-constellation service around 2028.', claims: ['egnos.v3-dfmc'] },
+    provider: { text: 'EGNOS v3 is planned to add a dual-frequency multi-constellation service, augmenting GPS and Galileo on L1 and L5; EUSPA’s 2026 roadmap places it in the early 2030s.', claims: ['egnos.v3-dfmc'] },
   },
 }
 
@@ -89,8 +89,10 @@ export const SERVICE_NOTICES: readonly { date: string; text: string; claims: rea
 export const EWA_FACTS = {
   asOf: 'March 2024',
   ewas: 85,
-  withAnsps: 46,
+  /** Of the EWAs, those with ATC providers (others are with AFIS and military ANSPs, air operators and aerodromes). */
+  withAtc: 46,
   procedures: 954,
+  airports: 523,
   claims: ['essp.ewa'] as readonly string[],
 }
 

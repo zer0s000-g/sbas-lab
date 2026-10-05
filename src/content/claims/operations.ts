@@ -1,10 +1,12 @@
 /** Claims about operations, air traffic management and the ionosphere, shared by both scenarios. */
 import { OPERATIONS } from '@/core/operations'
 import { IF_NOISE_FACTOR } from '@/core/errors'
+import { dipEquatorLatDeg } from '@/core/region'
 import type { Claim } from './types'
 
 const BOTH = ['indonesia', 'essp'] as const
 const D9849 = (section: string) => ({ source: 'icao-doc9849' as const, section })
+const A10 = (section: string) => ({ source: 'icao-annex10' as const, section })
 const T = OPERATIONS
 
 export const OPERATIONS_CLAIMS: readonly Claim[] = [
@@ -24,21 +26,22 @@ export const OPERATIONS_CLAIMS: readonly Claim[] = [
     id: 'ops.departure-row',
     topic: 'Operations and ATM',
     scenarios: BOTH,
-    text: 'Departure shares the row of initial, intermediate and non-precision approach: HAL 0.3 NM (556 m), 10 s to alert.',
-    refs: [{ source: 'icao-annex10', section: 'Table 3.7.2.4-1' }],
-    status: 'sourced',
+    text: 'Departure shares the row of initial, intermediate and non-precision approach in Annex 10 Table 3.7.2.4-1 (220 m accuracy, 10 s to alert). The SARPs give no alert limit for departure; the PBN Manual uses a 1 NM horizontal alert limit for the RNAV 1 and RNP 1 specifications used for departures, and the avionics value is set by RTCA DO-229 (to confirm).',
+    refs: [A10('Chapter 3 Table 3.7.2.4-1 and Note 2'), { source: 'icao-doc9613', section: 'Vol II Part B Ch. 3 §3.2.1.6; Part C Ch. 3 §3.2.1.2' }, { source: 'rtca-do229' }],
+    status: 'to-confirm',
     value: [555.6, 10],
-    unit: 'm, s',
+    unit: 'm (the HAL the page applies on departure, the NPA value), s',
     actual: () => [T.departure.halM, T.departure.ttaS],
     code: 'src/core/operations.ts',
-    note: 'Corrected in this build: the takeoff phase used the terminal limits (1.85 km, 15 s) before.',
+    todo: 'the departure HAL',
+    note: 'The page applies the NPA HAL (0.3 NM, 556 m) on departure, which no ICAO text states for departure; the earlier build used the terminal 1 NM (1.85 km), which the PBN Manual supports for RNAV 1/RNP 1 departures. A reviewer with DO-229 should fix the value.',
   },
   {
     id: 'ops.lnavvnav',
     topic: 'Operations and ATM',
     scenarios: BOTH,
     text: 'SBAS LNAV/VNAV alert limits: HAL 556 m, VAL 50 m.',
-    refs: [{ source: 'rtca-do229' }],
+    refs: [{ source: 'rtca-do229' }, { source: 'faa-waas-ps-2008' }, { source: 'icao-doc9613', section: 'Vol II, RNP APCH, 5.3.3.3.1.2 a) Note' }],
     status: 'to-confirm',
     value: [555.6, 50],
     unit: 'm',
@@ -47,22 +50,37 @@ export const OPERATIONS_CLAIMS: readonly Claim[] = [
     todo: 'SBAS LNAV/VNAV alert limits',
   },
   { id: 'ops.time-to-alert', topic: 'Operations and ATM', scenarios: BOTH, text: 'The time to alert is the longest time allowed from a fault to the alert in the cockpit.', refs: [D9849('§2.2.4.4')], status: 'sourced', code: 'src/core/messages.ts' },
-  { id: 'ops.adsb', topic: 'Operations and ATM', scenarios: BOTH, text: 'ADS-B broadcasts the GNSS position; its integrity, linked to the GNSS alert limits, lets the controller trust the position on the screen.', refs: [D9849('§1.4.3'), D9849('§2.2.4.6')], status: 'sourced' },
-  { id: 'ops.notam', topic: 'Operations and ATM', scenarios: BOTH, text: 'States verify SBAS performance and issue NOTAMs for degradations, using a service volume model.', refs: [D9849('§4.3.3.4.1')], status: 'sourced' },
-  { id: 'ops.gnss-loss-fallback', topic: 'Operations and ATM', scenarios: BOTH, text: 'On loss of GNSS: inertial systems, DME, VOR/DME, ILS and procedural control by ATC.', refs: [D9849('§7.13.2')], status: 'sourced' },
-  { id: 'ops.space-weather', topic: 'Operations and ATM', scenarios: BOTH, text: 'ICAO space weather advisories cover the ionosphere (total electron content and scintillation).', refs: [D9849('§7.13.3')], status: 'sourced' },
-  { id: 'ops.abas-lnav', topic: 'Operations and ATM', scenarios: BOTH, text: 'With GPS alone (ABAS) approaches go down to LNAV minima; there is no vertical protection level.', refs: [D9849('§1.4.2.2'), D9849('§4.2')], status: 'sourced' },
+  {
+    id: 'ops.adsb',
+    topic: 'Operations and ATM',
+    scenarios: BOTH,
+    text: 'ADS-B broadcasts the GNSS position with an integrity indicator (NIC) taken from the receiver’s horizontal protection level; the ground system checks it against what the surveillance service needs, so the controller can trust the position on the screen.',
+    refs: [D9849('§1.4.3'), D9849('§2.2.4.6')],
+    status: 'sourced',
+    note: 'NIC from the protection level is RTCA DO-260B / EUROCAE ED-102A practice, not read for this registry.',
+  },
+  { id: 'ops.notam', topic: 'Operations and ATM', scenarios: BOTH, text: 'States verify SBAS performance and issue NOTAMs for degradations, using a service volume model.', refs: [D9849('§4.3.3.4.1'), A10('Attachment D 6.2.6')], status: 'sourced' },
+  { id: 'ops.gnss-loss-fallback', topic: 'Operations and ATM', scenarios: BOTH, text: 'On loss of GNSS: inertial systems, DME (DME/DME updating), VOR/DME, ILS, radar (surveillance) and procedures by crews and ATC.', refs: [D9849('§7.13.2')], status: 'sourced' },
+  { id: 'ops.space-weather', topic: 'Operations and ATM', scenarios: BOTH, text: 'ICAO space weather advisories cover the ionosphere (total electron content and scintillation).', refs: [D9849('§7.13.3'), { source: 'icao-doc4444', section: '§9.1.3.8' }], status: 'sourced' },
+  {
+    id: 'ops.abas-lnav',
+    topic: 'Operations and ATM',
+    scenarios: BOTH,
+    text: 'With GPS alone (ABAS) the GNSS approach goes down to LNAV minima: GNSS gives no vertical protection level, so vertical guidance needs Baro-VNAV (LNAV/VNAV minima) or SBAS (LPV).',
+    refs: [D9849('§1.4.2.2'), D9849('§4.2')],
+    status: 'sourced',
+  },
   {
     id: 'atc.phraseology',
     topic: 'Operations and ATM',
     scenarios: ['essp'],
-    text: 'Radiotelephony for GNSS problems, as PANS-ATM gives it: a controller warns "GNSS REPORTED UNRELIABLE" (or "GNSS MAY NOT BE AVAILABLE [DUE TO INTERFERENCE]"); a crew that cannot fly an RNP procedure reports "UNABLE RNP".',
-    refs: [{ source: 'icao-doc4444', section: 'Chapter 12' }],
-    status: 'to-confirm',
-    note: 'Quoted from memory of PANS-ATM, not from the document: the build could not reach it. Check the exact words and their section in the current edition before use.',
+    text: 'Radiotelephony for GNSS problems, as PANS-ATM (Doc 4444 §12.3.1.14–12.3.1.15) gives it: a controller warns "GNSS REPORTED UNRELIABLE (or GNSS MAY NOT BE AVAILABLE [DUE TO INTERFERENCE]) IN THE VICINITY OF (location) (radius)" or "SBAS UNAVAILABLE FOR (specify operation)"; a crew whose navigation performance has degraded reports "UNABLE RNP (specify type) [DUE TO (reason)]".',
+    refs: [{ source: 'icao-doc4444', section: 'Chapter 12, §12.3.1.14, §12.3.1.15' }],
+    status: 'sourced',
+    note: 'Checked against the 16th edition incl. Amendment 8; "SBAS UNAVAILABLE FOR (specify operation)" shortens "BASIC GNSS (or SBAS, or GBAS) UNAVAILABLE FOR (specify operation) [FROM (time) TO (time) (or UNTIL FURTHER NOTICE)]". Later amendments to confirm.',
   },
   // The ionosphere.
-  { id: 'iono.storm', topic: 'Ionosphere', scenarios: BOTH, text: 'The ionospheric delay follows the sun; storms make the ionosphere thicker and less even.', refs: [D9849('§5.2.1.1'), D9849('§5.2.1.2')], status: 'sourced', code: 'src/core/iono.ts' },
+  { id: 'iono.storm', topic: 'Ionosphere', scenarios: BOTH, text: 'The ionospheric delay follows the sun (time of day, season, 11-year cycle); storms make it change fast and unevenly over wide areas.', refs: [D9849('§5.2.1.1'), D9849('§5.2.1.2')], status: 'sourced', code: 'src/core/iono.ts' },
   { id: 'iono.equatorial-l1', topic: 'Ionosphere', scenarios: BOTH, text: 'Near the magnetic equator, dense bands about 15° either side and post-sunset bubbles make single-frequency SBAS vertical guidance (APV, Category I) impractical.', refs: [D9849('§5.2.1.5'), D9849('§4.3.1.4')], status: 'sourced', code: 'src/core/iono.ts' },
   { id: 'iono.scintillation', topic: 'Ionosphere', scenarios: ['indonesia'], text: 'Severe scintillation is common near the equator after sunset; it is patchy, takes out a few satellites at a time and affects every frequency.', refs: [D9849('§5.2.1.3'), D9849('§5.2.1.4')], status: 'sourced', code: 'src/core/iono.ts' },
   {
@@ -92,12 +110,24 @@ export const OPERATIONS_CLAIMS: readonly Claim[] = [
     id: 'iono.dip-equator',
     topic: 'Ionosphere',
     scenarios: BOTH,
-    text: 'The magnetic (dip) equator is read approximately from IGRF maps every 15° of longitude (about 9–10°N over Indonesia).',
-    refs: [D9849('§5.2.1.5')],
+    text: 'The magnetic (dip) equator is taken from IGRF (epoch 2025) every 15° of longitude (about 7°N over Indonesia).',
+    refs: [{ source: 'igrf-14', section: 'inclination zero at ground level, epoch 2025.0' }, D9849('§5.2.1.5')],
     status: 'to-confirm',
+    value: [7.2, 6.8, 6.7],
+    unit: '°N at 90°E, 105°E, 120°E',
+    actual: () => [90, 105, 120].map(dipEquatorLatDeg),
+    tolerance: 1e-9,
     code: 'src/core/region.ts',
-    todo: 'dip-equator latitudes are read approximately from IGRF maps',
+    todo: 'dip-equator latitudes computed from IGRF-14',
+    note: 'The earlier table, read from maps, put the line 2.5–3.3° too far north over Indonesia. At the 350 km shell height the line differs by at most 0.25° over 90–140°E.',
   },
-  { id: 'dfmc.planned', topic: 'SBAS', scenarios: BOTH, text: 'Dual-frequency multi-constellation (DFMC) SBAS services are planned, not yet operational (WAAS about 2026, EGNOS from 2028).', refs: [D9849('§4.3.4.5')], status: 'sourced' },
-  { id: 'dfmc.equatorial-apv', topic: 'SBAS', scenarios: ['indonesia'], text: 'Dual-frequency SBAS makes approaches with vertical guidance possible in equatorial States.', refs: [D9849('§6.8.2')], status: 'sourced' },
+  {
+    id: 'dfmc.planned',
+    topic: 'SBAS',
+    scenarios: BOTH,
+    text: 'Dual-frequency multi-constellation (DFMC) SBAS services for aviation are planned, not yet operational: the FAA plans WAAS dual-frequency service in stages from about 2026 (limited) to about 2028 (final); EUSPA’s 2026 roadmap places the EGNOS v3 DFMC service (release V3.2) in the early 2030s.',
+    refs: [{ source: 'faa-cgsic-2026', section: 'WAAS Phase 4 Dual Frequency Operations status' }, { source: 'euspa-egnos-v3', section: 'EGNOS infrastructure and services roadmaps' }, D9849('§4.3.4.5')],
+    status: 'sourced',
+  },
+  { id: 'dfmc.equatorial-apv', topic: 'SBAS', scenarios: ['indonesia'], text: 'Dual-frequency SBAS is expected to make approaches with vertical guidance possible, with high availability, in equatorial States.', refs: [D9849('§6.8.2')], status: 'sourced' },
 ]

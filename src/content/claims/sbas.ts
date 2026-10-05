@@ -1,13 +1,14 @@
 /** Claims about how SBAS works, shared by both scenarios. */
-import { K_H_NPA, K_H_PA, K_V_PA } from '@/core/receiver'
-import { MASK_DEG, UDRE_TABLE_M, UDREI_DO_NOT_USE, UDREI_NOT_FOR_LPV, UDREI_NOT_MONITORED, sigmaUdreM } from '@/core/groundSegment'
-import { GIVE_TABLE_M, GIVEI_NOT_MONITORED, IGP_SPACING_DEG, IONO_SHELL_HEIGHT_M, sigmaGiveM } from '@/core/iono'
+import { K_H_NPA, K_H_PA, K_V_PA, PBIAS } from '@/core/receiver'
+import { MASK_DEG, UDRE_TABLE_M, UDREI_DO_NOT_USE, UDREI_NOT_MONITORED, sigmaUdreM, usableForPa } from '@/core/groundSegment'
+import { GIVE_TABLE_M, GIVEI_NOT_MONITORED, IGP_SPACING_DEG, IONO_SHELL_HEIGHT_M, sigmaGiveM, tauVertNoSbasM } from '@/core/iono'
 import { DFMC_MESSAGE_BITS, MESSAGE_BITS, MESSAGE_PERIOD_S, TIMEOUTS_S } from '@/core/messages'
-import { APPROACH_CHANNEL, crc32q } from '@/core/approach'
+import { APPROACH_CHANNEL, GARP_BEYOND_FPAP_M, crc32q } from '@/core/approach'
 import type { Claim } from './types'
 
 const BOTH = ['indonesia', 'essp'] as const
 const D9849 = (section: string) => ({ source: 'icao-doc9849' as const, section })
+const A10 = (section: string) => ({ source: 'icao-annex10' as const, section })
 
 export const SBAS_CLAIMS: readonly Claim[] = [
   { id: 'sbas.reference-stations', topic: 'SBAS', scenarios: BOTH, text: 'Reference stations at surveyed positions over a large area monitor the satellites and send their data to master stations.', refs: [D9849('§4.3.1.1')], status: 'sourced', code: 'src/core/groundSegment.ts' },
@@ -25,13 +26,15 @@ export const SBAS_CLAIMS: readonly Claim[] = [
     id: 'sbas.do-not-use',
     topic: 'SBAS',
     scenarios: BOTH,
-    text: '"Do Not Use" and "Not Monitored" satellites cannot be used with SBAS integrity; LP and LPV also need UDREI other than 13.',
-    refs: [D9849('§4.3.1.3')],
+    text: '"Do Not Use" (UDREI 15) and "Not Monitored" (UDREI 14) satellites cannot be used with SBAS integrity; for precision approach and APV (LNAV/VNAV, LPV) a satellite with UDREI 12 or 13 (UDRE 50 m or 150 m) cannot be used either.',
+    refs: [A10('Appendix B 3.5.8.1.2.12'), D9849('§4.3.1.3')],
     status: 'sourced',
-    value: [13, 14, 15],
-    unit: 'UDREI (not for LPV, Not Monitored, Do Not Use)',
-    actual: () => [UDREI_NOT_FOR_LPV, UDREI_NOT_MONITORED, UDREI_DO_NOT_USE],
+    value: [12, 14, 15],
+    unit: 'UDREI (first not usable for precision approach and APV, Not Monitored, Do Not Use)',
+    // The first UDREI the receiver rule (usableForPa) refuses for precision approach and APV.
+    actual: () => [UDRE_TABLE_M.findIndex((_, u) => !usableForPa(u)), UDREI_NOT_MONITORED, UDREI_DO_NOT_USE],
     code: 'src/core/groundSegment.ts',
+    note: 'Annex 10 states the rule for precision approach and APV; LP is left out until RTCA DO-229 is checked.',
   },
   {
     id: 'sbas.udre-table',
@@ -165,15 +168,15 @@ export const SBAS_CLAIMS: readonly Claim[] = [
     id: 'sbas.timeouts',
     topic: 'SBAS',
     scenarios: BOTH,
-    text: 'How long received data may be used: fast corrections 12 s for approaches with vertical guidance and 18 s otherwise, long-term corrections 240 s / 360 s, the ionospheric grid 600 s.',
-    refs: [{ source: 'rtca-do229', section: 'Table A-25' }, { source: 'eurocae-ed259' }],
+    text: 'How long received data may be used: the integrity data (UDREI) 12 s for precision approach and APV (LNAV/VNAV, LPV) and 18 s for en route, terminal and NPA; the fast corrections themselves time out after I_fc, set by the degradation factor in Message Type 7 (12 to 120 s for approach, 18 to 180 s otherwise); long-term corrections 240 s / 360 s; the ionospheric corrections 600 s.',
+    refs: [A10('Appendix B Table B-94, Table B-95, 3.5.8.1.2.8'), { source: 'rtca-do229', section: 'Table A-25' }, { source: 'eurocae-ed259' }],
     status: 'to-confirm',
     value: [12, 18, 240, 360, 600],
     unit: 's',
-    actual: () => [TIMEOUTS_S.fastCorrections.PA, TIMEOUTS_S.fastCorrections.NPA, TIMEOUTS_S.longTerm.PA, TIMEOUTS_S.longTerm.NPA, TIMEOUTS_S.iono.PA],
+    actual: () => [TIMEOUTS_S.udrei.PA, TIMEOUTS_S.udrei.NPA, TIMEOUTS_S.longTerm.PA, TIMEOUTS_S.longTerm.NPA, TIMEOUTS_S.iono.PA],
     code: 'src/core/messages.ts',
-    todo: 'message time-outs (RTCA DO-229, Table A-25)',
-    note: '12 s / 18 s are the time-outs of the integrity (UDREI) data; the fast-correction time-out itself follows from the MT7 degradation parameters. Check which the GEO-loss behaviour should use.',
+    todo: 'message time-outs',
+    note: 'The GEO-loss behaviour uses the UDREI time-outs. LP is not named in the Annex 10 columns, so it is not put in the 12 s column until DO-229 is checked. Annex 10 App B 3.5.8.1.2.7 adds that losing four successive messages during an approach with HAL ≤ 40 m or VAL ≤ 50 m invalidates all UDREI data.',
   },
   {
     id: 'sbas.alarm-latency',
@@ -211,18 +214,22 @@ export const SBAS_CLAIMS: readonly Claim[] = [
     id: 'sbas.raim',
     topic: 'SBAS',
     scenarios: BOTH,
-    text: 'GPS alone uses RAIM/FDE; its detection thresholds and protection-level factors are illustrative values (false-alarm probability about 10⁻⁵).',
-    refs: [D9849('§4.2')],
+    text: 'GPS alone uses RAIM/FDE; its detection thresholds and protection-level factors are illustrative values (false-alarm probability about 10⁻⁵ per epoch, missed-detection probability 10⁻³).',
+    refs: [D9849('§4.2'), { source: 'rtca-do229', section: '§2.1 FDE requirements' }],
     status: 'to-confirm',
+    value: [7.51, 7.81, 8.02, 8.2, 8.35, 8.49, 8.61, 8.72, 8.83, 8.92],
+    unit: '√λ for 1–10 degrees of freedom (non-central χ², Pfa 10⁻⁵, Pmd 10⁻³)',
+    actual: () => PBIAS.slice(1),
     code: 'src/core/receiver.ts',
     todo: 'RAIM/FDE thresholds are illustrative',
+    note: 'Recomputed in the AI check: the χ² thresholds (19.51 … 41.30) match Pfa 10⁻⁵; the earlier factors (5.4 … 7.2) gave a missed-detection probability of 0.08 to 0.16 and an HPL about 30 % too small. RTCA DO-229 states its false-alert requirement per hour, not per epoch (to confirm).',
   },
   {
     id: 'sbas.mask-angle',
     topic: 'SBAS',
     scenarios: BOTH,
-    text: 'Satellites below 5° elevation are not tracked, by the aircraft or by the reference stations.',
-    refs: [{ source: 'rtca-do229' }],
+    text: 'For SBAS approaches with vertical guidance, the avionics use only satellites at or above 5° elevation; the page applies the same 5° mask in every phase of flight and to the reference stations, as a simplification.',
+    refs: [A10('Appendix B 3.5.8.1.2.11'), { source: 'egnos-sol-sdd', section: '§6' }, { source: 'rtca-do229' }],
     status: 'to-confirm',
     value: 5,
     unit: 'degrees',
@@ -234,11 +241,15 @@ export const SBAS_CLAIMS: readonly Claim[] = [
     id: 'sbas.abas-iono-sigma',
     topic: 'SBAS',
     scenarios: BOTH,
-    text: 'GPS alone: the σ of the broadcast-model ionospheric residual is taken as 9 m vertically at low magnetic latitudes, times the obliquity.',
-    refs: [{ source: 'rtca-do229' }],
+    text: 'GPS alone: the σ of the broadcast-model ionospheric residual is the larger of T_iono/5 and τ_vert times the obliquity, with τ_vert = 9 m where the pierce point is within 20° of the equator, 4.5 m from 20° to 55° and 6 m beyond (the model Annex 10 gives for an SBAS receiver that is not applying SBAS ionospheric corrections; the page also uses it for GPS alone).',
+    refs: [A10('Appendix B 3.5.5.6.3.2'), { source: 'rtca-do229', section: 'Appendix J' }],
     status: 'to-confirm',
-    code: 'src/core/sbasWorld.ts',
+    value: [9, 4.5, 6],
+    unit: 'm (τ_vert for |φ_pp| ≤ 20°, 20–55°, beyond 55°)',
+    actual: () => [tauVertNoSbasM(10), tauVertNoSbasM(-40), tauVertNoSbasM(60)],
+    code: 'src/core/iono.ts',
     todo: 'σ of the single-frequency broadcast-model ionospheric residual',
+    note: 'The bands are on the geographic latitude of the pierce point (φ_pp), as Annex 10 defines them. The same σ serves L1 SBAS satellites outside the ionospheric grid and the service-area maps.',
   },
   {
     id: 'sbas.dfre',
@@ -256,8 +267,8 @@ export const SBAS_CLAIMS: readonly Claim[] = [
     id: 'sbas.fas-fields',
     topic: 'SBAS',
     scenarios: BOTH,
-    text: 'The FAS data block’s fields (operation type, provider, airport, runway, performance designator, reference path, threshold, glide path, threshold crossing height, course width, HAL, VAL), with a typical 105 m course width at the threshold.',
-    refs: [{ source: 'rtca-do229' }, { source: 'icao-annex10', section: 'Appendix B' }],
+    text: 'The FAS data block’s main fields (operation type, SBAS provider, airport, runway, approach performance designator, route indicator, reference path, landing threshold point, flight path alignment point, threshold crossing height, glide path angle, course width, HAL, VAL), with a typical 105 m course width at the threshold (80–143.75 m allowed).',
+    refs: [A10('Appendix B Table B-96'), { source: 'rtca-do229', section: 'Appendix D' }, { source: 'eurocontrol-fasdb' }],
     status: 'to-confirm',
     code: 'src/core/approach.ts',
     todo: 'FAS data block field set',
@@ -292,11 +303,15 @@ export const SBAS_CLAIMS: readonly Claim[] = [
     id: 'sbas.lpv-deviations',
     topic: 'SBAS',
     scenarios: BOTH,
-    text: 'LPV deviations: lateral full scale is the course width at the threshold, splaying out (capped at 2°); vertical full scale is a quarter of the glide path angle.',
-    refs: [{ source: 'rtca-do229' }],
+    text: 'LPV deviations: lateral full scale is the course width at the threshold and widens at a constant angle measured from the azimuth reference point 305 m beyond the flight path alignment point (an ILS-like splay, about 1.5–2° for a typical runway); vertical full scale is a quarter of the glide path angle.',
+    refs: [A10('Appendix B, FAS data block note; Attachment D 7.11.3.1–7.11.3.2, Figure D-15'), { source: 'rtca-do229' }],
     status: 'to-confirm',
+    value: 305,
+    unit: 'm (azimuth reference point beyond the FPAP)',
+    actual: () => GARP_BEYOND_FPAP_M,
     code: 'src/core/approach.ts',
-    todo: 'lateral splay (±2° cap)',
+    todo: 'LPV lateral full scale is limited to ±1 NM',
+    note: 'The page puts the flight path alignment point at the far end of the runway. Its ±1 NM limit on the lateral full scale is not in Annex 10 or Doc 8168 Vol II and is to be confirmed against RTCA DO-229; it never binds on the final approach shown.',
   },
   {
     id: 'sbas.decision-height',
@@ -308,15 +323,25 @@ export const SBAS_CLAIMS: readonly Claim[] = [
     code: 'src/core/approach.ts',
     todo: 'the LPV decision height is procedure-specific',
   },
-  { id: 'sbas.two-geos', topic: 'SBAS', scenarios: BOTH, text: 'LNAV/VNAV, LP and LPV need the avionics to track two SBAS satellites.', refs: [D9849('§4.3.2.10')], status: 'sourced', code: 'src/core/sbasWorld.ts', note: 'The model keeps LPV with one GEO and loses it when both are lost (after the time-out). Confirm that reading.' },
+  {
+    id: 'sbas.two-geos',
+    topic: 'SBAS',
+    scenarios: BOTH,
+    text: 'For LNAV/VNAV, LP and LPV the avionics must be able to track two SBAS satellites, so they can switch if one is lost; one satellite with current data is enough to fly the approach.',
+    refs: [D9849('§4.3.2.10'), D9849('Appendix G §2.4.1'), { source: 'egnos-sol-sdd', section: '§3.3.1' }],
+    status: 'sourced',
+    code: 'src/core/sbasWorld.ts',
+    note: 'The model keeps LPV with one GEO and loses it when both are lost (after the time-out).',
+  },
   { id: 'sbas.abas-fallback', topic: 'SBAS', scenarios: BOTH, text: 'Outside SBAS service, SBAS avionics fall back to ABAS (GPS alone with RAIM) automatically.', refs: [D9849('§4.3.4.3')], status: 'sourced', code: 'src/core/sbasWorld.ts navStatus' },
   { id: 'sbas.no-airport-equipment', topic: 'SBAS', scenarios: BOTH, text: 'SBAS approaches need no dedicated equipment at the airport.', refs: [D9849('§4.3.3.1')], status: 'sourced' },
   {
     id: 'sbas.cat1-200ft',
     topic: 'SBAS',
     scenarios: BOTH,
-    text: 'A 35 m VAL supports a 200 ft decision height (SBAS Category I, LPV-200); WAAS’s worst observed vertical error was 8.9 m in 1.76 billion samples.',
-    refs: [D9849('§4.3.3.3')],
+    text: 'A 35 m VAL supports a 200 ft decision height (LPV-200, equivalent to ILS Category I); in more than 1.76 billion WAAS observations with a VAL of 35 m or less, the largest signal-in-space vertical error was 8.9 m. Annex 10 requires a system-specific safety analysis before a VAL above 10 m is used.',
+    refs: [D9849('§4.3.3.3'), A10('Chapter 3 Table 3.7.2.4-1 Note 2; Attachment D 3.3.6')],
     status: 'sourced',
+    note: 'The statistic is quoted from Doc 9849 (3rd edition, §4.3.3.3); its section number in the 5th edition is to confirm.',
   },
 ]

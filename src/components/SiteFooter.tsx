@@ -1,5 +1,9 @@
 import { ShieldAlert } from 'lucide-react'
 import { SCENARIO } from '@/scenarios/active'
+import { ACTIVE_VIEW } from '@/page/view'
+
+const SYSTEMS_FOOTER =
+  'A summary for civil aviation from public documents; statuses and dates change with each provider’s notices. The page is not published or endorsed by any SBAS provider, ICAO or EUROCONTROL.'
 
 export const DISCLAIMER = 'For educational use only, not for operational use.'
 
@@ -11,7 +15,7 @@ export function SiteFooter() {
           <ShieldAlert className="size-4 shrink-0" aria-hidden />
           {DISCLAIMER}
         </p>
-        <p className="max-w-2xl">{SCENARIO.texts.footer}</p>
+        <p className="max-w-2xl">{ACTIVE_VIEW === 'systems' ? SYSTEMS_FOOTER : SCENARIO.texts.footer}</p>
       </div>
     </footer>
   )

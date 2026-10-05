@@ -42,6 +42,8 @@ describe(`the Sources sheet (${SCENARIO.id})`, () => {
     await screen.findAllByRole('article')
     fireEvent.click(screen.getByRole('radio', { name: 'Show the claims to confirm' }))
     expect(screen.getAllByRole('article')).toHaveLength(statusCounts(mine)['to-confirm'])
+    fireEvent.click(screen.getByRole('radio', { name: 'Show the claims checked by AI' }))
+    expect(screen.queryAllByRole('article')).toHaveLength(statusCounts(mine)['ai-checked'])
     fireEvent.click(screen.getByRole('radio', { name: 'Show the reviewed claims' }))
     expect(screen.queryAllByRole('article')).toHaveLength(0)
     expect(screen.getByText('No claims with this status.')).toBeTruthy()

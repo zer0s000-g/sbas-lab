@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { crc32q, deviations, fasCrc, fasValid, makeFasDataBlock, type FasDataBlock } from '@/core/approach'
+import { crc32q, deviations, fasCrc, fasValid, GARP_BEYOND_FPAP_M, LATERAL_FS_CAP_M, lateralFullScaleM, ltpToGarpM, makeFasDataBlock, type FasDataBlock } from '@/core/approach'
 import { DESTINATION, runwayToLocalNm } from '@/core/region'
 import { glidePathAltFt } from '@/core/flight'
 
@@ -39,5 +39,26 @@ describe('approach deviations', () => {
   })
   it('bad input gives no answer', () => {
     expect(deviations(b, Number.NaN, 0, 1000)).toBeNull()
+  })
+  it('lateral full scale: the course width at the threshold, widening at a constant angle from the GARP (Annex 10 Att D 7.11.3.1)', () => {
+    const garp = ltpToGarpM()
+    expect(GARP_BEYOND_FPAP_M).toBe(305)
+    expect(garp).toBe(DESTINATION.runwayLengthM + 305)
+    expect(lateralFullScaleM(b.courseWidthM, 0)).toBeCloseTo(b.courseWidthM, 9)
+    expect(lateralFullScaleM(b.courseWidthM, -500)).toBeCloseTo(b.courseWidthM, 9)
+    // The same angle at every distance: full scale over the distance to the GARP.
+    const angle = (d: number) => lateralFullScaleM(b.courseWidthM, d) / (d + garp)
+    for (const d of [1852, 5 * 1852, 10 * 1852]) expect(angle(d)).toBeCloseTo(angle(0), 12)
+    // About 1.5–2° for a 105 m course width and a runway of 2.5–3.5 km.
+    const deg = (Math.atan(angle(0)) * 180) / Math.PI
+    expect(deg).toBeGreaterThan(1.5)
+    expect(deg).toBeLessThan(2.2)
+    // The ±1 NM limit (to confirm against DO-229).
+    expect(lateralFullScaleM(b.courseWidthM, 200 * 1852)).toBe(LATERAL_FS_CAP_M)
+  })
+  it('the CDI uses that full scale: one full-scale deflection at 5 NM is the widened course width off the centreline', () => {
+    const fs = lateralFullScaleM(b.courseWidthM, 5 * 1852)
+    const d = deviations(b, ...runwayToLocalNm(DESTINATION, -5 * 1852, fs / 2), glidePathAltFt(5))!
+    expect(d.lateralFs).toBeCloseTo(0.5, 2)
   })
 })

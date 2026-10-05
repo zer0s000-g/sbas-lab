@@ -217,12 +217,15 @@ export function Segmented<T extends string>({
   options,
   onChange,
   className,
+  wrap = false,
 }: {
   label?: ReactNode
   value: T
   options: { value: T; label: ReactNode; ariaLabel?: string }[]
   onChange: (v: T) => void
   className?: string
+  /** Let the options wrap onto more rows when they do not fit (many or long options on a phone). */
+  wrap?: boolean
 }) {
   const id = useId()
   return (
@@ -237,7 +240,7 @@ export function Segmented<T extends string>({
         value={value}
         onValueChange={(v) => v && onChange(v as T)}
         aria-labelledby={label ? id : undefined}
-        className="flex w-full overflow-hidden rounded-[4px] border border-hud-line pointer-coarse:flex-wrap"
+        className={cn('flex w-full overflow-hidden rounded-[4px] border border-hud-line pointer-coarse:flex-wrap', wrap && 'flex-wrap gap-px bg-hud-line')}
       >
         {options.map((o, i) => (
           <ToggleGroupPrimitive.Item
@@ -246,7 +249,7 @@ export function Segmented<T extends string>({
             aria-label={o.ariaLabel}
             className={cn(
               'hud-value min-h-8 flex-1 px-2 text-[11px] tracking-wider text-muted-foreground uppercase outline-offset-[-2px] hover:text-foreground pointer-coarse:min-h-10 pointer-coarse:min-w-10',
-              i > 0 && 'border-l border-hud-line',
+              wrap ? 'min-w-fit bg-background' : i > 0 && 'border-l border-hud-line',
               'data-[state=on]:bg-foreground data-[state=on]:text-background',
             )}
           >

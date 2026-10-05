@@ -1,9 +1,14 @@
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { PageBoundary } from '@/components/RouteError'
 import { SiteFooter } from '@/components/SiteFooter'
 import { applyMotion, applyTheme, usePrefs } from '@/stores/prefs'
 import JourneyPage from '@/page/JourneyPage'
+import { ACTIVE_VIEW } from '@/page/view'
+import { lazyRetry } from '@/lib/lazyRetry'
+
+// The SBAS systems of the world (`?view=systems`): a page of its own, loaded only there.
+const SystemsPage = ACTIVE_VIEW === 'systems' ? lazyRetry(() => import('@/page/systems/SystemsPage')) : null
 
 function useThemeSync() {
   const theme = usePrefs((s) => s.theme)
@@ -22,7 +27,7 @@ function useMotionSync() {
   useEffect(() => applyMotion(override), [override])
 }
 
-/** The one page ("/"): LAB201's journey. */
+/** The one page ("/"): LAB201's journey, or the SBAS systems of the world (`?view=systems`). */
 export default function App() {
   useThemeSync()
   useMotionSync()
@@ -36,7 +41,13 @@ export default function App() {
       </a>
       <div className="flex min-h-dvh flex-col">
         <PageBoundary>
-          <JourneyPage />
+          {SystemsPage ? (
+            <Suspense fallback={<div className="min-h-dvh" aria-busy="true" />}>
+              <SystemsPage />
+            </Suspense>
+          ) : (
+            <JourneyPage />
+          )}
         </PageBoundary>
         <SiteFooter />
       </div>

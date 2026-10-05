@@ -121,7 +121,9 @@ describe('EGNOS as the scenario shows it', () => {
     expect(mcc.sort()).toEqual(['Ciampino', 'Torrejón'])
     expect(MASTER.kind).toBe('mcc')
     for (const g of GEO_SATS) expect(STATIONS.some((s) => s.kind === 'gus' && s.geoId === g.id)).toBe(true)
-    expect(RIMS_STATIONS.length).toBe(11)
+    // The RIMS shown are in the current 38-site network (SoL SDD v3.6 Figure 3): no Alexandria or Kourou, and the
+    // Finnish site is Lappeenranta.
+    expect(RIMS_STATIONS.map((s) => s.code).sort()).toEqual(['ATH', 'AZO', 'KUU', 'LAP', 'LIS', 'MAD', 'PAR', 'SPC', 'TLS'])
     expect(STATIONS.filter((s) => s.kind === 'gus').every((s) => s.code === 'NLES')).toBe(true)
   })
   it('the IGPs stay inside the band where DO-229 spaces them 5° apart (up to 55°)', () => {

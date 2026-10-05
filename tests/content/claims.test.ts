@@ -6,7 +6,8 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { CLAIMS, claim, claimsFor } from '@/content/claims'
+import { CLAIMS, claim, claimsFor, STATUS_LABEL } from '@/content/claims'
+import { AI_CHECKED_IDS } from '@/content/claims/aiChecks'
 import { renderClaimsCsv, renderExpertReview } from '@/content/claims/report'
 import { SOURCES } from '@/content/sources'
 import { ACTIVE_SCENARIO } from '@/scenarios/id'
@@ -43,7 +44,20 @@ describe('the claims registry', () => {
       expect(c.scenarios.length, c.id).toBeGreaterThan(0)
       if (c.status === 'reviewed') expect(c.review?.by && c.review.on, `${c.id} needs a reviewer and a date`).toBeTruthy()
       if (c.review) expect(c.status, c.id).toBe('reviewed')
+      if (c.status === 'ai-checked') {
+        expect(c.aiCheck, `${c.id} needs its AI check`).toBeDefined()
+        expect(c.aiCheck!.rationale.length, c.id).toBeGreaterThan(30)
+        expect(c.aiCheck!.checked.length, `${c.id}: what the AI check read`).toBeGreaterThan(0)
+        expect(c.aiCheck!.on, c.id).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      }
+      if (c.aiCheck) expect(c.status, `${c.id}: an AI check is shown only on a claim no person has signed off`).toBe('ai-checked')
     }
+  })
+
+  it('the AI check covers only claims that exist, and never stands in for a sign-off', () => {
+    const ids = new Set(CLAIMS.map((c) => c.id))
+    for (const id of AI_CHECKED_IDS) expect(ids.has(id), id).toBe(true)
+    expect(STATUS_LABEL['ai-checked']).not.toMatch(/review/i)
   })
 
   it(`every value it states matches the code (${ACTIVE_SCENARIO} scenario)`, () => {
@@ -64,12 +78,12 @@ describe('the claims registry', () => {
     expect(checked).toBeGreaterThan(10)
   })
 
-  it('every TODO(expert-review) in the code belongs to exactly one claim marked "to confirm", and the other way round', () => {
+  it('every TODO(expert-review) in the code belongs to exactly one claim still awaiting an expert, and the other way round', () => {
     expect(TODOS.length).toBeGreaterThan(30)
     for (const t of TODOS) {
       const owners = CLAIMS.filter((c) => c.todo && c.code && t.file === c.code.split(' ')[0] && t.text.includes(c.todo))
       expect(owners.map((c) => c.id), `${t.file}:${t.line} ${t.text.trim().slice(0, 90)}`).toHaveLength(1)
-      expect(owners[0].status, owners[0].id).toBe('to-confirm')
+      expect(['to-confirm', 'ai-checked'], owners[0].id).toContain(owners[0].status)
     }
     for (const c of CLAIMS.filter((x) => x.todo)) {
       const hits = TODOS.filter((t) => t.file === c.code!.split(' ')[0] && t.text.includes(c.todo!))

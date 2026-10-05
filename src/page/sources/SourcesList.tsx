@@ -1,17 +1,17 @@
 import { useMemo, useState } from 'react'
-import { CircleDashed, FileCheck2, ShieldCheck } from 'lucide-react'
+import { Bot, CircleDashed, FileCheck2, ShieldCheck } from 'lucide-react'
 import { Segmented } from '@/hud/Controls'
 import { cn } from '@/lib/utils'
-import { claimsFor, STATUS_LABEL, statusCounts, type Claim, type ClaimStatus, type ClaimTopic } from '@/content/claims'
+import { AI_MODEL, claimsFor, STATUSES, STATUS_LABEL, statusCounts, type Claim, type ClaimStatus, type ClaimTopic } from '@/content/claims'
 import { SOURCES } from '@/content/sources'
 import { SCENARIO } from '@/scenarios/active'
 import { useSources } from './store'
 
 type Filter = 'all' | ClaimStatus
 
-const STATUS_ICON: Record<ClaimStatus, typeof ShieldCheck> = { reviewed: ShieldCheck, sourced: FileCheck2, 'to-confirm': CircleDashed }
-const STATUS_TONE: Record<ClaimStatus, string> = { reviewed: 'text-success', sourced: 'text-foreground', 'to-confirm': 'text-brass' }
-const TOPICS: readonly ClaimTopic[] = ['EGNOS and ESSP', 'Operations and ATM', 'SBAS', 'Ionosphere', 'GNSS', 'Scenario data', 'Real signal']
+const STATUS_ICON: Record<ClaimStatus, typeof ShieldCheck> = { reviewed: ShieldCheck, 'ai-checked': Bot, sourced: FileCheck2, 'to-confirm': CircleDashed }
+const STATUS_TONE: Record<ClaimStatus, string> = { reviewed: 'text-success', 'ai-checked': 'text-signal', sourced: 'text-foreground', 'to-confirm': 'text-brass' }
+const TOPICS: readonly ClaimTopic[] = ['EGNOS and ESSP', 'Operations and ATM', 'SBAS', 'Ionosphere', 'GNSS', 'Scenario data', 'Real signal', 'SBAS worldwide', 'Training']
 
 /** A claim's status, as an icon and words (never colour alone). */
 export function StatusTag({ status }: { status: ClaimStatus }) {
@@ -23,6 +23,8 @@ export function StatusTag({ status }: { status: ClaimStatus }) {
     </span>
   )
 }
+
+const VERDICT = { confirmed: 'agrees with the source', corrected: 'corrected to the source', illustrative: 'a labelled simplification, fit for teaching' } as const
 
 function ClaimCard({ c }: { c: Claim }) {
   const value = c.value === undefined ? null : `${Array.isArray(c.value) ? c.value.join(', ') : c.value}${c.unit ? ` ${c.unit}` : ''}`
@@ -59,6 +61,14 @@ function ClaimCard({ c }: { c: Claim }) {
           Reviewed by {c.review.by}, {c.review.on}
         </p>
       )}
+      {c.aiCheck && (
+        <div className="mt-1.5 rounded-[4px] border border-hud-line p-2 text-[12px] leading-4">
+          <p className="hud-label normal-case text-signal">
+            Checked by an AI model ({c.aiCheck.model}), {c.aiCheck.on}: {VERDICT[c.aiCheck.verdict]}. Not a human sign-off.
+          </p>
+          <p className="mt-1 text-foreground/85">{c.aiCheck.rationale}</p>
+        </div>
+      )}
       {c.code && <p className="mt-1 font-mono text-[11px] text-muted-foreground">In the code: {c.code}</p>}
     </article>
   )
@@ -73,8 +83,8 @@ export default function SourcesList({ focus }: { focus: readonly string[] | null
   const shown = all.filter((c) => (focus ? focus.includes(c.id) : true) && (filter === 'all' || c.status === filter))
   return (
     <div className="flex flex-col gap-3 p-4">
-      <dl className="grid grid-cols-3 gap-2 text-center">
-        {(['reviewed', 'sourced', 'to-confirm'] as const).map((s) => (
+      <dl className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
+        {STATUSES.map((s) => (
           <div key={s} className="rounded-[4px] border border-hud-line p-2">
             <dt className="flex justify-center">
               <StatusTag status={s} />
@@ -85,16 +95,18 @@ export default function SourcesList({ focus }: { focus: readonly string[] | null
       </dl>
       {n.reviewed === 0 && (
         <p className="text-[12.5px] leading-5 text-foreground/85">
-          No claim has been signed off by a qualified GNSS/CNS engineer yet. "Sourced" means the source and section are identified; "To confirm" marks simplified or illustrative values and facts this build could not check against the primary document.
+          No claim has been signed off by a qualified GNSS/CNS engineer yet. "Checked by AI" means an AI model ({AI_MODEL}), prompted to act as a GNSS expert, checked the claim against its sources; a named expert still has to confirm it. "Sourced" means the source and section are identified; "To confirm" marks simplified or illustrative values and facts this build could not check against the primary document.
         </p>
       )}
       <Segmented
         label="Show"
         value={filter}
+        wrap
         onChange={setFilter}
         options={[
           { value: 'all', label: 'All', ariaLabel: 'Show all claims' },
           { value: 'to-confirm', label: 'To confirm', ariaLabel: 'Show the claims to confirm' },
+          { value: 'ai-checked', label: 'AI-checked', ariaLabel: 'Show the claims checked by AI' },
           { value: 'sourced', label: 'Sourced', ariaLabel: 'Show the sourced claims awaiting review' },
           { value: 'reviewed', label: 'Reviewed', ariaLabel: 'Show the reviewed claims' },
         ]}

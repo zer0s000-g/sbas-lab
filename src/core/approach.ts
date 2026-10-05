@@ -112,11 +112,37 @@ export interface Deviations {
 }
 
 /**
- * Deviations of a position from the final approach path. Lateral full scale is the
- * course width at the threshold, splaying with distance; vertical full scale is a
- * quarter of the glide path angle.
+ * The azimuth reference point (GARP) lies this far beyond the flight path alignment point
+ * (FPAP), m: the lateral deviations are angular about it (Annex 10 Vol I Att D 7.11.3.1).
  */
-// TODO(expert-review): lateral splay (±2° cap) and vertical full-scale (±0.25 GPA) definitions for LPV deviations.
+export const GARP_BEYOND_FPAP_M = 305
+
+/**
+ * Distance from the landing threshold to the GARP, m. The page puts the FPAP at the far
+ * end of the runway (ΔLength offset 0), so it is the runway length plus 305 m.
+ */
+export const ltpToGarpM = (runwayLengthM: number = DESTINATION.runwayLengthM) => runwayLengthM + GARP_BEYOND_FPAP_M
+
+/** The cap on the lateral full scale, m. */
+// TODO(expert-review): LPV lateral full scale is limited to ±1 NM here (not in Annex 10 or Doc 8168 Vol II; RTCA DO-229 to confirm).
+export const LATERAL_FS_CAP_M = 1852
+
+/**
+ * The lateral full-scale deflection at a distance before the threshold, m: the course
+ * width at the threshold, widening at the constant angle it subtends at the GARP (an
+ * ILS-like splay, Annex 10 Att D 7.11.3.1 and Figure D-15). Past the threshold it stays
+ * at the course width.
+ */
+export function lateralFullScaleM(courseWidthM: number, alongTrackM: number, garpM: number = ltpToGarpM()): number {
+  const d = Math.max(alongTrackM, 0)
+  return Math.min((courseWidthM * (d + garpM)) / garpM, LATERAL_FS_CAP_M)
+}
+
+/**
+ * Deviations of a position from the final approach path. Lateral full scale is the
+ * course width at the threshold, widening at a constant angle from the GARP; vertical
+ * full scale is a quarter of the glide path angle (Annex 10 Att D 7.11.3.2).
+ */
 export function deviations(b: FasDataBlock, eastNm: number, northNm: number, altFt: number): Deviations | null {
   if (![eastNm, northNm, altFt].every(isFiniteNumber)) return null
   const c = b.courseDeg * DEG
@@ -129,7 +155,7 @@ export function deviations(b: FasDataBlock, eastNm: number, northNm: number, alt
   const gpa = b.gpaDeg * DEG
   const pathHeightM = b.tchFt * M_PER_FT + Math.max(alongTrackM, 0) * Math.tan(gpa)
   const aboveGlidePathM = heightM - pathHeightM
-  const lateralHalfWidth = Math.min(b.courseWidthM + Math.max(alongTrackM, 0) * Math.tan(2 * DEG) * 0.5, 1852)
+  const lateralHalfWidth = lateralFullScaleM(b.courseWidthM, alongTrackM)
   const distance = Math.max(alongTrackM, 30)
   const verticalHalfAngle = 0.25 * gpa
   const clampFs = (v: number) => Math.max(-1, Math.min(1, v))

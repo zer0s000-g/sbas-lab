@@ -11,6 +11,21 @@ import { OBJECTIVES, QUESTIONS } from '@/scenarios/essp/questions'
 import { cn } from '@/lib/utils'
 import { useSources } from '../sources/store'
 import { useAssessment } from './assessmentStore'
+import { examSeedFromUrl } from './instructor'
+import { logAction, useSessionLog } from '@/journey/sessionLog'
+import { CURRICULUM_GAPS, CURRICULUM_LINKS, FRAMEWORKS, curriculaCsv } from '@/content/curricula'
+
+/** Hands the learner a file (the session log, the curriculum mapping). */
+function download(name: string, text: string, type: string) {
+  const url = URL.createObjectURL(new Blob([text], { type }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = name
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
 import { useExamLock } from './examLock'
 
 type Tab = 'quiz' | 'exam' | 'result'
@@ -105,7 +120,9 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
   const content = useRef<HTMLDivElement>(null)
   const refocus = () => requestAnimationFrame(() => content.current?.focus())
   const startExam = () => {
-    const plan = examPlan((Date.now() % 2_000_000_000) + 1, FAILURES)
+    // An instructor's link fixes the seed (`?seed=`), so a class gets the same hidden failure.
+    const plan = examPlan(examSeedFromUrl() ?? (Date.now() % 2_000_000_000) + 1, FAILURES)
+    logAction(engine, 'exam', `started (seed ${plan.seed})`)
     for (const f of FAILURES) engine.setFailure(f.id, false)
     engine.jumpTo(plan.phase)
     engine.setFailure(plan.failure, true)
@@ -119,6 +136,9 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
     const r = running
     end()
     engine.setFailure(r.failure, false)
+    const g = gradeExam(r, what, action)
+    logAction(engine, 'exam', `what failed: ${what === null ? 'no answer' : label(what)}`, g.whatRight)
+    logAction(engine, 'exam', `crew and controller: ${action === null ? 'no answer' : 'answered'}`, g.actionRight)
     saveExam({ seed: r.seed, what, action })
     setTab('result')
     refocus()
@@ -159,6 +179,8 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
                     className="flex-1"
                     onClick={() => {
                       checkQuiz()
+                      const g = gradeQuiz(QUESTIONS, useAssessment.getState().quizAnswers)
+                      logAction(engine, 'quiz', `quiz checked: ${g.correct} / ${g.max}`, g.correct / g.max >= PASS_MARK)
                       refocus()
                     }}
                   >
@@ -260,8 +282,42 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
                 <li key={o.id}>{o.text}</li>
               ))}
             </ul>
-            <p className="mt-1 text-[11.5px] text-muted-foreground">This page’s own objectives; a training organisation maps them to its syllabus.</p>
+            <p className="mt-1 text-[11.5px] text-muted-foreground">This page’s own objectives, mapped below to the curricula they serve.</p>
           </details>
+          <details className="mt-1">
+            <summary className="hud-label cursor-pointer">Curriculum mapping</summary>
+            <p className="mt-1 text-[11.5px] leading-4 text-muted-foreground">A proposed mapping, not approved by any authority; a training organisation confirms it against its own syllabus.</p>
+            {OBJECTIVES.map((o) => (
+              <div key={o.id} className="mt-2">
+                <p className="text-[12px] font-medium text-foreground">{o.text}</p>
+                <ul className="mt-0.5 flex flex-col gap-0.5 text-[11.5px] leading-4 text-foreground/85">
+                  {CURRICULUM_LINKS.filter((l) => l.objective === o.id).map((l, k) => (
+                    <li key={k}>
+                      <span className="hud-label normal-case text-brass">{FRAMEWORKS.find((f) => f.id === l.framework)?.short}</span> · {l.item} <span className="text-muted-foreground">({l.fit === 'full' ? 'covered' : 'partly covered'})</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+            <details className="mt-2">
+              <summary className="hud-label cursor-pointer">Not covered yet</summary>
+              <ul className="mt-1 list-disc pl-5 text-[11.5px] leading-4 text-foreground/85">
+                {CURRICULUM_GAPS.map((g, k) => (
+                  <li key={k}>{g}</li>
+                ))}
+              </ul>
+            </details>
+            <HudButton className="mt-2 w-full" onClick={() => download('sbas-lab-curriculum-mapping.csv', curriculaCsv(OBJECTIVES), 'text/csv')}>
+              Download the mapping (CSV)
+            </HudButton>
+          </details>
+          <HudButton
+            className="mt-1 w-full"
+            onClick={() => download(`sbas-lab-session-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.json`, JSON.stringify(useSessionLog.getState().log, null, 1), 'application/json')}
+          >
+            Export my session
+          </HudButton>
+          <p className="text-[11.5px] leading-4 text-muted-foreground">For your instructor’s debrief: what you did, on the journey clock. The file stays with you.</p>
         </div>
       )}
       </div>

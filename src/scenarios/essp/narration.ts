@@ -41,7 +41,7 @@ export const NARRATION: Readonly<Record<PhaseId, Narration>> = {
   },
   reference: {
     title: 'RIMS: watchers at known spots',
-    now: 'EGNOS has about 40 reference stations (RIMS), from the Canary Islands to Finland and beyond. The map shows the ones named in the public sources this page uses. Because each knows exactly where it is, every difference it measures is a satellite or ionosphere error.',
+    now: 'EGNOS has 38 reference stations (RIMS), from the Canary Islands, Madeira and the Azores to Svalbard and northern Finland, and beyond Europe. The map shows some of them. Because each knows exactly where it is, every difference it measures is a satellite or ionosphere error.',
     benefit: 'A network spread across a continent sees the errors that every aircraft over Europe would see.',
     source: 'Doc 9849 §4.3.1.1; EGNOS SoL SDD',
     claims: ['sbas.reference-stations', 'egnos.ground-segment', 'egnos.rims-sites'],
@@ -70,7 +70,7 @@ export const NARRATION: Readonly<Record<PhaseId, Narration>> = {
   cruise: {
     title: 'En route with integrity',
     now: 'Climbing to FL330 over the Gulf of Lion, the alert limit is 2 NM (3.7 km) with 5 minutes to alert. The EGNOS protection level is hundreds of times smaller.',
-    benefit: 'LAB201 broadcasts this position on ADS-B. Its integrity lets the controller trust the position shown on the screen.',
+    benefit: 'LAB201 broadcasts this position on ADS-B, with an integrity indicator taken from its protection level, so the controller can trust the position shown on the screen.',
     source: 'Doc 9849 Table 2-1, §1.4.3, §2.2.4.6',
     claims: ['ops.alert-limits', 'ops.adsb'],
   },
@@ -91,7 +91,7 @@ export const NARRATION: Readonly<Record<PhaseId, Narration>> = {
   landing: {
     title: 'Down at Nice',
     now: 'Touchdown on runway 04L at Nice Côte d’Azur, then the taxi to the terminal. EGNOS guided LAB201 from the gate in Toulouse to the gate in Nice.',
-    benefit: 'SBAS approaches give lower minima and vertical guidance without airport equipment. In Europe, an air navigation service provider that publishes them first signs an EGNOS Working Agreement with ESSP.',
+    benefit: 'SBAS approaches give lower minima and vertical guidance without airport equipment. In Europe, an air navigation service provider that publishes them must sign an EGNOS Working Agreement with ESSP.',
     source: 'Doc 9849 §4.3.3.1; ESSP EGNOS Working Agreements',
     claims: ['sbas.no-airport-equipment', 'essp.ewa'],
   },

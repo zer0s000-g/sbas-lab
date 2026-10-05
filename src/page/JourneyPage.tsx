@@ -11,6 +11,8 @@ import { PanelBoundary } from '@/components/PanelBoundary'
 import { ScenarioBar } from '@/components/ScenarioBar'
 import { SourcesButton, SourcesSheet } from './sources/SourcesSheet'
 import { lazyRetry } from '@/lib/lazyRetry'
+import { attachSessionLog, useSessionLog } from '@/journey/sessionLog'
+import { examSeedFromUrl } from './essp/instructor'
 import { SCENARIO } from '@/scenarios/active'
 import { cn } from '@/lib/utils'
 import { directionFor } from '@/journey/director'
@@ -25,6 +27,9 @@ import { JourneyStage, type ViewChoice } from './JourneyStage'
 // The ESSP-SAS scenario's own panels (Break something, Service provision, real signal,
 // assessment) load as one chunk, only in that scenario.
 const EsspToolkit = SCENARIO.id === 'essp' ? lazyRetry(() => import('./essp/Toolkit')) : null
+// The controller's view (both scenarios): its own chunk.
+const AtcPanel = lazyRetry(() => import('./atc/AtcPanel'))
+const ATC_INDEX = SCENARIO.id === 'essp' ? '13' : '08'
 
 /** The one page: LAB201 gate to gate (design.md §4). */
 export default function JourneyPage() {
@@ -36,6 +41,11 @@ export default function JourneyPage() {
     return getJourney({ guidedStops: usePrefs.getState().guidedStops, running: !reduced })
   })
   useEffect(() => engine.setGuidedStops(guidedStops), [engine, guidedStops])
+  // The session log for the instructor's debrief: what the learner does, on the journey clock.
+  useEffect(() => {
+    useSessionLog.getState().reset(SCENARIO.id, examSeedFromUrl())
+    return attachSessionLog(engine)
+  }, [engine])
   useAnimationFrame((dt) => engine.advance(dt))
   const phase = useJourneyState(engine, (s) => s.phase)
   const running = useJourneyState(engine, (s) => s.running)
@@ -124,11 +134,17 @@ export default function JourneyPage() {
         <EsspToolkit engine={engine} nowS={m.worldS} part={part} />
       </PanelBoundary>
     )
+  const atc = (
+    <PanelBoundary name="The controller’s view">
+      <AtcPanel engine={engine} index={ATC_INDEX} />
+    </PanelBoundary>
+  )
   const left = (
     <>
       <FlightCard m={m} />
       <NowPanel m={m} />
       {toolkit('left')}
+      {atc}
     </>
   )
   const right = (
@@ -184,6 +200,7 @@ export default function JourneyPage() {
                 <TabsTrigger value="cockpit">Cockpit</TabsTrigger>
                 <TabsTrigger value="signals">Signals</TabsTrigger>
                 {EsspToolkit && <TabsTrigger value="egnos">EGNOS</TabsTrigger>}
+                <TabsTrigger value="atc">ATC</TabsTrigger>
               </TabsList>
               <TabsContent value="now" className="mt-3 flex flex-col gap-3">
                 <NowPanel m={m} />
@@ -197,6 +214,9 @@ export default function JourneyPage() {
               </TabsContent>
               <TabsContent value="signals" className="mt-3 flex flex-col gap-3">
                 <SignalsPanel m={m} getPoints={() => points.current} />
+              </TabsContent>
+              <TabsContent value="atc" className="mt-3 flex flex-col gap-3">
+                {atc}
               </TabsContent>
               {EsspToolkit && (
                 <TabsContent value="egnos" className="mt-3 flex flex-col gap-3">

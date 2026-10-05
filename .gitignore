@@ -28,3 +28,4 @@ dist-ssr
 e2e-shots
 gpu-shots
 dist-scorm
+data-cache/

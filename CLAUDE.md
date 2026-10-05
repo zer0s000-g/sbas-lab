@@ -12,6 +12,14 @@ levels, and an LPV approach. Two scenarios, chosen from the tab bar:
 - ESSP-SAS (`/?scenario=essp`): Toulouse-Blagnac (LFBO) to Nice (LFMN) with
   EGNOS, plus its own panels: Break something, Service provision, Real EGNOS
   signal (a replayed 2011 recording) and Assessment (SCORM export).
+- SBAS worldwide (`/?view=systems`, src/page/systems): every SBAS for civil
+  aviation (src/content/sbasSystems.ts), its service area (approximate), status and
+  services, and the end-to-end chain as a stepped animation. No 3D stage.
+Both scenarios have the controller's view (src/page/atc, arrivals from
+src/core/traffic + src/scenarios/traffic.ts). The ESSP-SAS scenario also has the
+service-area map of a real day (src/page/essp/ServiceMapPanel, data in
+src/data/servicemap) and, with `?instructor`, the instructor panel (exam seed, session
+debrief; `?seed=N` fixes the exam). Every session is logged (src/journey/sessionLog.ts).
 What to teach: docs/SBAS_CONTENT.md. Prompts: docs/SBAS_Lab_Prompt_Pack.md.
 Claims and their review status: src/content/claims (docs/EXPERT_REVIEW.md).
 
@@ -31,8 +39,17 @@ One route (/). Static site on GitHub Pages.
   runs the suite once per scenario (projects in vite.config.ts).
 - Every fact the page shows is a claim in src/content/claims with its sources
   and status. A claim's value must match the code (tested). Every
-  `// TODO(expert-review):` belongs to one "to-confirm" claim. After changing
-  a claim run `npm run claims` (docs/EXPERT_REVIEW.md, docs/claims.csv).
+  `// TODO(expert-review):` belongs to one "to-confirm" or "ai-checked" claim. After
+  changing a claim run `npm run claims` (docs/EXPERT_REVIEW.md, docs/claims.csv).
+- Statuses: "reviewed" only for a named, qualified person. "ai-checked" means an AI
+  model checked it against the sources (src/content/claims/aiChecks.ts: verdict,
+  reason, what it read); never present it as an expert sign-off. When a claim's
+  text or value changes, check it again or remove its aiChecks entry.
+- Real data (service-area map): scripts/data/fetch-bkg.mjs fetches one day from the
+  BKG GNSS Data Center gently (one file at a time, pauses, local cache data-cache/,
+  never committed); scripts/data/build-service-map.mjs reduces it to
+  src/data/servicemap/ (≤ 150 kB gzip, lazy). Real EGNOS messages (EMS/EDAS files in
+  data-cache/egnos/<day>/) replace the modelled corrections when present.
 - The page is one interactive journey (design.md §4). The journey is a
   deterministic, fixed-tick state machine (src/journey/phases.ts) with tests.
 - One world model, one clock, one set of units: metres and seconds for GNSS
@@ -86,7 +103,7 @@ bundle budget) · npm run claims leaves the docs unchanged · screenshots at
 1440/768/390 in dark and light, both scenarios · axe with zero violations ·
 node scripts/verify/gpu-render.mjs on the real GPU for any shader or stage
 change (SCENARIO=essp too) · node scripts/verify/page-e2e.mjs (layout, stops,
-keyboard, reduced, scenario, essp, scorm).
+keyboard, reduced, scenario, essp, scorm, systems, servicemap, atc, instructor).
 
 ## Deploy
 Push finished work to main; GitHub Actions builds and deploys GitHub Pages.
@@ -94,5 +111,6 @@ Do not wait for or check the Pages deployment after pushing.
 
 ## Commands
 npm run dev | npm run test | npm run build | npm run typecheck |
+node scripts/data/fetch-bkg.mjs && node scripts/data/build-service-map.mjs (the map) |
 npm run claims (regenerate the review docs) | npm run scorm (SCORM 1.2 package
 of the ESSP-SAS scenario in dist-scorm/)

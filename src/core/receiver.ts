@@ -96,8 +96,14 @@ export function dMajor(cov: Matrix): number {
 }
 
 // TODO(expert-review): RAIM/FDE thresholds are illustrative: χ² quantiles for Pfa ≈ 1e-5 by degrees of freedom, and the matching √λ (pbias) for the missed-detection probability.
-const CHI2_THRESHOLD = [0, 19.5, 23.0, 25.9, 28.5, 30.9, 33.1, 35.3, 37.3, 39.3, 41.3]
-const PBIAS = [0, 5.4, 5.8, 6.1, 6.3, 6.5, 6.7, 6.8, 7.0, 7.1, 7.2]
+/** Detection threshold on the test statistic: the χ² quantile for a false-alarm probability of 1e-5 per epoch, by degrees of freedom (n − 4). */
+export const CHI2_THRESHOLD = [0, 19.5, 23.0, 25.9, 28.5, 30.9, 33.1, 35.3, 37.3, 39.3, 41.3]
+/**
+ * √λ: the non-centrality at which a fault reaches the threshold above with a
+ * missed-detection probability of 1e-3 (non-central χ², same degrees of freedom). The
+ * RAIM HPL is the largest slope times this.
+ */
+export const PBIAS = [0, 7.51, 7.81, 8.02, 8.2, 8.35, 8.49, 8.61, 8.72, 8.83, 8.92]
 const tableAt = (t: readonly number[], dof: number) => t[Math.min(Math.max(dof, 1), t.length - 1)]
 
 function testStatistic(meas: readonly Measurement[], sol: Solution): number {

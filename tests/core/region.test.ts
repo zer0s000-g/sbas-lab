@@ -132,6 +132,9 @@ describe('time and the magnetic equator', () => {
     const javaMag = DEPARTURE.threshold.latDeg - dipEquatorLatDeg(DEPARTURE.threshold.lonDeg)
     expect(javaMag).toBeLessThan(-12)
     expect(javaMag).toBeGreaterThan(-19)
+    // IGRF-14 at 2025.0 (inclination zero, ground level): within a quarter of a degree over Indonesia.
+    const igrf: [number, number][] = [[95, 7.11], [100, 6.96], [106.8, 6.68], [110, 6.57], [115, 6.52], [120, 6.66], [125, 6.96]]
+    for (const [lon, lat] of igrf) expect(Math.abs(dipEquatorLatDeg(lon) - lat), String(lon)).toBeLessThan(0.25)
     expect(dipEquatorLatDeg(-180)).toBeCloseTo(dipEquatorLatDeg(180), 9)
     expect(Number.isFinite(dipEquatorLatDeg(359))).toBe(true)
   })

@@ -3,6 +3,7 @@
 //   npm run build && npx vite preview --port 4173 &
 //   node scripts/verify/page-e2e.mjs              # everything
 //   ONLY=layout node scripts/verify/page-e2e.mjs  # one group: layout | stops | keyboard | reduced | scenario | essp | scorm
+//                                                 #   | systems | servicemap | atc | instructor
 //   SCENARIOS=essp node scripts/verify/page-e2e.mjs   # layout for one scenario (default: indonesia,essp)
 //
 // CHROME sets the browser; GL_ARGS its GPU flags (default Metal; on Linux without a GPU:
@@ -57,8 +58,9 @@ async function open(size, theme, opts = {}) {
   })
   page.on('pageerror', (e) => errors.push('pageerror ' + e.message))
   await page.goto(HOST + (opts.path ?? urlOf(opts.scenario ?? 'indonesia')), { waitUntil: 'load' })
-  await page.waitForFunction(() => { const c = document.querySelector('canvas[data-engine]'); return c && c.width > 200 && c.height > 150 }, null, { timeout: 30000 }).catch(() => errors.push('stage canvas never sized'))
-  await page.waitForTimeout(3000)
+  // The systems page (`?view=systems`) has no 3D stage.
+  if (!opts.noStage) await page.waitForFunction(() => { const c = document.querySelector('canvas[data-engine]'); return c && c.width > 200 && c.height > 150 }, null, { timeout: 30000 }).catch(() => errors.push('stage canvas never sized'))
+  await page.waitForTimeout(opts.noStage ? 1200 : 3000)
   return { ctx, page, errors, width, height }
 }
 
@@ -167,7 +169,7 @@ try {
       seen.add(info.label)
       if (!info.ring) ringMissing.push(info.label)
     }
-    const needed = ['Pause the journey', 'Display and motion settings', 'Sources and review status', 'AirNav Indonesia', 'ESSP-SAS', 'View:', 'Camera: follow', 'Camera: reset', 'Phase 1: Gate', 'Phase 12: Landing', 'Automatic time-lapse', 'Guided stops']
+    const needed = ['Pause the journey', 'Display and motion settings', 'Sources and review status', 'AirNav Indonesia', 'ESSP-SAS', 'SBAS worldwide', 'View:', 'Camera: follow', 'Camera: reset', 'Phase 1: Gate', 'Phase 12: Landing', 'Automatic time-lapse', 'Guided stops']
     const missing = needed.filter((n) => ![...seen].some((s) => s.startsWith(n)))
     check(missing.length === 0, `Tab reaches the controls (${seen.size} stops)${missing.length ? '; missing ' + missing.join(', ') : ''}`)
     ringMissing = [...new Set(ringMissing)]
@@ -294,6 +296,158 @@ try {
     check((await course.getByText(/Result sent to your learning management system/).count()) === 1, 'SCORM: the page says the result was sent')
     check(errors.length === 0, `SCORM: no page errors${errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''}`)
     await ctx.close()
+  }
+
+  // The new pages and panels: the same size, theme, axe, scroll and focus checks.
+  const sideways = (page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  async function tabPass(page, label, needed, presses = 80) {
+    const seen = new Set()
+    const ringMissing = new Set()
+    for (let i = 0; i < presses; i++) {
+      await page.keyboard.press('Tab')
+      const info = await page.evaluate(() => {
+        const el = document.activeElement
+        if (!el || el === document.body) return null
+        const cs = getComputedStyle(el)
+        const label = el.getAttribute('aria-label') || el.textContent?.trim().slice(0, 40) || el.tagName
+        return { label, ring: (cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0) || (cs.boxShadow !== 'none' && cs.boxShadow !== '') }
+      })
+      if (!info) continue
+      seen.add(info.label)
+      if (!info.ring) ringMissing.add(info.label)
+    }
+    const missing = needed.filter((n) => ![...seen].some((s) => s.startsWith(n)))
+    check(missing.length === 0, `${label}: Tab reaches the controls${missing.length ? '; missing ' + missing.join(', ') : ''}`)
+    check(ringMissing.size === 0, `${label}: every focused control shows a focus ring${ringMissing.size ? ': missing on ' + [...ringMissing].slice(0, 5).join(', ') : ''}`)
+  }
+
+  if (!ONLY || ONLY === 'systems') {
+    for (const size of ['1440x900', '768x1024', '390x844'])
+      for (const theme of ['dark', 'light']) {
+        const tag = `systems ${size} ${theme}`
+        const { ctx, page, errors } = await open(size, theme, { path: '/?view=systems', noStage: true })
+        check((await sideways(page)) <= 0, `${tag}: no sideways scroll`)
+        check((await page.getByRole('img', { name: /World map of SBAS service areas/ }).count()) === 1, `${tag}: the world map shows`)
+        await axe(page, tag)
+        await page.screenshot({ path: `${OUT}/systems-${size}-${theme}.png`, fullPage: true })
+        check(errors.length === 0, `${tag}: no console errors${errors.length ? ': ' + [...new Set(errors)].slice(0, 3).join(' | ') : ''}`)
+        await ctx.close()
+      }
+    const { ctx, page, errors } = await open('1440x900', 'dark', { path: '/?view=systems', noStage: true })
+    const nav = page.getByRole('navigation', { name: 'Scenario' })
+    check((await nav.getByRole('link', { name: /SBAS worldwide/ }).getAttribute('aria-current')) === 'page', 'systems: the SBAS worldwide tab is current')
+    await page.getByRole('button', { name: /^WAAS/ }).first().click()
+    check((await page.getByRole('img', { name: /WAAS highlighted/ }).count()) === 1, 'systems: choosing WAAS highlights its area')
+    const caption = page.getByText(/^Step \d of 7/)
+    const c0 = await caption.innerText()
+    await page.waitForTimeout(3600)
+    check((await caption.innerText()) !== c0, 'systems: the chain animation moves on by itself')
+    await page.getByRole('button', { name: 'Pause the animation' }).click()
+    const c1 = await caption.innerText()
+    await page.waitForTimeout(3600)
+    check((await caption.innerText()) === c1, 'systems: Pause holds the chain')
+    await tabPass(page, 'systems', ['AirNav Indonesia', 'ESSP-SAS', 'SBAS worldwide', 'Sources and review status', 'WAAS', 'EGNOS', 'Previous step', 'Play the animation', 'Next step'])
+    await nav.getByRole('link', { name: /ESSP-SAS/ }).click()
+    await page.waitForURL((u) => u.search.includes('scenario=essp') && !u.search.includes('view'))
+    ok('systems: a scenario tab goes back to the journey')
+    check(errors.length === 0, `systems: no console errors${errors.length ? ': ' + [...new Set(errors)].slice(0, 3).join(' | ') : ''}`)
+    await ctx.close()
+    const r = await open('1440x900', 'dark', { path: '/?view=systems', noStage: true, reduced: true })
+    const rc = r.page.getByText(/^Step \d of 7/)
+    const r0 = await rc.innerText()
+    await r.page.waitForTimeout(3600)
+    check((await rc.innerText()) === r0, 'systems, reduced motion: the chain waits for the learner')
+    await r.page.getByRole('button', { name: 'Next step' }).click()
+    check((await rc.innerText()) !== r0, 'systems, reduced motion: Next steps through it')
+    await r.ctx.close()
+  }
+
+  if (!ONLY || ONLY === 'servicemap') {
+    for (const size of ['1440x900', '390x844'])
+      for (const theme of ['dark', 'light']) {
+        const tag = `service map ${size} ${theme}`
+        const { ctx, page, errors } = await open(size, theme, { scenario: 'essp' })
+        if (size === '390x844') await page.getByRole('tab', { name: 'EGNOS' }).click()
+        const map = page.getByRole('img', { name: /availability .* over Europe/ })
+        await map.first().waitFor({ timeout: 20000 }).then(() => ok(`${tag}: the map of the real day loads`), () => fail(`${tag}: the map did not load`))
+        check(/real gps orbits and euref stations/i.test(await page.getByText(/Real GPS orbits and EUREF stations/i).first().innerText()), `${tag}: the honesty label shows`)
+        const panel = page.getByText('Service-area map', { exact: true }).first().locator('xpath=ancestor::section[1]')
+        await panel.scrollIntoViewIfNeeded()
+        await panel.screenshot({ path: `${OUT}/servicemap-${size}-${theme}.png` })
+        await page.getByRole('radio', { name: 'Show availability at the chosen time' }).click()
+        const slider = page.getByRole('slider').last()
+        await slider.focus()
+        await page.keyboard.press('ArrowRight')
+        check(/UTC/.test((await slider.getAttribute('aria-valuetext')) ?? ''), `${tag}: the time slider works by keyboard`)
+        await page.getByRole('radio', { name: 'Show APV-I availability' }).click()
+        check((await map.first().getAttribute('aria-label'))?.startsWith('APV-I'), `${tag}: the operation switch redraws the map`)
+        check((await sideways(page)) <= 0, `${tag}: no sideways scroll`)
+        await axe(page, tag)
+        check(errors.length === 0, `${tag}: no console errors${errors.length ? ': ' + [...new Set(errors)].slice(0, 3).join(' | ') : ''}`)
+        await ctx.close()
+      }
+  }
+
+  if (!ONLY || ONLY === 'atc') {
+    for (const scenario of SCENARIOS) {
+      const { ctx, page, errors } = await open('1440x900', 'dark', { scenario })
+      const tag = `ATC ${scenario}`
+      await page.getByRole('button', { name: /pause the journey/i }).click()
+      await phaseButton(page, 'final').click()
+      await page.waitForTimeout(1500)
+      const scope = page.getByRole('img', { name: /Approach scope around/ })
+      await scope.waitFor({ timeout: 15000 }).then(() => ok(`${tag}: the approach scope shows`), () => fail(`${tag}: no approach scope`))
+      await page.getByRole('button', { name: 'No action needed' }).click()
+      check((await page.getByText('Right call').count()) === 1, `${tag}: with nothing broken, no action is the right call`)
+      // ESSP-SAS breaks things in its Break panel; the other scenario in the controller's view.
+      if (scenario === 'essp') await page.getByRole('switch', { name: /interference/i }).first().click()
+      else await page.getByRole('radio', { name: /Outage: GPS jamming/ }).click()
+      await page.waitForTimeout(2500)
+      check(/flagged/.test((await scope.getAttribute('aria-label')) ?? '') && !/None flagged/.test((await scope.getAttribute('aria-label')) ?? ''), `${tag}: jamming flags the GNSS arrivals`)
+      await page.getByRole('button', { name: 'Warn: GNSS unreliable' }).click()
+      check((await page.getByText('Right call').count()) === 1 && (await page.getByText(/GNSS REPORTED UNRELIABLE/).count()) >= 1, `${tag}: "GNSS reported unreliable" is the right call under jamming`)
+      const panel = page.getByText('Controller’s view', { exact: true }).first().locator('xpath=ancestor::section[1]')
+      await panel.scrollIntoViewIfNeeded()
+      await panel.screenshot({ path: `${OUT}/atc-${scenario}.png` })
+      await axe(page, tag)
+      check(errors.length === 0, `${tag}: no console errors${errors.length ? ': ' + [...new Set(errors)].slice(0, 3).join(' | ') : ''}`)
+      await ctx.close()
+    }
+  }
+
+  if (!ONLY || ONLY === 'instructor') {
+    const { ctx, page, errors } = await open('1440x900', 'dark', { path: '/?scenario=essp&instructor&seed=1234' })
+    const tag = 'instructor'
+    await page.getByText('Instructor', { exact: true }).first().waitFor({ timeout: 15000 }).then(() => ok(`${tag}: the instructor panel shows with ?instructor`), () => fail(`${tag}: no instructor panel`))
+    check((await page.getByLabel('Exam seed').inputValue()) === '1234', `${tag}: the seed comes from the link`)
+    await page.getByRole('radio', { name: /^Exam$/ }).click()
+    await page.getByRole('button', { name: 'Start the exam' }).click()
+    await page.waitForTimeout(800)
+    const failed1 = await page.evaluate(() => JSON.stringify([...document.querySelectorAll('[role="switch"][aria-checked="true"]')].map((e) => e.getAttribute('aria-label'))))
+    await page.getByRole('group', { name: /What failed/ }).getByRole('radio').first().click()
+    await page.getByRole('group', { name: /What do the crew/ }).getByRole('radio').first().click()
+    await page.getByRole('button', { name: 'Hand in the exam' }).click()
+    await page.waitForTimeout(500)
+    const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export my session' }).click()])
+    const path = `${OUT}/session-log.json`
+    await download.saveAs(path)
+    const log = JSON.parse(readFileSync(path, 'utf8'))
+    check(log.format === 'sbas-lab-session/1' && log.seed === 1234 && log.entries.some((e) => e.event.area === 'exam'), `${tag}: the exported session holds the seed and the exam`)
+    await page.getByLabel('Load a learner’s session').setInputFiles(path)
+    await page.getByText(/Debrief/).first().waitFor({ timeout: 5000 }).then(() => ok(`${tag}: the debrief opens from a loaded session`), () => fail(`${tag}: no debrief`))
+    const panel = page.getByText('Instructor', { exact: true }).first().locator('xpath=ancestor::section[1]')
+    await panel.screenshot({ path: `${OUT}/instructor.png` })
+    await axe(page, tag)
+    check(errors.length === 0, `${tag}: no console errors${errors.length ? ': ' + [...new Set(errors)].slice(0, 3).join(' | ') : ''}`)
+    await ctx.close()
+    // The same seed gives the same exam failure.
+    const again = await open('1440x900', 'dark', { path: '/?scenario=essp&instructor&seed=1234' })
+    await again.page.getByRole('radio', { name: /^Exam$/ }).click()
+    await again.page.getByRole('button', { name: 'Start the exam' }).click()
+    await again.page.waitForTimeout(800)
+    const failed2 = await again.page.evaluate(() => JSON.stringify([...document.querySelectorAll('[role="switch"][aria-checked="true"]')].map((e) => e.getAttribute('aria-label'))))
+    check(failed1 === failed2, `${tag}: the same seed hides the same failure`)
+    await again.ctx.close()
   }
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error))

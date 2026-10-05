@@ -131,6 +131,29 @@ export function broadcastModelSlantL1(trueSlantL1M: number, latDeg: number, lonD
 }
 
 /**
+ * τ_vert, the vertical σ of the broadcast-model ionospheric residual, by the geographic
+ * latitude of the pierce point φ_pp (Annex 10 Vol I App B 3.5.5.6.3.2): 9 m for
+ * |φ_pp| ≤ 20°, 4.5 m for 20° < |φ_pp| ≤ 55°, 6 m beyond. m.
+ */
+export function tauVertNoSbasM(ppLatDeg: number): number {
+  const a = Math.abs(ppLatDeg)
+  return a <= 20 ? 9 : a <= 55 ? 4.5 : 6
+}
+
+/**
+ * σ of the ionospheric error when no SBAS ionospheric correction is applied (the GPS
+ * broadcast model), along the line of sight, m: the larger of T_iono/5 and F_pp·τ_vert,
+ * where T_iono is the broadcast model's slant delay estimate and F_pp the obliquity
+ * (Annex 10 Vol I App B 3.5.5.6.3.2, for an SBAS receiver outside the ionospheric
+ * grid). Pass T_iono = 0 where it is not known.
+ */
+// TODO(expert-review): σ of the single-frequency broadcast-model ionospheric residual follows Annex 10 App B 3.5.5.6.3.2 (an SBAS receiver without SBAS ionospheric corrections); applying it to GPS alone (ABAS RAIM) is the page's choice.
+export function sigmaIonoNoSbasM(pp: PiercePoint, tIonoSlantM = 0): number {
+  const t = Number.isFinite(tIonoSlantM) ? Math.abs(tIonoSlantM) : 0
+  return Math.max(t / 5, pp.obliquity * tauVertNoSbasM(pp.latDeg))
+}
+
+/**
  * Scintillation loss of lock: in the evening (or when forced), a line of sight whose
  * pierce point crosses a bubble can lose the signal for a while. Affects L1 and L5
  * alike (Doc 9849 §5.2.1.3).
@@ -210,12 +233,12 @@ let weightScratch = new Float64Array(256)
  * equatorial bands it is inflated for bubbles the network cannot see. An IGP with too
  * few measurements nearby is "not monitored".
  */
-export function estimateIgps(obs: readonly IonoObservation[], c: IonoConditions): IgpEstimate[] {
+export function estimateIgps(obs: readonly IonoObservation[], c: IonoConditions, igps: readonly Igp[] = IGPS): IgpEstimate[] {
   // Runs for every snapshot (each frame of a moving view), so it allocates nothing per
   // measurement: the weights go into one shared scratch array.
   if (weightScratch.length < obs.length) weightScratch = new Float64Array(obs.length)
   const weights = weightScratch
-  return IGPS.map((igp) => {
+  return igps.map((igp) => {
     let wSum = 0
     let dSum = 0
     let nNear = 0

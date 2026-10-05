@@ -50,10 +50,10 @@ export const MASTER = STATIONS.find((s) => s.kind === 'mcc' && s.role === 'prima
 // Magnetic equator
 // ---------------------------------------------------------------------------
 
-// TODO(expert-review): dip-equator latitudes are read approximately from IGRF maps (epoch ~2025) every 15° of
-// longitude; the real line wanders between these points.
-/** Geographic latitude of the magnetic (dip) equator, degrees, at longitudes −180, −165, …, 180. */
-export const DIP_EQUATOR_TABLE: readonly number[] = [-2, -4, -6, -8, -9, -10, -11, -12, -11, -4, 1, 7, 10, 10, 9, 8, 7.5, 8.5, 9.5, 10, 9.5, 8.5, 6, 2, -2]
+// TODO(expert-review): dip-equator latitudes computed from IGRF-14 (epoch 2025.0, ground level, inclination zero)
+// every 15° of longitude; the real line wanders between these points.
+/** Geographic latitude of the magnetic (dip) equator, degrees, at longitudes −180, −165, …, 180 (IGRF-14, 2025.0). */
+export const DIP_EQUATOR_TABLE: readonly number[] = [2.5, 0.1, -1.6, -3.4, -5.2, -7.4, -10.4, -11.1, -5.3, 3.9, 10.0, 12.1, 11.9, 11.0, 9.0, 7.0, 6.6, 6.9, 7.2, 6.8, 6.7, 7.7, 7.6, 5.6, 2.5]
 
 /** Latitude of the magnetic equator at a longitude, degrees (linear between table points). */
 export function dipEquatorLatDeg(lonDeg: number): number {

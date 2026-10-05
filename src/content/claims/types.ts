@@ -5,7 +5,7 @@
  * - a claim that names a value binds it to the code (`actual`), and the test fails when
  *   the code and the claim disagree;
  * - every `TODO(expert-review)` in src belongs to exactly one claim with status
- *   "to-confirm" (`todo` matches the comment, `code` names the file);
+ *   "to-confirm" or "ai-checked" (`todo` matches the comment, `code` names the file);
  * - every claim a scenario's narration or failures cite exists;
  * - docs/EXPERT_REVIEW.md and docs/claims.csv are generated from the registry
  *   (scripts/claims-report.mjs) and a test checks they are current.
@@ -16,14 +16,17 @@ import type { SourceId } from '../sources'
 /**
  * How far a claim has been checked:
  * - "reviewed": a named, qualified reviewer confirmed it against the primary source;
+ * - "ai-checked": an AI model, prompted to act as a GNSS/SBAS expert, checked it against
+ *   the sources (`aiCheck` records the model, the verdict and why). Not a sign-off: a
+ *   named reviewer still has to confirm it;
  * - "sourced": the source and section are identified and the claim agrees with them as
  *   cited, but no reviewer has signed it off yet;
  * - "to-confirm": not yet traced to a primary source, or a simplification or illustrative
  *   value the page labels as such (a `TODO(expert-review)` in the code).
  */
-export type ClaimStatus = 'reviewed' | 'sourced' | 'to-confirm'
+export type ClaimStatus = 'reviewed' | 'ai-checked' | 'sourced' | 'to-confirm'
 
-export type ClaimTopic = 'GNSS' | 'SBAS' | 'Operations and ATM' | 'Ionosphere' | 'EGNOS and ESSP' | 'Scenario data' | 'Real signal'
+export type ClaimTopic = 'GNSS' | 'SBAS' | 'Operations and ATM' | 'Ionosphere' | 'EGNOS and ESSP' | 'Scenario data' | 'Real signal' | 'SBAS worldwide' | 'Training'
 
 export interface ClaimRef {
   source: SourceId
@@ -56,4 +59,21 @@ export interface Claim {
   note?: string
   /** Filled when a qualified reviewer signs the claim off. */
   review?: { by: string; on: string }
+  /** Filled when an AI model checked the claim (status "ai-checked"). */
+  aiCheck?: AiCheck
+}
+
+/**
+ * An AI check of a claim. The verdict is the model's: "confirmed" (agrees with the
+ * source), "corrected" (the claim was wrong and has been corrected to what the source
+ * says) or "illustrative" (a simplification the page labels, judged fit for teaching).
+ */
+export interface AiCheck {
+  model: string
+  on: string
+  verdict: 'confirmed' | 'corrected' | 'illustrative'
+  /** Why, in plain words. */
+  rationale: string
+  /** What the model checked against; `read` when it read the document itself, not from memory. */
+  checked: readonly { source: string; section?: string; read: boolean }[]
 }

@@ -147,9 +147,13 @@ covers it while the stage pauses. The camera snaps when the scale changes and ea
 **Chrome:**
 - **Scenario tabs** under the top bar: "AirNav Indonesia" and "ESSP-SAS", each a link
   (a scenario is a page load of its own), the active one with a cyan underline and
-  `aria-current="page"`. 40 px tall; the hint ("Toulouse → Nice · EGNOS") shows from 1024 px.
+  `aria-current="page"`, and on the right "SBAS worldwide" (§11). 40 px tall; the hint
+  ("Toulouse → Nice · EGNOS") shows from 1024 px; at 390 px the bar scrolls sideways inside
+  itself rather than truncating a tab.
 - **Sources** button in the top bar (both scenarios): a Sheet with every claim the scenario
-  makes, its sources and its review status (icon and words, never colour alone).
+  makes, its sources and its review status (icon and words, never colour alone): Reviewed
+  (green shield, a named person), Checked by AI (cyan bot icon, with the model's verdict and
+  reason and the words "not a human sign-off"), Sourced, To confirm (brass).
 - **Top bar:** the SBAS LAB wordmark and the phase name, plus a badge. Before the descent the
   badge says what LAB201 navigates with (GPS ALONE / SBAS). From the descent it is the
   approach mode annunciator (LPV ARMED, LPV, LNAV/VNAV, LNAV, NO APPR). Then the journey
@@ -173,8 +177,15 @@ covers it while the stage pauses. The camera snaps when the scale changes and ea
     - Time (time-lapse, guided stops, fly again);
     - "Break something" (Stage 4).
 - **At 768 px:** the panels move below the view in two columns.
+- **Controller's view** (both scenarios, left column; its own tab "ATC" at 390 px): an
+  approach scope on the dark `--scope-*` tokens (range rings 10/20/30 NM, the final course
+  dashed, the runway in foreground). Arrivals by shape: square = SBAS avionics, circle = GPS
+  only, diamond = no GNSS approach; data block (callsign, flight level, what it can fly) to
+  the right of the track; red only for an aircraft that cannot fly its planned GNSS
+  approach. Below: the instruction buttons and the radiotelephony, marked right or not.
+  Where a scenario has no Break panel, a Segmented control chooses the outage.
 - **At 390 px:** the view is a 56svh sticky strip, and the panels sit below it in tabs
-  (Now, Cockpit, Signals; Break it arrives in Stage 4).
+  (Now, Cockpit, Signals, ATC, and EGNOS in the ESSP-SAS scenario).
 - **Scrims:** HUD text on the view sits over top and bottom scrims.
 - **No sideways scroll** at any width. Touch targets are at least 40px.
 
@@ -342,3 +353,37 @@ The same page, journey, views and kit, with EGNOS over southern France
   or endorsed by ESSP or EUSPA.
 - **Colour.** The forecast chart uses `--success` for available and a hatched
   `--destructive` for not available, with a text legend; nothing new.
+- **Service-area map** (12): a scope-dark SVG of Europe (world coastline, east–west scaled by
+  cos 47°) with 2° cells: `--success` at two strengths (≥ 99 % / 90–99 % of the day, or
+  available now) and a hatched `--destructive` line pattern below that; RIMS as brass
+  triangles, EUREF stations as cyan rings (the chosen one filled). Controls: operation and
+  "whole day / at a time" Segmenteds, a time Slider (aria-valuetext "hh:mm UTC"), a station
+  Select. Honesty label in brass: "Real GPS orbits and EUREF stations · <day> · EGNOS
+  corrections modelled" until real messages are loaded.
+- **Instructor** (`?instructor`, top of the left column): seed Input, copy-link button,
+  file Input for a learner's session, and the debrief (failures with response times, a
+  timeline with right calls in `--success` and wrong ones in `--destructive`, with words).
+- **Assessment additions:** "Curriculum mapping" (a details block, CSV download) and
+  "Export my session" in the Result tab.
+
+## 11. SBAS worldwide (`?view=systems`)
+
+A page of its own on the same site, no 3D stage (light: one lazy chunk), civil aviation only.
+- **01 Service areas:** an equirectangular world map on `--sim-water` / `--sim-land`; every
+  service area a dashed hairline in `--sim-ink`, the chosen one filled `--signal` at 25 %
+  with a 1.6 px outline; its GEOs as brass diamonds on the dashed equator (filled =
+  operational, hollow = test or planned). No text on the map: names live in the list beside
+  it (≥ 1024 px, buttons with `aria-pressed`) or a Select under it. Label: "Areas
+  approximate, drawn from each provider's wording, not official maps".
+- **02 System card:** status (icon + words: green square operational, brass diamond in
+  development, hollow square test), headline, provider, services with years ("planned
+  2028"), GEOs, ground counts ("not published" when no source gives one), DFMC, and its
+  Sources.
+- **03 How SBAS works, end to end:** seven fixed steps (GPS satellites → reference stations
+  → master stations → uplink → GEO → aircraft → approach), a row of seven at ≥ 1024 px and a
+  column below. The lit step has the signal outline and glow; a pulse travels the link to
+  the next step (cyan for GPS signals, brass dashed for the correction path), 3.2 s a step,
+  with Prev / Play-Pause / Next and ←/→. Reduced motion: no autoplay, no pulses, the same
+  steps by button. Each step shows the chosen system's figure.
+- **04 Side by side:** a Table from 768 px; one card per system below.
+- Footer: the systems page's own note (not endorsed by any provider, ICAO or EUROCONTROL).

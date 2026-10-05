@@ -24,7 +24,7 @@ export const FAILURES: readonly FailureDef[] = [
   {
     id: 'storm',
     label: 'Ionospheric storm',
-    explain: 'A solar storm makes the ionosphere much thicker and less even.',
+    explain: 'A solar storm makes the ionospheric delay change fast and unevenly over a wide area.',
     notice: 'GIVE grows. With L1 SBAS, VPL goes above VAL and LPV becomes unavailable. DFMC removes the delay and keeps LPV.',
     crewAtc: 'Space weather advisories and NOTAMs warn of reduced SBAS approach availability. Crews plan LNAV or another approach.',
     source: 'Doc 9849 §5.2.1.2, §5.2.1.6, §7.13.3',

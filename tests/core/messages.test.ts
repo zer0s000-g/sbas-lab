@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { alarmBroadcastS, MESSAGE_BITS, messageType, MESSAGE_TYPES, scheduledMessage } from '@/core/messages'
+import { alarmBroadcastS, MESSAGE_BITS, messageType, MESSAGE_TYPES, scheduledMessage, TIMEOUTS_S } from '@/core/messages'
 import { OPERATIONS } from '@/core/operations'
+
+describe('SBAS message time-outs (Annex 10 App B Table B-94)', () => {
+  it('the integrity data (UDREI) time out after 12 s for precision approach and APV and 18 s otherwise', () => {
+    expect(TIMEOUTS_S.udrei).toEqual({ PA: 12, NPA: 18 })
+    expect(TIMEOUTS_S.longTerm).toEqual({ PA: 240, NPA: 360 })
+    expect(TIMEOUTS_S.iono.PA).toBe(600)
+  })
+})
 
 describe('SBAS messages', () => {
   it('a 250-bit message: preamble, type, data and CRC', () => {

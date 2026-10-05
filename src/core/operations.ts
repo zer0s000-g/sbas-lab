@@ -32,6 +32,8 @@ export const OPERATIONS: Record<OperationId, Operation> = {
   enroute: { id: 'enroute', name: 'Continental en route', halM: 2 * M_PER_NM, valM: null, ttaS: 300, source: T21 },
   terminal: { id: 'terminal', name: 'Terminal', halM: 1 * M_PER_NM, valM: null, ttaS: 15, source: T21 },
   // Annex 10 Table 3.7.2.4-1 puts departure in one row with initial, intermediate and non-precision approach.
+  // TODO(expert-review): the departure HAL: Note 2 of Table 3.7.2.4-1 gives none, so the page applies the NPA 0.3 NM; the
+  // value the avionics use (RTCA DO-229) is to confirm (the PBN Manual uses 1 NM for RNAV 1 and RNP 1 departures).
   departure: { id: 'departure', name: 'Departure', halM: 0.3 * M_PER_NM, valM: null, ttaS: 10, source: T21 },
   npa: { id: 'npa', name: 'Non-precision approach (LNAV)', halM: 0.3 * M_PER_NM, valM: null, ttaS: 10, source: T21 },
   // TODO(expert-review): SBAS LNAV/VNAV alert limits (HAL 556 m, VAL 50 m) follow RTCA DO-229, not Table 2-1 (Note 3 there covers Baro VNAV).

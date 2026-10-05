@@ -29,7 +29,7 @@ export const FAILURES: readonly FailureDef[] = [
   {
     id: 'storm',
     label: 'Ionospheric storm',
-    explain: 'A severe solar storm makes the ionosphere over Europe much thicker and less even.',
+    explain: 'A severe solar storm makes the ionospheric delay over Europe change fast and unevenly.',
     notice: 'GIVE grows. With the L1 service, VPL goes above VAL and LPV-200 becomes unavailable; LNAV stays. A dual-frequency service removes most of the delay (EGNOS v3, planned).',
     crewAtc: 'Space weather advisories and NOTAMs warn of reduced LPV availability. Crews plan LNAV or another approach.',
     source: 'Doc 9849 §5.2.1.2, §5.2.1.6, §7.13.3',
@@ -39,7 +39,7 @@ export const FAILURES: readonly FailureDef[] = [
     id: 'stationOffline',
     label: 'RIMS offline',
     explain: 'The RIMS in Toulouse, Paris, Lisbon and Madeira stop sending data to the mission control centres.',
-    notice: 'Fewer stations see each satellite and the ionospheric grid near the route loses its monitoring, so LPV is no longer available at Nice; LNAV stays. This page models only the 11 RIMS it shows, so the effect is far larger than the real network of about 40 would see.',
+    notice: 'Fewer stations see each satellite and the ionospheric grid near the route loses its monitoring, so LPV is no longer available at Nice; LNAV stays. This page models only the 9 RIMS it shows, so the effect is far larger than the real network of 38 would see.',
     crewAtc: 'ESSP publishes a service notice and proposes NOTAMs for any predicted loss of LPV. Crews check them before the flight.',
     source: 'Doc 9849 §4.3.1.3, §4.3.3.4.1',
     claims: ['sbas.do-not-use', 'ops.notam', 'essp.notam-proposal'],

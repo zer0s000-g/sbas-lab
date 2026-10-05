@@ -13,6 +13,8 @@ import {
   piercePoint,
   QUIET,
   scintillationLoss,
+  sigmaIonoNoSbasM,
+  tauVertNoSbasM,
   verticalTec,
   type IgpEstimate,
 } from '@/core/iono'
@@ -20,6 +22,22 @@ import { GPS_L5_HZ } from '@/core/units'
 import { dipEquatorLatDeg } from '@/core/region'
 
 const at = (hour: number, extra = {}) => ({ ...QUIET, startLocalHour: hour, tS: 0, ...extra })
+
+describe('σ of the broadcast-model ionospheric residual (Annex 10 App B 3.5.5.6.3.2)', () => {
+  it('τ_vert is 9 m within 20° of the equator, 4.5 m to 55° and 6 m beyond, on the pierce point’s geographic latitude', () => {
+    expect([0, 20, -20].map(tauVertNoSbasM)).toEqual([9, 9, 9])
+    expect([20.01, -40, 55, -55].map(tauVertNoSbasM)).toEqual([4.5, 4.5, 4.5, 4.5])
+    expect([55.01, -70].map(tauVertNoSbasM)).toEqual([6, 6])
+  })
+  it('is the larger of T_iono/5 and F_pp·τ_vert', () => {
+    const pp = { latDeg: 43, lonDeg: 5, obliquity: 2 }
+    expect(sigmaIonoNoSbasM(pp)).toBeCloseTo(9, 12)
+    expect(sigmaIonoNoSbasM(pp, 10)).toBeCloseTo(9, 12)
+    expect(sigmaIonoNoSbasM(pp, 60)).toBeCloseTo(12, 12)
+    expect(sigmaIonoNoSbasM({ ...pp, latDeg: -8 }, 20)).toBeCloseTo(18, 12)
+    expect(sigmaIonoNoSbasM(pp, Number.NaN)).toBeCloseTo(9, 12)
+  })
+})
 
 describe('ionospheric geometry', () => {
   it('a satellite overhead pierces the shell straight above the receiver with obliquity 1', () => {

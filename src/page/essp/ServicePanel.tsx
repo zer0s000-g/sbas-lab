@@ -171,8 +171,8 @@ export function ServicePanel({ engine, nowS, index = '09' }: { engine: JourneyEn
 
       <h3 className="hud-label mt-4 text-foreground">EGNOS Working Agreements</h3>
       <p className="mt-1 text-[12.5px] leading-5 text-foreground/90">
-        An air navigation service provider that publishes EGNOS (LPV) procedures first signs an EGNOS Working Agreement with ESSP. In {EWA_FACTS.asOf}: <span className={cn('hud-value text-foreground')}>{EWA_FACTS.ewas}</span> EWAs in force ({EWA_FACTS.withAnsps} with ANSPs) and{' '}
-        <span className="hud-value text-foreground">{EWA_FACTS.procedures}</span> EGNOS-based procedures. <ClaimLink claims={EWA_FACTS.claims}>Sources</ClaimLink>
+        To publish EGNOS-based (LPV) procedures, an air navigation service provider must sign an EGNOS Working Agreement with ESSP. In {EWA_FACTS.asOf}: <span className={cn('hud-value text-foreground')}>{EWA_FACTS.ewas}</span> EWAs in force ({EWA_FACTS.withAtc} of them with ATC providers) and{' '}
+        <span className="hud-value text-foreground">{EWA_FACTS.procedures}</span> EGNOS-based procedures serving {EWA_FACTS.airports} airports. <ClaimLink claims={EWA_FACTS.claims}>Sources</ClaimLink>
       </p>
       <p className="mt-2 text-[11.5px] leading-4 text-muted-foreground">{APPROACH_NOTE}.</p>
     </HudPanel>

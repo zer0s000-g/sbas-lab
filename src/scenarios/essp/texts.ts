@@ -6,7 +6,7 @@ import type { ScenarioDef } from '../types'
 
 export const TEXTS: ScenarioDef['texts'] = {
   flightNote: 'Real airports, the real EGNOS satellites, and real EGNOS ground sites at city level. The route, the LPV procedure at Nice and the uplink pairing are illustrative.',
-  statusNote: 'EGNOS v2 broadcasts L1 SBAS today. A dual-frequency (DFMC) service is planned for EGNOS v3 (EUSPA: around 2028); the "EGNOS v3 preview" switch shows it.',
+  statusNote: 'EGNOS v2 broadcasts L1 SBAS today. A dual-frequency (DFMC) service is planned for EGNOS v3 (EUSPA: early 2030s); the "EGNOS v3 preview" switch shows it.',
   benefitGate: 'No navigation integrity requirement at the gate. The crew check the NOTAMs, including any proposed by ESSP for EGNOS LPV unavailability.',
   benefitLanding: 'On the ground: no navigation integrity requirement. EGNOS brought LAB201 down to LPV-200 minima at Nice with satellite signals alone.',
   benefitCompareNote: 'L1 only: EGNOS v2 today, on the same satellites. Over Europe its VPL fits LPV-200 too; dual-frequency helps most in storms and near the equator.',

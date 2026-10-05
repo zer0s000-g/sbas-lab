@@ -6,9 +6,9 @@
  */
 import { lookAngles, type Geodetic, type Vec3 } from './geo'
 import { ALL_SATS, satEcef, type SatDef } from './orbits'
-import { broadcastModelSlantL1, interpolateGrid, piercePoint, scintillationLoss, verticalDelayL1, type PiercePoint } from './iono'
+import { broadcastModelSlantL1, interpolateGrid, piercePoint, scintillationLoss, sigmaIonoNoSbasM, verticalDelayL1, type PiercePoint } from './iono'
 import { satErrors, tropoModelM, sigmaAirL1M, SIGMA_CLOCK_M, SIGMA_ORBIT_M, SIGMA_TROPO_VERTICAL_M, tropoMapping, IF_GAMMA, IF_NOISE_FACTOR, type FaultInjection } from './errors'
-import { groundSolution, MASK_DEG, sigmaUdreM, UDREI_DO_NOT_USE, UDREI_NOT_FOR_LPV, UDREI_NOT_MONITORED, type GroundSnapshot } from './groundSegment'
+import { groundSolution, MASK_DEG, sigmaUdreM, UDREI_DO_NOT_USE, UDREI_NOT_MONITORED, usableForPa, type GroundSnapshot } from './groundSegment'
 import { solveFix, type ApproachMode, type FixResult, type Measurement } from './receiver'
 import { alarmBroadcastS, TIMEOUTS_S } from './messages'
 import { OPERATIONS, type Operation } from './operations'
@@ -89,8 +89,6 @@ export interface Snapshot {
   alarmedSats: string[]
 }
 
-// TODO(expert-review): σ of the single-frequency broadcast-model ionospheric residual: τ_vert = 9 m at low magnetic latitudes (DO-229 Klobuchar variance), times the obliquity.
-const TAU_VERT_ABAS_M = 9
 const SIGMA_URA_M = Math.hypot(SIGMA_CLOCK_M, SIGMA_ORBIT_M)
 
 /** Whether the aircraft has received the alarm for a satellite by time t. */
@@ -137,14 +135,16 @@ export function snapshot(tS: number, aircraft: Geodetic, c: Conditions, ground: 
     const sigAir = sigmaAirL1M(el)
     view.parts = { clock: e.clockM, orbit: e.orbitM, iono: ionoL1, tropo: e.tropoM, multipath: e.mpNoiseL1M }
 
-    // GPS alone: broadcast ionospheric model.
-    const ionoAbasResid = ionoL1 - broadcastModelSlantL1(ionoL1, pp.latDeg, pp.lonDeg, tS)
+    // GPS alone: broadcast ionospheric model, bounded as Annex 10 bounds it for a receiver without SBAS ionospheric corrections.
+    const ionoBroadcast = broadcastModelSlantL1(ionoL1, pp.latDeg, pp.lonDeg, tS)
+    const ionoAbasResid = ionoL1 - ionoBroadcast
+    const sigIonoBroadcast = sigmaIonoNoSbasM(pp, ionoBroadcast)
     abas.push({
       satId: sat.id,
       los: look.los,
       elDeg: el,
       errorM: e.clockM + e.orbitM + ionoAbasResid + tropoResid + e.mpNoiseL1M,
-      sigmaM: Math.hypot(SIGMA_URA_M, TAU_VERT_ABAS_M * pp.obliquity, sigTropo, sigAir),
+      sigmaM: Math.hypot(SIGMA_URA_M, sigIonoBroadcast, sigTropo, sigAir),
     })
 
     const corr = ground.corrections.get(sat.id)
@@ -159,7 +159,8 @@ export function snapshot(tS: number, aircraft: Geodetic, c: Conditions, ground: 
 
     // L1 SBAS: the grid where it is monitored, otherwise the broadcast model (not for vertical guidance).
     const grid = interpolateGrid(ground.grid, pp)
-    const lpvOk = udrei !== UDREI_NOT_FOR_LPV
+    // UDREI 12 and above: not for precision approach or APV (Annex 10 App B 3.5.8.1.2.12).
+    const lpvOk = usableForPa(udrei)
     if (grid) {
       const m: Measurement = {
         satId: sat.id,
@@ -171,7 +172,7 @@ export function snapshot(tS: number, aircraft: Geodetic, c: Conditions, ground: 
       l1.push(m)
       if (lpvOk) l1Pa.push(m)
     } else {
-      l1.push({ satId: sat.id, los: look.los, elDeg: el, errorM: clockOrbitResid + ionoAbasResid + tropoResid + e.mpNoiseL1M, sigmaM: Math.hypot(sigUdre, TAU_VERT_ABAS_M * pp.obliquity, sigTropo, sigAir) })
+      l1.push({ satId: sat.id, los: look.los, elDeg: el, errorM: clockOrbitResid + ionoAbasResid + tropoResid + e.mpNoiseL1M, sigmaM: Math.hypot(sigUdre, sigIonoBroadcast, sigTropo, sigAir) })
     }
 
     // DFMC: ionosphere-free L1/L5 (the first-order delay cancels; multipath and noise are amplified).
@@ -184,9 +185,9 @@ export function snapshot(tS: number, aircraft: Geodetic, c: Conditions, ground: 
   }
 
   const lostFor = geoLost ? tS - (c.geoLostFromS ?? tS) : 0
-  const anyGeo = geosTracked > 0 || lostFor < TIMEOUTS_S.fastCorrections.NPA
+  const anyGeo = geosTracked > 0 || lostFor < TIMEOUTS_S.udrei.NPA
   const service: ServiceState = {
-    paValid: c.service !== 'off' && !c.jammed && (geosTracked > 0 || lostFor < TIMEOUTS_S.fastCorrections.PA),
+    paValid: c.service !== 'off' && !c.jammed && (geosTracked > 0 || lostFor < TIMEOUTS_S.udrei.PA),
     npaValid: c.service !== 'off' && !c.jammed && anyGeo,
     messageAgeS: geosTracked > 0 ? 0 : lostFor,
     geosTracked,

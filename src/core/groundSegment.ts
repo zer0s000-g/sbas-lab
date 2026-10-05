@@ -21,8 +21,19 @@ export const MASK_DEG = 5
 export const UDRE_TABLE_M = [0.75, 1.0, 1.25, 1.75, 2.25, 3.0, 3.75, 4.5, 5.25, 6.0, 7.5, 15.0, 50.0, 150.0] as const
 export const UDREI_NOT_MONITORED = 14
 export const UDREI_DO_NOT_USE = 15
-/** LP/LPV need UDREI ≠ 13 (Doc 9849 §4.3.1.3). */
-export const UDREI_NOT_FOR_LPV = 13
+/**
+ * The first UDREI a receiver may not use for SBAS precision approach or APV (LNAV/VNAV,
+ * LPV): Annex 10 Vol I App B 3.5.8.1.2.12, "if the UDREI received is greater than or
+ * equal to 12" (UDRE 50 m or 150 m).
+ */
+export const UDREI_PA_LIMIT = 12
+/** Whether a satellite with this UDREI may be used for precision approach and APV (LNAV/VNAV, LPV). */
+export const usableForPa = (udrei: number) => udrei < UDREI_PA_LIMIT
+/**
+ * The bound the model's ground segment now and then broadcasts for a satellite (UDREI 13,
+ * 150 m), so the rule above stays visible: the satellite still serves en route to LNAV.
+ */
+export const UDREI_FLAGGED = 13
 
 export const udreIndex = (udreM: number) => {
   const i = UDRE_TABLE_M.findIndex((u) => u >= udreM)
@@ -98,19 +109,24 @@ export function groundSolution(c: GroundConditions): GroundSnapshot {
   return { corrections, grid, gridList, observations, ionoObs }
 }
 
+/** The σ of the master station's clock-and-orbit estimate when `seenBy` stations see the satellite, m. */
+export const estimationSigmaM = (seenBy: number) => 0.35 / Math.sqrt(seenBy)
+
+/** UDRE: a 99.9 % bound on what the correction leaves, larger when few stations see the satellite, m. */
+export const udreForSeenByM = (seenBy: number) => 3.29 * Math.hypot(estimationSigmaM(seenBy) * 1.6, 0.18) * (seenBy >= 4 ? 1 : 1.4)
+
 function correctionFor(sat: SatDef, seenBy: number, c: GroundConditions): SatCorrection {
   if (seenBy < 2) return { satId: sat.id, correctionM: 0, udrei: UDREI_NOT_MONITORED, udreiBeforeAlarm: UDREI_NOT_MONITORED, seenBy, status: 'not-monitored' }
   // The truth the network sees (clock + orbit; the orbit part is taken along a typical line of sight).
   const truth = satErrors(sat.id, 45, 0, c.tS, c.seed, 0, null)
   const code = satCode(sat.id)
-  const estErrSigma = 0.35 / Math.sqrt(seenBy)
+  const estErrSigma = estimationSigmaM(seenBy)
   const estErr = smoothGauss(code, c.tS, 60, estErrSigma, c.seed + 5)
   let correctionM = truth.clockM + truth.orbitM + estErr
   correctionM = Number.isFinite(correctionM) ? correctionM : 0
-  // UDRE: a 99.9 % bound on what the correction leaves, larger when few stations see the satellite.
-  const udre = 3.29 * Math.hypot(estErrSigma * 1.6, 0.18) * (seenBy >= 4 ? 1 : 1.4)
-  // A satellite occasionally flagged as not good enough for LPV (UDREI 13) keeps the rule visible.
-  const udrei = hash2(code, Math.floor(c.tS / 600), c.seed) < 0.02 ? UDREI_NOT_FOR_LPV : udreIndex(udre)
+  const udre = udreForSeenByM(seenBy)
+  // A satellite occasionally broadcast with a large bound (UDREI 13), not usable for LPV, keeps the rule visible.
+  const udrei = hash2(code, Math.floor(c.tS / 600), c.seed) < 0.02 ? UDREI_FLAGGED : udreIndex(udre)
   const f = c.fault
   // Before detection the old correction goes on being sent; once detected, "Do Not Use".
   if (f && f.satId === sat.id && c.tS >= f.startS + ALARM_LATENCY.detectS) {
