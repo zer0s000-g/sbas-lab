@@ -8,7 +8,7 @@
  * cyan for GPS, dashed brass for the SBAS GEOs. Truth is a cross, GPS alone a hollow
  * ring and SBAS a filled dot, their offsets drawn ×10. Loaded with the 3D chunk.
  */
-import { memo, useLayoutEffect, useMemo, useRef } from 'react'
+import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { ThemeTokens } from '@/hooks/useThemeTokens'
@@ -17,7 +17,7 @@ import { GEO_SATS, geoLabel } from '@/core/orbits'
 import { DEG, M_PER_FT } from '@/core/units'
 import { operationFor } from '@/core/operations'
 import { navStatus, approachMode } from '@/core/sbasWorld'
-import { directionFor } from '@/journey/director'
+import { stageAt } from '@/journey/director'
 import { getJourney, useJourneyState } from '@/journey/store'
 import { useReducedMotion } from '@/stores/prefs'
 import { Callout3D } from '@/stage/Callout3D'
@@ -114,7 +114,9 @@ function FlightScene({ t, quality }: { t: ThemeTokens; quality: Quality }) {
   const sun = useRef<THREE.DirectionalLight>(null)
   const hemi = useRef<THREE.HemisphereLight>(null)
   const sunTarget = useMemo(() => new THREE.Object3D(), [])
-  const op = operationFor(directionFor(phase).stage)
+  // The operation whose limits the label shows; it can change within the descent (stageAt).
+  const [op, setOp] = useState(() => operationFor(stageAt(phase, engine.aircraft.wp)))
+  const shownOp = useRef(op)
 
   // Haze, coloured like the sky's horizon (updated every frame below). The scene's own fog:
   // three reads fog only from the scene, never from a group.
@@ -175,8 +177,9 @@ function FlightScene({ t, quality }: { t: ThemeTokens; quality: Quality }) {
     lab201.gear = a.onGround || agl < (a.vsFpm < 0 ? 2500 : 400)
     lab201.landing = a.altFt < 10000 && (!a.onGround || a.gsKt > 30)
     // The fix the story shows: GPS alone until the first correction, then SBAS.
-    const stage = directionFor(engine.state.phase).stage
+    const stage = stageAt(engine.state.phase, a.wp)
     const op = operationFor(stage)
+    if (op !== shownOp.current) setOp((shownOp.current = op))
     let fix = snap.abas
     if (engine.sbasShown) fix = stage === 'final' ? approachMode(snap).fix : op ? navStatus(snap, op).fix : (snap.sbasFix ?? snap.abas)
     if (pl.current) {

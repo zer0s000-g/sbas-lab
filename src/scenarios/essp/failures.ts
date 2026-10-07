@@ -74,7 +74,7 @@ export const FAILURES: readonly FailureDef[] = [
 ]
 
 /** RIMS taken offline by the "RIMS offline" failure: the western European sites nearest the route. */
-export const OFFLINE_SET = ['RIMS-TLS', 'RIMS-PAR', 'RIMS-LIS', 'RIMS-MAD'] as const
+export const OFFLINE_SET = ['RIMS-TLS', 'RIMS-PAR', 'RIMS-LSB', 'RIMS-MAD'] as const
 /** How big the clock jump is, m. */
 export const CLOCK_JUMP_M = 40
 /** Not used in this scenario (no evening flight), kept for the shared failure state. */

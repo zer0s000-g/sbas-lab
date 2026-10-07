@@ -12,7 +12,7 @@ import { GEO_SATS } from '@/core/orbits'
 import { DEPARTURE, DESTINATION, REGION, zoneTime, type ZoneTime } from '@/core/region'
 import { localToGeodetic } from '@/core/geo'
 import { SCENARIO } from '@/scenarios/active'
-import { directionFor } from '@/journey/director'
+import { stageAt } from '@/journey/director'
 import type { JourneyEngine } from '@/journey/engine'
 import { phaseDef, PHASE_INDEX, type PhaseId } from '@/journey/phases'
 import { formatMetres } from '@/lib/format'
@@ -47,6 +47,8 @@ export interface ViewModel {
   localHour: number
   localZone: ZoneTime['zone']
   altFt: number
+  /** On the runway, a taxiway or the stand (not altitude: Toulouse is at 490 ft). */
+  onGround: boolean
   gsKt: number
   distToGoNm: number
   sbasShown: boolean
@@ -156,7 +158,7 @@ export function viewModel(e: JourneyEngine): ViewModel {
   const phase = e.state.phase
   const def = phaseDef(phase)
   const a = e.aircraft
-  const stage = directionFor(phase).stage
+  const stage = stageAt(phase, a.wp)
   const op = operationFor(stage)
   const cond = e.conditions()
   const shown = e.sbasShown
@@ -165,8 +167,9 @@ export function viewModel(e: JourneyEngine): ViewModel {
   let navSource: ViewModel['navSource'] = snap.abas ? 'abas' : 'none'
   if (shown) {
     if (stage === 'final') {
-      nav = am.fix
       navSource = am.fix ? (am.fix === snap.abas ? 'abas' : 'sbas') : 'none'
+      // Without vertical guidance (LNAV or none) there is no VPL to show against the VAL.
+      nav = am.fix && (am.mode === 'LNAV' || am.mode === 'NONE') ? { ...am.fix, vplM: null } : am.fix
     } else if (op) {
       const ns = navStatus(snap, op)
       nav = ns.fix
@@ -184,7 +187,7 @@ export function viewModel(e: JourneyEngine): ViewModel {
   // Before the reveal the story flies GPS alone, which supports LNAV at best (Doc 9849 §1.4.2.2).
   const mode: ApproachMode = shown ? am.mode : snap.abas && !snap.abas.alarm && snap.abas.hplM <= OPERATIONS.npa.halM ? 'LNAV' : 'NONE'
   const signal: SbasSignal = cond.service === 'l1' ? 'L1' : 'DFMC'
-  const dev = stage === 'final' || stage === 'approach' ? deviations(FAS, a.eastNm, a.northNm, a.altFt) : null
+  const dev = phase === 'descent' || phase === 'final' ? deviations(FAS, a.eastNm, a.northNm, a.altFt) : null
   return {
     phase,
     phaseNo: PHASE_INDEX.get(phase)! + 1,
@@ -197,6 +200,7 @@ export function viewModel(e: JourneyEngine): ViewModel {
       return { localHour: z.hour, localZone: z.zone }
     })(),
     altFt: a.altFt,
+    onGround: a.onGround,
     gsKt: a.gsKt,
     distToGoNm: Math.hypot(DESTINATION.thresholdEastNm - a.eastNm, DESTINATION.thresholdNorthNm - a.northNm),
     sbasShown: shown,
@@ -210,7 +214,8 @@ export function viewModel(e: JourneyEngine): ViewModel {
     dfmcNpa: snap.dfmcNpa,
     mode,
     sbasMode: am.mode,
-    withinLimits: !!(op && nav && withinLimits(op, nav.hplM, nav.vplM)),
+    // On final the procedure's limits (LPV) are met only while the avionics annunciate LPV.
+    withinLimits: !!(op && nav && (stage !== 'final' || am.mode === 'LPV') && withinLimits(op, nav.hplM, nav.vplM)),
     sats,
     gpsTracked: snap.sats.filter((s) => s.kind === 'gps' && s.tracked).length,
     geosTracked: snap.service.geosTracked,
@@ -230,13 +235,13 @@ export function viewModel(e: JourneyEngine): ViewModel {
 export function describe(m: ViewModel, view: 'space' | 'flight' | 'network'): string {
   const pl = m.nav ? `HPL ${formatMetres(m.nav.hplM)}${m.nav.vplM !== null ? `, VPL ${formatMetres(m.nav.vplM)}` : ''}` : 'no position'
   const lim = m.op ? `${m.op.name} limits HAL ${formatMetres(m.op.halM)}${m.op.valM !== null ? `, VAL ${formatMetres(m.op.valM)}` : ''}, ${m.withinLimits ? 'within limits' : 'outside limits'}` : ''
-  const where = `LAB201 ${m.altFt < 100 ? 'on the ground' : `at ${Math.round(m.altFt / 100) * 100} ft`}, ${m.distToGoNm.toFixed(1)} NM from ${DESTINATION.city}`
+  const where = `LAB201 ${m.onGround ? 'on the ground' : `at ${Math.round(m.altFt / 100) * 100} ft`}, ${m.distToGoNm.toFixed(1)} NM from ${DESTINATION.city}`
   const sky = `${m.gpsTracked} GPS satellites tracked, ${m.geosTracked} of ${GEO_SATS.length} SBAS GEOs (${GEO_SATS.map((g) => g.id).join(' and ')}) received`
   // Where the flight view is looking: an airport, the climb-out, the cruise or the final approach.
   const routeNm = Math.hypot(DESTINATION.thresholdEastNm - DEPARTURE.thresholdEastNm, DESTINATION.thresholdNorthNm - DEPARTURE.thresholdNorthNm)
   const ap = (a: typeof DEPARTURE) => `${a.city} ${a.name} (${a.id})`
   const place =
-    m.altFt < 100
+    m.onGround
       ? `at ${m.distToGoNm > routeNm / 2 ? ap(DEPARTURE) : ap(DESTINATION)}, with its runway, taxiways and terminal`
       : m.distToGoNm < 15
         ? `on final to runway ${DESTINATION.runway} at ${DESTINATION.city}, ${SCENARIO.texts.describeFinal}`

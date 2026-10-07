@@ -3,7 +3,8 @@
  * for its seed and always solvable from the journey, and the marks add up.
  */
 import { describe, expect, it } from 'vitest'
-import { EXAMABLE, examPlan, gradeExam, gradeQuiz, overall, PASS_MARK } from '@/assessment/assessment'
+import { EXAMABLE, examPlan, gradeExam, gradeQuiz, overall, PASS_MARK, rightResponse } from '@/assessment/assessment'
+import { IN_FLIGHT_RESPONSES } from '@/scenarios/essp/examResponses'
 import { AUTHORED_ANSWERS, OBJECTIVES, QUESTIONS } from '@/scenarios/essp/questions'
 import { claim } from '@/content/claims'
 import { FAILURES } from '@/journey/failures'
@@ -49,19 +50,22 @@ describe('the ESSP-SAS question bank', () => {
 describe('the exam', () => {
   it('is the same exam for the same seed, and hides one of the failures the scenario offers', () => {
     for (let seed = 1; seed < 200; seed++) {
-      const a = examPlan(seed, FAILURES)
-      expect(examPlan(seed, FAILURES)).toEqual(a)
+      const a = examPlan(seed, FAILURES, IN_FLIGHT_RESPONSES)
+      expect(examPlan(seed, FAILURES, IN_FLIGHT_RESPONSES)).toEqual(a)
       expect(EXAMABLE).toContain(a.failure)
       expect(FAILURES.some((f) => f.id === a.failure)).toBe(true)
-      for (const opts of [a.whatOptions, a.actionOptions]) {
-        expect(opts).toHaveLength(4)
-        expect(new Set(opts).size).toBe(4)
-        expect(opts).toContain(a.failure)
-      }
+      expect(a.whatOptions).toHaveLength(4)
+      expect(new Set(a.whatOptions).size).toBe(4)
+      expect(a.whatOptions).toContain(a.failure)
+      // The second question: four distinct in-flight responses, one the hidden failure's (tests/essp/exam-responses.test.ts).
+      expect(a.actionOptions).toHaveLength(4)
+      expect(new Set(a.actionOptions).size).toBe(4)
+      expect(a.action).toBe(rightResponse(a.failure, IN_FLIGHT_RESPONSES).id)
+      expect(a.actionOptions).toContain(a.action)
     }
   })
   it('over many seeds, every examable failure is used', () => {
-    const seen = new Set(Array.from({ length: 300 }, (_, i) => examPlan(i + 1, FAILURES).failure))
+    const seen = new Set(Array.from({ length: 300 }, (_, i) => examPlan(i + 1, FAILURES, IN_FLIGHT_RESPONSES).failure))
     expect([...seen].sort()).toEqual([...EXAMABLE].sort())
   })
   it('every hidden failure shows on the panels on final: the learner can find it', () => {
@@ -81,18 +85,20 @@ describe('the exam', () => {
     }
   })
   it('marks the two exam questions', () => {
-    const p = examPlan(42, FAILURES)
+    const p = examPlan(42, FAILURES, IN_FLIGHT_RESPONSES)
     const other = p.whatOptions.find((x) => x !== p.failure)!
-    expect(gradeExam(p, p.failure, p.failure)).toMatchObject({ correct: 2, max: 2 })
-    expect(gradeExam(p, other, p.failure)).toMatchObject({ correct: 1, whatRight: false, actionRight: true })
+    const wrongAction = p.actionOptions.find((x) => x !== p.action)!
+    expect(gradeExam(p, p.failure, p.action)).toMatchObject({ correct: 2, max: 2 })
+    expect(gradeExam(p, other, p.action)).toMatchObject({ correct: 1, whatRight: false, actionRight: true })
+    expect(gradeExam(p, p.failure, wrongAction)).toMatchObject({ correct: 1, whatRight: true, actionRight: false })
     expect(gradeExam(p, null, null).correct).toBe(0)
   })
   it('passes at 80 % of the quiz and exam points together, and is incomplete until both are done', () => {
     const q = gradeQuiz(QUESTIONS, QUESTIONS.map((x) => x.answer))
-    const p = examPlan(7, FAILURES)
+    const p = examPlan(7, FAILURES, IN_FLIGHT_RESPONSES)
     expect(overall(q, null, QUESTIONS.length).status).toBe('incomplete')
-    expect(overall(null, gradeExam(p, p.failure, p.failure), QUESTIONS.length).status).toBe('incomplete')
-    const all = overall(q, gradeExam(p, p.failure, p.failure), QUESTIONS.length)
+    expect(overall(null, gradeExam(p, p.failure, p.action), QUESTIONS.length).status).toBe('incomplete')
+    const all = overall(q, gradeExam(p, p.failure, p.action), QUESTIONS.length)
     expect(all).toMatchObject({ raw: QUESTIONS.length + 2, max: QUESTIONS.length + 2, scaled: 1, status: 'passed' })
     const weak = gradeQuiz(QUESTIONS, QUESTIONS.map((x, i) => (i < 6 ? x.answer : null)))
     expect(overall(weak, gradeExam(p, null, null), QUESTIONS.length).status).toBe('failed')

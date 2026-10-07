@@ -28,15 +28,19 @@ export const MESSAGE_TYPES: readonly MessageType[] = [
   { type: 1, signal: 'L1', name: 'PRN mask', plain: 'Which satellites the corrections are for' },
   { type: 2, signal: 'L1', name: 'Fast corrections', plain: 'Clock corrections, updated every few seconds' },
   { type: 3, signal: 'L1', name: 'Fast corrections', plain: 'Clock corrections for more satellites' },
+  { type: 4, signal: 'L1', name: 'Fast corrections', plain: 'Clock corrections for more satellites' },
+  { type: 5, signal: 'L1', name: 'Fast corrections', plain: 'Clock corrections for more satellites' },
   { type: 6, signal: 'L1', name: 'Integrity information', plain: 'How much to trust each satellite, and alarms' },
   { type: 7, signal: 'L1', name: 'Fast correction degradation', plain: 'How quickly the clock corrections go stale' },
-  { type: 9, signal: 'L1', name: 'GEO navigation', plain: 'Where the GEO satellite is, so it can be used for ranging' },
+  { type: 9, signal: 'L1', name: 'GEO navigation', plain: 'Where the GEO satellite is' },
   { type: 10, signal: 'L1', name: 'Degradation parameters', plain: 'How uncertainty grows when messages are missed' },
   { type: 12, signal: 'L1', name: 'SBAS network time', plain: 'The link between SBAS time and UTC' },
   { type: 17, signal: 'L1', name: 'GEO almanac', plain: 'Where all the GEO satellites are' },
   { type: 18, signal: 'L1', name: 'Ionospheric grid mask', plain: 'Which grid points the delays are for' },
+  { type: 24, signal: 'L1', name: 'Mixed fast and long-term corrections', plain: 'Clock corrections for some satellites, orbit corrections for others' },
   { type: 25, signal: 'L1', name: 'Long-term corrections', plain: 'Orbit corrections and slow clock corrections' },
   { type: 26, signal: 'L1', name: 'Ionospheric delay corrections', plain: 'The delay at each grid point, with its GIVE' },
+  { type: 27, signal: 'L1', name: 'SBAS service message', plain: 'How far the integrity bounds hold, region by region' },
   { type: 28, signal: 'L1', name: 'Clock-ephemeris covariance', plain: 'How the correction error grows away from the network' },
   { type: 63, signal: 'L1', name: 'Null message', plain: 'Nothing new this second' },
   { type: 31, signal: 'DFMC', name: 'Satellite mask', plain: 'Which satellites of which constellations are augmented' },
@@ -67,8 +71,12 @@ export const DFMC_MESSAGE_BITS = { total: 250, preamble: 4, type: 6, data: 216, 
 export const messageBits = (signal: SbasSignal) => (signal === 'L1' ? MESSAGE_BITS : DFMC_MESSAGE_BITS)
 export const MESSAGE_PERIOD_S = 1
 
-/** A repeating broadcast plan (illustrative; real schedules are set by the SBAS provider within the time-outs). */
-const L1_CYCLE = [1, 2, 3, 26, 2, 3, 25, 2, 3, 18, 2, 3, 26, 2, 3, 9, 2, 3, 7, 2, 3, 10, 2, 3, 28, 2, 3, 12, 2, 3, 26, 2, 3, 17, 2, 63]
+/**
+ * A repeating broadcast plan (illustrative; real schedules are set by the SBAS provider
+ * within the time-outs). The L1 plan uses only types EGNOS broadcasts (EGNOS SoL SDD v3.6
+ * Table 4: no Type 28), so the ESSP-SAS scenario shows a plausible EGNOS stream.
+ */
+const L1_CYCLE = [1, 2, 3, 26, 2, 3, 25, 2, 3, 18, 2, 3, 26, 2, 3, 9, 2, 3, 7, 2, 3, 10, 2, 3, 24, 2, 3, 12, 2, 3, 27, 2, 3, 17, 2, 63]
 const DFMC_CYCLE = [31, 32, 32, 34, 32, 32, 34, 39, 32, 32, 34, 37, 32, 32, 34, 47, 32, 32, 34, 32]
 
 export interface Broadcast {
@@ -96,12 +104,18 @@ export function scheduledMessage(second: number, geoIndex: number, signal: SbasS
  * the degradation factor in Message Type 7 (Table B-95), which the page does not model
  * separately.
  */
-// TODO(expert-review): message time-outs: Annex 10 App B Table B-94 for L1 (RTCA DO-229 has the same table); the DFMC time-outs (ED-259) are to confirm.
+// TODO(expert-review): message time-outs: Annex 10 App B Table B-94 for L1 (RTCA DO-229 has the same table) and the four-lost-messages rule below; the DFMC time-outs (ED-259) are to confirm.
 export const TIMEOUTS_S = {
   udrei: { PA: 12, NPA: 18 },
   longTerm: { PA: 240, NPA: 360 },
   iono: { PA: 600, NPA: 600 },
 } as const
+
+/**
+ * During an approach with HAL ≤ 40 m or VAL ≤ 50 m (LPV, LNAV/VNAV), losing this many
+ * successive messages invalidates all UDREI data (Annex 10 Vol I App B 3.5.8.1.2.7).
+ */
+export const MESSAGES_LOST_PA = 4
 
 /** The integrity alarm path: the master detects a fault, the alarm goes up to the GEO and down to the aircraft. */
 // TODO(expert-review): detection and alarm latencies are illustrative; the requirement is the time to alert of Doc 9849 Table 2-1.

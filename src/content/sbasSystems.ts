@@ -123,20 +123,22 @@ export const SBAS_SYSTEMS: readonly SbasSystem[] = [
     region: 'India',
     provider: 'Airports Authority of India (AAI), certified by DGCA India',
     status: 'operational',
-    headline: 'RNP 0.1 en route since 2013 and APV-I over the Indian landmass since 2015, in the equatorial ionosphere.',
+    headline: 'RNP 0.1 en route since 2013 and APV-I since 2015 (99 % of the time over 76 % of the Indian landmass), in the equatorial ionosphere.',
     services: [
       { level: 'RNP 0.1 en route (Indian FIRs)', year: 2013 },
-      { level: 'APV-I, LPV to 250 ft (Indian landmass)', year: 2015 },
+      { level: 'APV-I, LPV to 250 ft (99 % of the time over 76 % of the Indian landmass)', year: 2015 },
     ],
     geos: [
-      { name: 'GSAT-8', prn: 127, lonDeg: 55, role: 'not stated' },
-      { name: 'GSAT-10', prn: 128, lonDeg: 83, role: 'not stated' },
-      { name: 'GSAT-15', prn: 132, lonDeg: 93.5, role: 'not stated' },
+      // ICAO APAC SBAS guidance (2025) §2.4: the uplink sends the messages to all three, and "the GEO satellites
+      // broadcast these correction messages"; it does not say whether one of them is a standby.
+      { name: 'GSAT-8', prn: 127, lonDeg: 55, role: 'operational' },
+      { name: 'GSAT-10', prn: 128, lonDeg: 83, role: 'operational' },
+      { name: 'GSAT-15', prn: 132, lonDeg: 93.5, role: 'operational' },
     ],
     ground: { reference: 15, master: 2, uplink: 3, note: 'AAI, 2025.' },
     dfmc: 'Reference stations ready for dual frequency; DFMC planned step by step, no date.',
     area: [[60, 25], [68, 37], [80, 36], [98, 29], [100, 18], [93, 5], [90, 0], [78, 0], [60, 8]],
-    areaNote: 'Indian FIRs (RNP 0.1) and landmass (APV-I).',
+    areaNote: 'Indian FIRs (RNP 0.1) and 76 % of the Indian landmass (APV-I, 99 % of the time).',
     claim: 'world.gagan',
   },
   {

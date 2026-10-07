@@ -16,7 +16,7 @@ export const OPEN_QUESTIONS: readonly string[] = [
   '**Airports (AIP Indonesia).** `scenario.indonesia-airports` needs AIP Indonesia AD 2 WIII and WADD (current AIRAC). OurAirports matches the code except the length of WADD 09 (2984 m there, 2996 m here).',
   '**FIR hand-off (AIP Indonesia).** `scenario.indonesia-fir` needs AIP Indonesia ENR 2.1, or an AirNav Indonesia reviewer, for where the route crosses from the Jakarta FIR to the Ujung Pandang FIR and the names of the units.',
   '**QZS-6 status (JCAB).** `scenario.qzs6-status` needs a current JCAB/MSAS notice or AIP Japan GEN/ENR entry: the SBAS operational date of QZS-6 (PRN 129) and the status of the L5 broadcast of QZS-3 and QZS-6. The gps.gov PRN allocation date (September 2029) says nothing about service.',
-  '**Departure alert limit (RTCA DO-229).** `ops.departure-row`: Annex 10 gives no HAL for departure; the page applies the NPA 0.3 NM (556 m), the PBN Manual uses 1 NM for RNAV 1 and RNP 1 departures, and the earlier build used 1 NM. A reviewer with DO-229 should set the departure-mode HAL.',
+  '**Departure alert limit (RTCA DO-229).** `ops.departure-row`: EGNOS SoL SDD v3.6 Table 7, summarising Annex 10, gives the departure row HAL 556 m (0.3 NM), which the page applies; an earlier reading of Annex 10 Note 2 found no departure HAL, the PBN Manual uses 1 NM for RNAV 1 and RNP 1 departures, and the earlier build used 1 NM. A reviewer with Annex 10 and DO-229 should settle the departure-mode HAL.',
   '**Other values only RTCA DO-229 can settle.** The ±1 NM limit on the LPV lateral full scale (`sbas.lpv-deviations`, in neither Annex 10 nor Doc 8168); the FDE false-alert requirement, per hour rather than the per-epoch 10⁻⁵ the page uses (`sbas.raim`); whether LP shares the UDREI ≥ 12 rule and the 12 s UDREI time-out of precision approach and APV (`sbas.do-not-use`, `sbas.timeouts`).',
   '**DFMC services.** DFMC SBAS services are planned rather than operational: the FAA plans WAAS dual-frequency service from about 2026 (limited) to about 2028 (final), and EUSPA’s 2026 roadmap places the EGNOS v3 DFMC service in the early 2030s, later than Doc 9849 (2025) §4.3.4.5 says. Ask ESSP or EUSPA for the official V3.2 date. The hypothetical Indonesian SBAS offers DFMC; the ESSP-SAS scenario shows EGNOS v3 DFMC only as a labelled preview.',
   '**The ESSP-SAS scenario.** The AI check read the EGNOS SoL SDD v3.6, Service Notices 33–35, the Realtime page (5 October 2026) and ESSP’s 2024 EWA figures. Still to confirm with ESSP: current EWA and procedure counts (the page shows March 2024), whether the Haifa RIMS is back in operation, whether LPV-200 outages get NOTAM proposals of their own, and that the NLES list of the 2017 decision is still current.',
@@ -71,9 +71,11 @@ changes.
 
 **About the AI check.** ${AI_MODEL}, prompted to act as a senior GNSS/SBAS integrity engineer,
 checked every claim against its sources, reading the public documents it could reach
-(\`src/content/claims/aiChecks.ts\`). Its verdicts and reasons are listed below. An AI check is
-not a sign-off: it narrows what a qualified reviewer has to look at, and "Reviewed" stays
-reserved for a named reviewer.
+(\`src/content/claims/aiChecks.ts\`). Its verdicts and reasons are listed below. A claim counts as
+checked by AI only when the model read at least one of its documents itself; where it could
+read none, its view from memory is listed separately and the claim keeps its status. An AI
+check is not a sign-off: it narrows what a qualified reviewer has to look at, and "Reviewed"
+stays reserved for a named reviewer.
 
 ## Summary
 
@@ -95,6 +97,12 @@ ${byStatus('sourced').length ? table(byStatus('sourced')) : 'None.'}
 ## Checked by AI, awaiting expert
 
 ${aiTable(byStatus('ai-checked'))}
+
+## AI views from memory (no source read)
+
+The model could read none of these claims' documents, so they keep their status above.
+
+${aiTable(CLAIMS.filter((c) => c.aiCheck && c.status !== 'ai-checked'))}
 
 ## Reviewed
 

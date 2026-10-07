@@ -10,11 +10,13 @@ import { persist } from 'zustand/middleware'
 import { ALL_FAILURE_IDS, type FailureId } from '@/journey/failures'
 import { isRecord, safeStorage } from '@/stores/storage'
 import { pageLmsSession } from '@/lms/scorm'
+import { IN_FLIGHT_RESPONSES } from '@/scenarios/essp/examResponses'
 
 export interface DoneExam {
   seed: number
   what: FailureId | null
-  action: FailureId | null
+  /** The chosen in-flight response (src/scenarios/essp/examResponses.ts). */
+  action: string | null
 }
 
 interface AssessmentState {
@@ -30,6 +32,8 @@ interface AssessmentState {
 type Saved = Pick<AssessmentState, 'quizAnswers' | 'quizChecked' | 'lastExam'>
 
 const isFailure = (v: unknown): v is FailureId => typeof v === 'string' && (ALL_FAILURE_IDS as readonly string[]).includes(v)
+/** An exam saved before the responses had their own ids (a failure id) no longer matches one: it is dropped. */
+const isResponse = (v: unknown): v is string => typeof v === 'string' && IN_FLIGHT_RESPONSES.some((r) => r.id === v)
 
 /** Saved progress, keeping only well-formed fields. */
 export function sanitizeAssessment(raw: unknown): Partial<Saved> {
@@ -39,7 +43,7 @@ export function sanitizeAssessment(raw: unknown): Partial<Saved> {
   if (typeof raw.quizChecked === 'boolean') out.quizChecked = raw.quizChecked
   const e = raw.lastExam
   if (e === null) out.lastExam = null
-  else if (isRecord(e) && typeof e.seed === 'number' && Number.isInteger(e.seed) && (e.what === null || isFailure(e.what)) && (e.action === null || isFailure(e.action))) out.lastExam = { seed: e.seed, what: e.what as FailureId | null, action: e.action as FailureId | null }
+  else if (isRecord(e) && typeof e.seed === 'number' && Number.isInteger(e.seed) && (e.what === null || isFailure(e.what)) && (e.action === null || isResponse(e.action))) out.lastExam = { seed: e.seed, what: e.what as FailureId | null, action: e.action as string | null }
   return out
 }
 

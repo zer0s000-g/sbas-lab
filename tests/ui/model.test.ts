@@ -25,13 +25,44 @@ suite('the page view model', () => {
     engine.jumpTo('descent')
     const d = viewModel(engine)
     expect(d.modeText).toBe('LPV armed')
-    expect(d.op?.id).toBe('npa')
+    // From the top of descent the en route limits apply, not the approach ones (SDD Table 7).
+    expect(d.op?.id).toBe('enroute')
     expect(d.detail?.kind).toBe('fas')
     engine.jumpTo('final')
     const f = viewModel(engine)
     expect(f.mode).toBe('LPV')
     expect(f.op?.id).toBe('apv1')
     expect(f.withinLimits).toBe(true)
+  })
+  it('on the descent the limits go en route, terminal on the arrival, then the approach row from the IF', () => {
+    const e = new JourneyEngine({ guidedStops: false, running: true })
+    e.jumpTo('descent')
+    const seen: string[] = []
+    while (e.state.phase === 'descent') {
+      const id = viewModel(e).op?.id ?? 'none'
+      if (seen.at(-1) !== id) seen.push(id)
+      e.advance(1)
+    }
+    expect(seen).toEqual(['enroute', 'terminal', 'npa'])
+  })
+  it('on final, LNAV after the loss of both GEOs never comes with "LPV limits met"', () => {
+    const e = new JourneyEngine({ guidedStops: false, running: true })
+    e.jumpTo('final')
+    const t0 = e.worldS
+    e.setFailure('geoLost', true)
+    while (e.worldS - t0 < 14) e.advance(0.05)
+    const m = viewModel(e)
+    expect(m.mode).toBe('LNAV')
+    expect(m.withinLimits).toBe(false)
+    expect(m.nav?.vplM).toBeNull()
+  })
+  it('"on the ground" follows the aircraft, not its altitude: airborne over the threshold it is flying', () => {
+    const e = new JourneyEngine({ guidedStops: false })
+    e.jumpTo('landing')
+    expect(e.aircraft.onGround).toBe(false)
+    const m = viewModel(e)
+    expect(m.onGround).toBe(false)
+    expect(describe(m, 'flight')).not.toMatch(/on the ground/)
   })
   it('the errors phase breaks one range into its parts, the ionosphere among them', () => {
     engine.jumpTo('errors')

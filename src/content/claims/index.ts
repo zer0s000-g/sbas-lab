@@ -15,10 +15,15 @@ import type { Claim, ClaimStatus } from './types'
 
 export type { AiCheck, Claim, ClaimRef, ClaimStatus, ClaimTopic } from './types'
 
-/** A claim with its AI check applied: a claim not yet signed off by a person becomes "ai-checked". */
+/**
+ * A claim with its AI check applied. A claim not yet signed off by a person becomes
+ * "ai-checked" only when the check read at least one of the documents itself; a check
+ * made from the model's knowledge alone is shown, but leaves the claim's status as it was.
+ */
 function withAiCheck(c: Claim): Claim {
   const aiCheck = aiCheckFor(c.id)
-  return aiCheck && c.status !== 'reviewed' ? { ...c, status: 'ai-checked', aiCheck } : c
+  if (!aiCheck || c.status === 'reviewed') return c
+  return aiCheck.checked.some((k) => k.read) ? { ...c, status: 'ai-checked', aiCheck } : { ...c, aiCheck }
 }
 
 export const CLAIMS: readonly Claim[] = [...GNSS_CLAIMS, ...SBAS_CLAIMS, ...OPERATIONS_CLAIMS, ...EGNOS_CLAIMS, ...WORLDWIDE_CLAIMS, ...TRAINING_CLAIMS].map(withAiCheck)

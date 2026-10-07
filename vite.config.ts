@@ -85,7 +85,7 @@ export default defineConfig({
     projects: [
       {
         extends: true,
-        test: { name: 'indonesia', env: { SBAS_SCENARIO: 'indonesia' }, include: ['tests/**/*.test.{ts,tsx}'], exclude: ['tests/essp/**'] },
+        test: { name: 'indonesia', env: { SBAS_SCENARIO: 'indonesia' }, include: ['tests/**/*.test.{ts,tsx}'], exclude: ['tests/essp/**', 'tests/_validation/**'] },
       },
       {
         extends: true,

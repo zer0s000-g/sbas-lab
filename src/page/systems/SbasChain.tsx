@@ -54,8 +54,13 @@ function figure(id: string, s: SbasSystem): string {
       return n(s.ground.master, 'master stations')
     case 'uplink':
       return s.id === 'egnos' ? '2 uplink stations per GEO' : n(s.ground.uplink, 'uplink stations')
-    case 'geo':
-      return `${s.geos.filter((g) => g.role === 'operational').length || 'no'} operational GEO${s.geos.filter((g) => g.role === 'operational').length === 1 ? '' : 's'}`
+    case 'geo': {
+      const operational = s.geos.filter((g) => g.role === 'operational').length
+      if (operational) return `${operational} operational GEO${operational === 1 ? '' : 's'}`
+      // A GEO whose role the sources leave open is not counted as non-operational.
+      const unstated = s.geos.filter((g) => g.role === 'not stated').length
+      return unstated ? `${unstated} GEO${unstated === 1 ? '' : 's'}, role not stated` : 'no operational GEOs'
+    }
     case 'aircraft':
       return 'SBAS receiver (RTCA DO-229)'
     default:

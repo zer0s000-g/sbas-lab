@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { FAILURES } from '@/journey/failures'
 import { debrief, parseLog, type SessionLog } from '@/journey/sessionLog'
 import { examPlan } from '@/assessment/assessment'
+import { IN_FLIGHT_RESPONSES } from '@/scenarios/essp/examResponses'
 import { cn } from '@/lib/utils'
 import { examSeedFromUrl } from './instructor'
 
@@ -27,7 +28,7 @@ export function InstructorPanel({ index = '00' }: { index?: string }) {
   const [error, setError] = useState<string | null>(null)
   const n = Number(seed)
   const valid = Number.isInteger(n) && n > 0 && n < 2 ** 31
-  const plan = valid ? examPlan(n, FAILURES) : null
+  const plan = valid ? examPlan(n, FAILURES, IN_FLIGHT_RESPONSES) : null
   const link = valid ? `${location.origin}${location.pathname}?scenario=essp&seed=${n}` : ''
   const d = log ? debrief(log) : null
 

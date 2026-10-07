@@ -5,6 +5,7 @@
  */
 import type { PhaseId } from './phases'
 import type { FlightStage } from '@/core/operations'
+import { ROUTE } from '@/core/flight'
 
 export type ViewId = 'space' | 'flight' | 'network'
 /** The camera intent the view turns into a shot. */
@@ -37,6 +38,21 @@ export const DIRECTION: Readonly<Record<PhaseId, Direction>> = {
 }
 
 export const directionFor = (phase: PhaseId): Direction => DIRECTION[phase]
+
+const wpIndex = (id: string) => ROUTE.findIndex((w) => w.id === id)
+
+/**
+ * The flight stage whose alert limits apply now. The descent spans three rows of the
+ * requirements (EGNOS SoL SDD v3.6 Table 7, from Annex 10 Table 3.7.2.4-1): en route from
+ * the top of descent to the start of the arrival, terminal on the arrival, and the
+ * initial/intermediate approach row (the NPA limits) from the IF to the FAF. `wp` is the
+ * waypoint the aircraft is flying to.
+ */
+export function stageAt(phase: PhaseId, wp: number): FlightStage {
+  const stage = DIRECTION[phase].stage
+  if (stage !== 'approach') return stage
+  return wp <= wpIndex('ARR1') ? 'enroute' : wp <= wpIndex('IF') ? 'terminal' : 'approach'
+}
 
 /**
  * The story device: until the first correction arrives (the end of the broadcast

@@ -44,6 +44,7 @@ export type SourceId =
   | 'icao-doc9613'
   | 'igrf-14'
   | 'faa-waas-pan97'
+  | 'faa-waas-pan92'
   | 'faa-sbas-worldwide'
   | 'faa-waas-qfacts'
   | 'egnos-mpr-2026-08'
@@ -68,6 +69,7 @@ export type SourceId =
   | 'icao-doc9849-3rd'
   | 'canso-asecna-2020'
   | 'gfz-kp'
+  | 'icao-apac-sbas-guidance-2025'
 
 export interface SourceDoc {
   id: SourceId
@@ -166,6 +168,7 @@ export const SOURCES: Readonly<Record<SourceId, SourceDoc>> = {
   },
   'esa-ems': { id: 'esa-ems', title: 'EGNOS Message Server (EMS) User Interface Document', edition: 'Issue 2.0', publisher: 'ESA', url: 'http://www.egnos-pro.esa.int/ems/', access: 'via-search' },
   'faa-waas-pan97': { id: 'faa-waas-pan97', title: 'WAAS Performance Analysis Report #97 (1 April to 30 June 2026)', edition: 'July 2026', publisher: 'FAA William J. Hughes Technical Center', url: 'https://www.nstb.tc.faa.gov/reports/FAA_WAAS_PAN_Report_97_v1.0.pdf', access: 'read' },
+  'faa-waas-pan92': { id: 'faa-waas-pan92', title: 'WAAS Performance Analysis Report #92 (1 January to 31 March 2025)', edition: 'April 2025', publisher: 'FAA William J. Hughes Technical Center', url: 'https://www.nstb.tc.faa.gov/reports/', access: 'read', note: 'Table 5-3 lists the WAAS message time-outs (UDREI 12/18 s, long-term 240/360 s, ionosphere 600 s).' },
   'faa-sbas-worldwide': { id: 'faa-sbas-worldwide', title: 'SBAS Worldwide fact sheet', edition: 'rev. 27 November 2025', publisher: 'FAA', url: 'https://www.faa.gov/about/office_org/headquarters_offices/ato/service_units/techops/navservices/gnss/library/factsheets/sbas_worldwide-reduced.pdf', access: 'read' },
   'faa-waas-qfacts': { id: 'faa-waas-qfacts', title: 'WAAS Quick Facts', edition: 'rev. 27 November 2025', publisher: 'FAA', url: 'https://www.faa.gov/about/office_org/headquarters_offices/ato/service_units/techops/navservices/gnss/library/factsheets/waas-qfacts-reduced.pdf', access: 'read' },
   'egnos-mpr-2026-08': { id: 'egnos-mpr-2026-08', title: 'EGNOS Services Monthly Performance Report, August 2026 (No. 184)', edition: 'Issue 1.0, 7 September 2026', publisher: 'ESSP / EUSPA', url: 'https://egnos.gsc-europa.eu/sites/default/files/documents/184%20-%20Monthly%20Performance%20Report%20-%20August%202026.pdf', access: 'read' },
@@ -190,4 +193,12 @@ export const SOURCES: Readonly<Record<SourceId, SourceDoc>> = {
   'icao-doc9849-3rd': { id: 'icao-doc9849-3rd', title: 'Global Navigation Satellite System (GNSS) Manual, Doc 9849', edition: 'Third Edition, 2017', publisher: 'ICAO', access: 'read', note: 'The edition the curriculum mapping cites by section.' },
   'canso-asecna-2020': { id: 'canso-asecna-2020', title: 'ASECNA launch pre-operational SBAS service', edition: '25 September 2020', publisher: 'CANSO (relaying ASECNA)', url: 'https://canso.org/asecna-launch-pre-operational-sbas-service/', access: 'read' },
   'gfz-kp': { id: 'gfz-kp', title: 'Geomagnetic Kp index (nowcast)', edition: 'preliminary values for 30 September 2026 (Kp at most 0.7)', publisher: 'GFZ German Research Centre for Geosciences', url: 'https://kp.gfz.de/', access: 'read', note: 'CC BY 4.0.' },
+  'icao-apac-sbas-guidance-2025': {
+    id: 'icao-apac-sbas-guidance-2025',
+    title: 'Guidance Document for Implementation of SBAS in the Asia/Pacific Region (Attachment A to the GBAS/SBAS ITF/7 report)',
+    edition: 'May 2025 (draft for endorsement, CNS SG/29 WP/11, June 2025)',
+    publisher: 'ICAO Asia/Pacific GBAS/SBAS Implementation Task Force',
+    access: 'read',
+    note: 'Its §2.4-2.5 on GAGAN quote the certified performance and e-AIP India ENR 4.3.',
+  },
 }

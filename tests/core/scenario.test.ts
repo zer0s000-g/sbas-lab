@@ -124,11 +124,25 @@ describe('failures', () => {
     const x = finals(nominal)[3]
     const pos = localToGeodetic(REGION, x.s.eastNm, x.s.northNm, x.s.altFt * M_PER_FT)
     const c = { ...NOMINAL, geoLostFromS: x.t }
-    expect(approachMode(snapshot(x.t + 5, pos, c)).mode).toBe('LPV')
+    // Vertical guidance survives three lost messages and goes with the fourth (Annex 10 App B 3.5.8.1.2.7).
+    expect(approachMode(snapshot(x.t + 3, pos, c)).mode).toBe('LPV')
+    expect(approachMode(snapshot(x.t + 4, pos, c)).mode).toBe('LNAV')
     expect(approachMode(snapshot(x.t + 13, pos, c)).mode).toBe('LNAV')
     const late = snapshot(x.t + 30, pos, c)
     expect(late.sbasFix).toBeNull()
     expect(approachMode(late).mode).toBe('LNAV')
+  })
+  it('with both GEOs lost no later alarm reaches the aircraft, and it keeps only the data it last received', () => {
+    const x = finals(nominal)[3]
+    const pos = localToGeodetic(REGION, x.s.eastNm, x.s.northNm, x.s.altFt * M_PER_FT)
+    const victim = snapshot(x.t, pos, NOMINAL).dfmc!.used[0]
+    const c = { ...NOMINAL, geoLostFromS: x.t - 1, fault: { satId: victim, startS: x.t, jumpM: 40 } }
+    const later = snapshot(x.t + 6, pos, c)
+    expect(later.service.geosTracked).toBe(0)
+    expect(later.alarmedSats).not.toContain(victim)
+    // An alarm that arrived before the loss stays known on board.
+    const before = { ...NOMINAL, geoLostFromS: x.t + 10, fault: { satId: victim, startS: x.t, jumpM: 40 } }
+    expect(snapshot(x.t + 12, pos, before).alarmedSats).toContain(victim)
   })
   it('GPS jamming: no satellite, no position, no approach mode', () => {
     const x = TRIP[200]

@@ -36,7 +36,7 @@ export function FlightCard({ m }: { m: ViewModel }) {
     <HudPanel index="01" title="Flight">
       <TelemetryRow label="Callsign" value="LAB201" />
       <TelemetryRow label="Route" value={`${DEPARTURE.city} ${DEPARTURE.id} → ${DESTINATION.city} ${DESTINATION.id}`} tone="muted" />
-      <TelemetryRow label="Altitude" value={m.altFt < 100 ? 'On ground' : formatNumber(Math.round(m.altFt / 10) * 10, 0)} unit={m.altFt < 100 ? undefined : 'ft'} />
+      <TelemetryRow label="Altitude" value={m.onGround ? 'On ground' : formatNumber(Math.round(m.altFt / 10) * 10, 0)} unit={m.onGround ? undefined : 'ft'} />
       <TelemetryRow label="Ground speed" value={formatNumber(m.gsKt, 0)} unit="kt" />
       <TelemetryRow label={`To ${DESTINATION.city}`} value={formatNumber(m.distToGoNm, 1)} unit="NM" />
       <TelemetryRow label="Local time" value={`${hhmm(m.localHour)} ${m.localZone}`} tone="muted" />
@@ -285,7 +285,7 @@ export function CockpitPanel({ m }: { m: ViewModel }) {
 export function SignalsPanel({ m, getPoints }: { m: ViewModel; getPoints: () => StanfordPoint[] }) {
   return (
     <HudPanel index="06" title="Signals">
-      <p className="hud-label mb-1">SBAS messages · {m.signal === 'L1' ? 'L1' : 'L5 (DFMC)'} · one per second</p>
+      <p className="hud-label mb-1">SBAS messages · {m.signal === 'L1' ? 'L1' : 'L5 (DFMC)'} · one per second · illustrative order</p>
       <MessageLog rows={m.log} signal={m.signal} />
       <p className="hud-label mt-4 mb-1">Stanford chart · horizontal error vs HPL (m)</p>
       <div className="dark">

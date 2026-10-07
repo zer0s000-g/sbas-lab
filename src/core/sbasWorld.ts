@@ -10,7 +10,7 @@ import { broadcastModelSlantL1, interpolateGrid, piercePoint, scintillationLoss,
 import { satErrors, tropoModelM, sigmaAirL1M, SIGMA_CLOCK_M, SIGMA_ORBIT_M, SIGMA_TROPO_VERTICAL_M, tropoMapping, IF_GAMMA, IF_NOISE_FACTOR, type FaultInjection } from './errors'
 import { groundSolution, MASK_DEG, sigmaUdreM, UDREI_DO_NOT_USE, UDREI_NOT_MONITORED, usableForPa, type GroundSnapshot } from './groundSegment'
 import { solveFix, type ApproachMode, type FixResult, type Measurement } from './receiver'
-import { alarmBroadcastS, TIMEOUTS_S } from './messages'
+import { alarmBroadcastS, MESSAGES_LOST_PA, MESSAGE_PERIOD_S, TIMEOUTS_S } from './messages'
 import { OPERATIONS, type Operation } from './operations'
 import { DEG } from './units'
 import { START_LOCAL_HOUR } from './region'
@@ -91,15 +91,28 @@ export interface Snapshot {
 
 const SIGMA_URA_M = Math.hypot(SIGMA_CLOCK_M, SIGMA_ORBIT_M)
 
-/** Whether the aircraft has received the alarm for a satellite by time t. */
-export function alarmReceived(fault: FaultInjection | null, satId: string, tS: number): boolean {
+/**
+ * Whether the aircraft has received the alarm for a satellite by time t. The alarm is an
+ * SBAS message, so it arrives only while a GEO signal is received: once both GEOs are
+ * lost (`geoLostFromS`), no later alarm reaches the aircraft.
+ */
+export function alarmReceived(fault: FaultInjection | null, satId: string, tS: number, geoLostFromS: number | null = null): boolean {
   if (!fault || fault.satId !== satId) return false
-  return tS >= alarmBroadcastS(fault.startS) + 1
+  const arrivesS = alarmBroadcastS(fault.startS) + 1
+  return tS >= arrivesS && (geoLostFromS === null || geoLostFromS >= arrivesS)
 }
 
 /** The ground segment's solution for a moment: the same for every receiver, so it can be shared. */
 export const groundFor = (tS: number, c: Conditions): GroundSnapshot =>
   groundSolution({ tS, startLocalHour: c.startLocalHour, storm: c.storm, scintillation: c.scintillation, seed: c.seed, offline: c.offlineStations, fault: c.fault })
+
+// The ground's solution at the moment both GEOs were lost, kept for the receivers that share it.
+let atLoss: { key: string; ground: GroundSnapshot } | null = null
+function groundAtLoss(c: Conditions): GroundSnapshot {
+  const key = JSON.stringify([c.geoLostFromS, c.startLocalHour, c.storm, c.scintillation, c.seed, c.offlineStations, c.fault])
+  if (atLoss?.key !== key) atLoss = { key, ground: groundFor(c.geoLostFromS!, c) }
+  return atLoss.ground
+}
 
 /** The SBAS world seen from a receiver. `ground` may pass in `groundFor(tS, c)` when many receivers share one moment. */
 export function snapshot(tS: number, aircraft: Geodetic, c: Conditions, ground: GroundSnapshot = groundFor(tS, c)): Snapshot {
@@ -111,6 +124,9 @@ export function snapshot(tS: number, aircraft: Geodetic, c: Conditions, ground: 
   const df: Measurement[] = []
   let geosTracked = 0
   const geoLost = c.geoLostFromS !== null && tS >= c.geoLostFromS
+  // With both GEOs lost the aircraft keeps what it last received: the ground's corrections
+  // and grid at the moment of the loss, not the live ones (EGNOS SoL SDD v3.6 §6.4).
+  const received = geoLost ? groundAtLoss(c) : ground
   const alarmed: string[] = []
 
   for (const sat of ALL_SATS) {
@@ -147,8 +163,8 @@ export function snapshot(tS: number, aircraft: Geodetic, c: Conditions, ground: 
       sigmaM: Math.hypot(SIGMA_URA_M, sigIonoBroadcast, sigTropo, sigAir),
     })
 
-    const corr = ground.corrections.get(sat.id)
-    const aircraftDnu = alarmReceived(c.fault, sat.id, tS)
+    const corr = received.corrections.get(sat.id)
+    const aircraftDnu = alarmReceived(c.fault, sat.id, tS, c.geoLostFromS)
     if (aircraftDnu) alarmed.push(sat.id)
     // The ground's "Do Not Use" takes effect on board only when the alarm message has
     // arrived; until then the aircraft keeps the satellite with the UDREI it last received.
@@ -158,7 +174,7 @@ export function snapshot(tS: number, aircraft: Geodetic, c: Conditions, ground: 
     const sigUdre = sigmaUdreM(udrei)
 
     // L1 SBAS: the grid where it is monitored, otherwise the broadcast model (not for vertical guidance).
-    const grid = interpolateGrid(ground.grid, pp)
+    const grid = interpolateGrid(received.grid, pp)
     // UDREI 12 and above: not for precision approach or APV (Annex 10 App B 3.5.8.1.2.12).
     const lpvOk = usableForPa(udrei)
     if (grid) {
@@ -186,8 +202,11 @@ export function snapshot(tS: number, aircraft: Geodetic, c: Conditions, ground: 
 
   const lostFor = geoLost ? tS - (c.geoLostFromS ?? tS) : 0
   const anyGeo = geosTracked > 0 || lostFor < TIMEOUTS_S.udrei.NPA
+  // Approaches with vertical guidance (HAL ≤ 40 m or VAL ≤ 50 m: LPV and LNAV/VNAV) lose
+  // the UDREI data after four successive lost messages, well before its 12 s time-out.
+  const paHoldS = Math.min(TIMEOUTS_S.udrei.PA, MESSAGES_LOST_PA * MESSAGE_PERIOD_S)
   const service: ServiceState = {
-    paValid: c.service !== 'off' && !c.jammed && (geosTracked > 0 || lostFor < TIMEOUTS_S.udrei.PA),
+    paValid: c.service !== 'off' && !c.jammed && (geosTracked > 0 || lostFor < paHoldS),
     npaValid: c.service !== 'off' && !c.jammed && anyGeo,
     messageAgeS: geosTracked > 0 ? 0 : lostFor,
     geosTracked,

@@ -50,7 +50,9 @@ describe('the claims registry', () => {
         expect(c.aiCheck!.checked.length, `${c.id}: what the AI check read`).toBeGreaterThan(0)
         expect(c.aiCheck!.on, c.id).toMatch(/^\d{4}-\d{2}-\d{2}$/)
       }
-      if (c.aiCheck) expect(c.status, `${c.id}: an AI check is shown only on a claim no person has signed off`).toBe('ai-checked')
+      if (c.status === 'ai-checked') expect(c.aiCheck!.checked.some((k) => k.read), `${c.id}: "ai-checked" needs a document the model read itself`).toBe(true)
+      if (c.aiCheck) expect(c.status, `${c.id}: an AI check is shown only on a claim no person has signed off`).not.toBe('reviewed')
+      if (c.aiCheck && !c.aiCheck.checked.some((k) => k.read)) expect(c.status, `${c.id}: a check from memory leaves the status`).not.toBe('ai-checked')
     }
   })
 
@@ -107,6 +109,12 @@ describe('the claims registry', () => {
     for (const f of s.failures.list) expect(f.claims?.length, f.id).toBeGreaterThan(0)
   })
 
+  it('the departure row follows EGNOS SoL SDD v3.6 Table 7 (HAL 556 m) and no longer says ICAO gives none', () => {
+    const c = claim('ops.departure-row')!
+    expect(c.refs).toContainEqual({ source: 'egnos-sol-sdd', section: '§6.2 Table 7' })
+    expect(c.text).not.toMatch(/give no alert limit/i)
+    expect(c.value).toEqual([555.6, 10])
+  })
   it('docs/EXPERT_REVIEW.md and docs/claims.csv are generated from the registry (run npm run claims)', () => {
     expect(readFileSync(join(ROOT, 'docs', 'EXPERT_REVIEW.md'), 'utf8')).toBe(renderExpertReview())
     expect(readFileSync(join(ROOT, 'docs', 'claims.csv'), 'utf8')).toBe(renderClaimsCsv())

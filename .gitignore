@@ -29,3 +29,7 @@ e2e-shots
 gpu-shots
 dist-scorm
 data-cache/
+
+# Local validation: proof tests for open findings, and the reference PDFs (third-party, not redistributed)
+tests/_validation/
+docs/SBAS_Reference_Docs/

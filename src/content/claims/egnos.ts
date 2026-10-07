@@ -71,7 +71,7 @@ export const EGNOS_CLAIMS: readonly Claim[] = [
     text: 'The ground sites shown: RIMS at Toulouse, Paris, Lisbon, Madeira, the Azores, La Palma, Athens, Lappeenranta and Kuusamo (sites in the 38-station network of SoL SDD v3.6, Figure 3); NLES at Aussaguel, Betzdorf, Burum, Cagliari, Fucino, Rambouillet and Redu (EU Implementing Decision 2017/1406). Only some of the sites are shown, at city level.',
     refs: [{ source: 'egnos-sol-sdd', section: '§3.3.2.1, Figure 3' }, { source: 'eu-decision-2017-1406', section: 'Annex' }, { source: 'essp-ewa-2024', section: 'slide 2 (SDD v3.5: removal of the ALY and ABS RIMS)' }, { source: 'egnos-service-notice-34' }],
     status: 'to-confirm',
-    value: 'ATH,AZO,KUU,LAP,LIS,MAD,PAR,SPC,TLS',
+    value: 'ACR,ATH,KUU,LAP,LPI,LSB,MAD,PAR,TLS',
     actual: () =>
       STATIONS.filter((s) => s.kind === 'rims')
         .map((s) => s.code)

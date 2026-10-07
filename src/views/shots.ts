@@ -9,7 +9,7 @@ import { satEcef, GEO_SATS, ALL_SATS } from '@/core/orbits'
 import { REGION, STATIONS } from '@/core/region'
 import { DEG, M_PER_FT, M_PER_NM } from '@/core/units'
 import type { JourneyEngine } from '@/journey/engine'
-import { directionFor, type CameraIntent, type ViewId } from '@/journey/director'
+import { directionFor, stageAt, type CameraIntent, type ViewId } from '@/journey/director'
 import { operationFor } from '@/core/operations'
 import type { Shot } from '@/stage/types'
 import { ecefToSpace, FLIGHT_UNIT_M, mToFlight, toFlight, type V3 } from './scales'
@@ -43,7 +43,7 @@ export function focusSatId(e: JourneyEngine): string {
 
 /** The alert-limit radius the flight camera must fit, m (the operation of the current phase). */
 export function alRadiusM(e: JourneyEngine): number {
-  const op = operationFor(directionFor(e.state.phase).stage)
+  const op = operationFor(stageAt(e.state.phase, e.aircraft.wp))
   return op?.halM ?? OPERATIONS.apv1.halM
 }
 

@@ -12,8 +12,7 @@ import { formatMetres } from '@/lib/format'
 import { egnosRecording, RECORDING_LABEL } from '@/replay/recording'
 import { useSources } from '../sources/store'
 
-const EXTRA_NAMES: Record<number, string> = { 24: 'Mixed fast and long-term corrections', 27: 'SBAS service message', 0: 'Do not use (test mode)' }
-const nameOf = (t: number) => messageType('L1', t)?.name ?? EXTRA_NAMES[t] ?? `Type ${t}`
+const nameOf = (t: number) => messageType('L1', t)?.name ?? `Type ${t}`
 
 /** The map of the recorded grid: 30°W–50°E, 20–70°N, with Europe's outline. */
 const MAP = { lon0: -30, lon1: 50, lat0: 20, lat1: 70 }

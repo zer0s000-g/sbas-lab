@@ -8,6 +8,7 @@ import { pageLmsSession, type LmsSession } from '@/lms/scorm'
 import { FAILURES, type FailureId } from '@/journey/failures'
 import type { JourneyEngine } from '@/journey/engine'
 import { OBJECTIVES, QUESTIONS } from '@/scenarios/essp/questions'
+import { IN_FLIGHT_RESPONSES } from '@/scenarios/essp/examResponses'
 import { cn } from '@/lib/utils'
 import { useSources } from '../sources/store'
 import { useAssessment } from './assessmentStore'
@@ -46,7 +47,7 @@ function keepExamFailure(engine: JourneyEngine) {
   })
 }
 const label = (id: FailureId) => FAILURES.find((f) => f.id === id)?.label ?? id
-const response = (id: FailureId) => FAILURES.find((f) => f.id === id)?.crewAtc ?? ''
+const response = (id: string) => IN_FLIGHT_RESPONSES.find((r) => r.id === id)?.text ?? ''
 
 function Mark({ ok }: { ok: boolean | null }) {
   if (ok === null)
@@ -100,7 +101,7 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
   const showSources = useSources((s) => s.show)
 
   const quiz = quizChecked ? gradeQuiz(QUESTIONS, quizAnswers) : null
-  const lastPlan = useMemo(() => (lastExam ? examPlan(lastExam.seed, FAILURES) : null), [lastExam])
+  const lastPlan = useMemo(() => (lastExam ? examPlan(lastExam.seed, FAILURES, IN_FLIGHT_RESPONSES) : null), [lastExam])
   const exam = lastExam && lastPlan ? gradeExam(lastPlan, lastExam.what, lastExam.action) : null
   const total = overall(quiz, exam, QUESTIONS.length)
 
@@ -121,7 +122,7 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
   const refocus = () => requestAnimationFrame(() => content.current?.focus())
   const startExam = () => {
     // An instructor's link fixes the seed (`?seed=`), so a class gets the same hidden failure.
-    const plan = examPlan(examSeedFromUrl() ?? (Date.now() % 2_000_000_000) + 1, FAILURES)
+    const plan = examPlan(examSeedFromUrl() ?? (Date.now() % 2_000_000_000) + 1, FAILURES, IN_FLIGHT_RESPONSES)
     logAction(engine, 'exam', `started (seed ${plan.seed})`)
     for (const f of FAILURES) engine.setFailure(f.id, false)
     engine.jumpTo(plan.phase)
@@ -242,7 +243,7 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
             <>
               <p className="hud-label text-brass">Exam running · something has failed</p>
               <Choice name="exam-what" legend="1. What failed?" options={running.whatOptions.map((id) => ({ value: id, text: label(id) }))} value={what} onChange={setWhat} />
-              <Choice name="exam-action" legend="2. What do the crew and the controller do?" options={running.actionOptions.map((id) => ({ value: id, text: response(id) }))} value={action} onChange={setAction} />
+              <Choice name="exam-action" legend="2. LAB201 is on final. What do the crew and the controller do now?" options={running.actionOptions.map((id) => ({ value: id, text: response(id) }))} value={action} onChange={setAction} />
               <HudButton variant="solid" className="mt-2 w-full" onClick={submitExam}>
                 Hand in the exam
               </HudButton>
@@ -267,6 +268,7 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
               <p className="mt-1 flex flex-wrap items-center gap-2">
                 What the crew and ATC do: <Mark ok={lastExam!.action === null ? null : exam.actionRight} />
               </p>
+              <p className="mt-1 text-foreground/85">The right response on final: {response(lastPlan.action)}</p>
               <p className="mt-1 text-foreground/85">{FAILURES.find((f) => f.id === lastPlan.failure)?.notice}</p>
             </div>
           ) : (

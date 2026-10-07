@@ -2,7 +2,7 @@
 import { K_H_NPA, K_H_PA, K_V_PA, PBIAS } from '@/core/receiver'
 import { MASK_DEG, UDRE_TABLE_M, UDREI_DO_NOT_USE, UDREI_NOT_MONITORED, sigmaUdreM, usableForPa } from '@/core/groundSegment'
 import { GIVE_TABLE_M, GIVEI_NOT_MONITORED, IGP_SPACING_DEG, IONO_SHELL_HEIGHT_M, sigmaGiveM, tauVertNoSbasM } from '@/core/iono'
-import { DFMC_MESSAGE_BITS, MESSAGE_BITS, MESSAGE_PERIOD_S, TIMEOUTS_S } from '@/core/messages'
+import { DFMC_MESSAGE_BITS, MESSAGE_BITS, MESSAGE_PERIOD_S, MESSAGES_LOST_PA, TIMEOUTS_S } from '@/core/messages'
 import { APPROACH_CHANNEL, GARP_BEYOND_FPAP_M, crc32q } from '@/core/approach'
 import type { Claim } from './types'
 
@@ -157,26 +157,26 @@ export const SBAS_CLAIMS: readonly Claim[] = [
     topic: 'SBAS',
     scenarios: BOTH,
     text: 'The message type numbers and names (L1: 1 PRN mask, 2–5 fast corrections, 6 integrity, 7 fast-correction degradation, 9 GEO navigation, 10 degradation, 12 network time, 17 GEO almanac, 18 IGP mask, 24 mixed, 25 long-term, 26 ionospheric delays, 27/28, 63 null; DFMC: 31, 32, 34, 37, 39, 47).',
-    refs: [{ source: 'rtca-do229' }, { source: 'eurocae-ed259' }, D9849('§4.3.4.2'), D9849('Appendix G 2.5')],
+    refs: [{ source: 'rtca-do229' }, { source: 'eurocae-ed259' }, D9849('§4.3.4.2'), D9849('Appendix G 2.5'), { source: 'egnos-sol-sdd', section: '§4.1.2 Table 4' }, { source: 'faa-waas-ps-2008', section: 'Table 2.1-1' }],
     status: 'to-confirm',
     code: 'src/core/messages.ts',
     todo: 'message type numbers and names other than Types 0, 27, 28',
-    note: 'Doc 9849 names Types 0, 27, 28 and 32. The L1 types the replay decodes (1, 2–5, 6, 7, 9, 10, 12, 17, 18, 24, 25, 26, 27, 63) appear in the recorded EGNOS broadcast with those numbers.',
+    note: 'Doc 9849 names Types 0, 27, 28 and 32. The L1 numbers and names agree with EGNOS SoL SDD v3.6 Table 4 and the WAAS PS Table 2.1-1; EGNOS broadcasts no Type 28, so the page’s L1 broadcast plan leaves it out. The recorded EGNOS broadcast (2011) contains Types 1, 2, 3, 7, 9, 10, 12, 17, 18, 24, 25, 26 and 27. The DFMC numbers (ED-259) are to confirm.',
   },
   { id: 'sbas.mt0', topic: 'SBAS', scenarios: BOTH, text: 'Message Type 0 means "do not use this SBAS for safety-of-life"; Types 27 and 28 (L1) and 32 (DFMC) bound the errors away from the network.', refs: [D9849('Appendix G 2.5'), D9849('§4.3.4.2')], status: 'sourced', code: 'src/core/messages.ts' },
   {
     id: 'sbas.timeouts',
     topic: 'SBAS',
     scenarios: BOTH,
-    text: 'How long received data may be used: the integrity data (UDREI) 12 s for precision approach and APV (LNAV/VNAV, LPV) and 18 s for en route, terminal and NPA; the fast corrections themselves time out after I_fc, set by the degradation factor in Message Type 7 (12 to 120 s for approach, 18 to 180 s otherwise); long-term corrections 240 s / 360 s; the ionospheric corrections 600 s.',
-    refs: [A10('Appendix B Table B-94, Table B-95, 3.5.8.1.2.8'), { source: 'rtca-do229', section: 'Table A-25' }, { source: 'eurocae-ed259' }],
+    text: 'How long received data may be used: the integrity data (UDREI) 12 s for precision approach and APV (LNAV/VNAV, LPV) and 18 s for en route, terminal and NPA; the fast corrections themselves time out after I_fc, set by the degradation factor in Message Type 7 (12 to 120 s for approach, 18 to 180 s otherwise); long-term corrections 240 s / 360 s; the ionospheric corrections 600 s. During an approach with HAL ≤ 40 m or VAL ≤ 50 m, losing 4 successive messages invalidates all UDREI data, so LPV and LNAV/VNAV end after 4 s without a GEO signal.',
+    refs: [A10('Appendix B Table B-94, Table B-95, 3.5.8.1.2.7, 3.5.8.1.2.8'), { source: 'faa-waas-pan92', section: 'Table 5-3' }, { source: 'rtca-do229', section: 'Table A-25' }, { source: 'eurocae-ed259' }],
     status: 'to-confirm',
-    value: [12, 18, 240, 360, 600],
+    value: [12, 18, 240, 360, 600, 4],
     unit: 's',
-    actual: () => [TIMEOUTS_S.udrei.PA, TIMEOUTS_S.udrei.NPA, TIMEOUTS_S.longTerm.PA, TIMEOUTS_S.longTerm.NPA, TIMEOUTS_S.iono.PA],
+    actual: () => [TIMEOUTS_S.udrei.PA, TIMEOUTS_S.udrei.NPA, TIMEOUTS_S.longTerm.PA, TIMEOUTS_S.longTerm.NPA, TIMEOUTS_S.iono.PA, MESSAGES_LOST_PA * MESSAGE_PERIOD_S],
     code: 'src/core/messages.ts',
     todo: 'message time-outs',
-    note: 'The GEO-loss behaviour uses the UDREI time-outs. LP is not named in the Annex 10 columns, so it is not put in the 12 s column until DO-229 is checked. Annex 10 App B 3.5.8.1.2.7 adds that losing four successive messages during an approach with HAL ≤ 40 m or VAL ≤ 50 m invalidates all UDREI data.',
+    note: 'The GEO-loss behaviour uses the four-lost-messages rule for vertical guidance and the 18 s UDREI time-out for en route to NPA. LP is not named in the Annex 10 columns, so it is not put in the 12 s column until DO-229 is checked. The four-messages rule (App B 3.5.8.1.2.7) is to confirm in DO-229; the WAAS PAN report gives the same time-outs as Table B-94.',
   },
   {
     id: 'sbas.alarm-latency',

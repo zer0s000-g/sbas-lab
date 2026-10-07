@@ -77,7 +77,7 @@ const AUTHORED: readonly AuthoredQuestion[] = [
     id: 'q.departure',
     prompt: 'Which row of the ICAO Annex 10 signal-in-space requirements does a departure share?',
     options: ['Initial, intermediate and non-precision approach: 220 m accuracy, 10 s to alert', 'Terminal: 0.74 km accuracy, 15 s to alert', 'En route: 3.7 km accuracy, 5 minutes to alert', 'APV-I: 16 m horizontal accuracy, VAL 50 m'],
-    explain: 'ICAO Annex 10 puts departure in one row with initial, intermediate and non-precision approach. Its alert-limit note gives no HAL for departure: this page applies the non-precision 0.3 NM (556 m), and the value the avionics use (RTCA DO-229) is still to be confirmed.',
+    explain: 'ICAO Annex 10 puts departure in one row with initial, intermediate and non-precision approach: 10 s to alert, and in the EGNOS service definition’s summary a horizontal alert limit of 0.3 NM (556 m). The value the avionics use in departure mode (RTCA DO-229) is still to be confirmed.',
     claims: ['ops.departure-row'],
     objective: 'obj.operations',
   },

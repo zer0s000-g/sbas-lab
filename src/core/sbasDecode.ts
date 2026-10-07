@@ -263,12 +263,16 @@ export function applyMessage(s: DecoderState, m: Decoded, tS: number): void {
       s.iodp = m.iodp
       return
     case 0:
+      // "Do not use": discard the ranging, corrections and integrity data of this signal
+      // (EGNOS SoL SDD v3.6 Table 4), including a test message that carries Type 2 data.
+      Object.assign(s, { ...emptyState(), counts: s.counts })
+      return
     case 2:
     case 3:
     case 4:
     case 5: {
       if (!('prc' in m) || s.iodp !== m.iodp) return
-      const first = 13 * ((m.type === 0 ? 2 : m.type) - 2)
+      const first = 13 * (m.type - 2)
       for (let i = 0; i < 13; i++) {
         const slot = first + i
         if (slot >= s.maskBits.length) break

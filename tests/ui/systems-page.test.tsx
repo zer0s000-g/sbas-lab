@@ -8,6 +8,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import SystemsPage from '@/page/systems/SystemsPage'
+import { SbasChain } from '@/page/systems/SbasChain'
 import { SBAS_CHAIN, SBAS_STUDIES, SBAS_SYSTEMS } from '@/content/sbasSystems'
 import { claim } from '@/content/claims'
 import { viewFromSearch, withoutView, systemsHref } from '@/page/view'
@@ -55,6 +56,18 @@ describe('the SBAS systems data', () => {
     expect(new Set(all).size).toBe(all.length)
   })
 
+  it('gives every system in aviation service at least one operational GEO (GAGAN: all three broadcast, ICAO APAC SBAS guidance 2025 §2.4)', () => {
+    const none = SBAS_SYSTEMS.filter((s) => s.status === 'operational' && !s.geos.some((g) => g.role === 'operational')).map((s) => s.id)
+    expect(none).toEqual([])
+  })
+
+  it('qualifies GAGAN APV-I as 99 % of the time over 76 % of the Indian landmass, never the whole landmass (e-AIP India ENR 4.3)', () => {
+    const gagan = SBAS_SYSTEMS.find((s) => s.id === 'gagan')!
+    const texts = [gagan.headline, ...gagan.services.map((s) => s.level), gagan.areaNote, claim('world.gagan')!.text]
+    expect(texts.filter((t) => /landmass/i.test(t) && !/76\s?%/.test(t))).toEqual([])
+    expect(claim('world.gagan')!.refs.some((r) => r.source === 'icao-apac-sbas-guidance-2025')).toBe(true)
+  })
+
   it('tells the chain in seven steps', () => {
     expect(SBAS_CHAIN.map((c) => c.id)).toEqual(['gnss', 'reference', 'master', 'uplink', 'geo', 'aircraft', 'approach'])
   })
@@ -92,6 +105,18 @@ describe('the SBAS worldwide page', () => {
     fireEvent.click(waas[waas.length - 1])
     expect(screen.getByText('Wide Area Augmentation System')).toBeTruthy()
     expect(screen.getByRole('img', { name: /WAAS highlighted/ })).toBeTruthy()
+  })
+
+  it('does not tell learners that a system whose GEOs broadcast has no operational GEO', () => {
+    act(() => usePrefs.setState({ reducedMotionOverride: true }))
+    render(<SbasChain system={SBAS_SYSTEMS.find((s) => s.id === 'gagan')!} />)
+    expect(screen.queryByText(/no operational GEO/)).toBeNull()
+    expect(screen.getByText('3 operational GEOs')).toBeTruthy()
+    cleanup()
+    const unstated = { ...SBAS_SYSTEMS.find((s) => s.id === 'gagan')!, geos: [{ name: 'X', prn: null, lonDeg: null, role: 'not stated' as const }] }
+    render(<SbasChain system={unstated} />)
+    expect(screen.queryByText(/no operational GEO/)).toBeNull()
+    act(() => usePrefs.setState({ reducedMotionOverride: null }))
   })
 
   it('steps through the chain with the buttons and the arrow keys', () => {

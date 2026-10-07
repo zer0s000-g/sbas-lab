@@ -11,12 +11,13 @@ import type { FailureId } from '@/journey/failures'
 interface ExamState {
   running: ExamPlan | null
   what: FailureId | null
-  action: FailureId | null
+  /** The chosen in-flight response id. */
+  action: string | null
   /** True while an exam runs. */
   locked: boolean
   start: (plan: ExamPlan) => void
   setWhat: (v: FailureId) => void
-  setAction: (v: FailureId) => void
+  setAction: (v: string) => void
   end: () => void
   /** For tests: lock or unlock without a plan. */
   setLocked: (v: boolean) => void

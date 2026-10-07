@@ -64,6 +64,24 @@ export function gradeQuiz(questions: readonly Question[], answers: readonly (num
   return { correct: marks.filter((m) => m === true).length, max: questions.length, marks }
 }
 
+/**
+ * An answer to "LAB201 is on final: what do the crew and the controller do now?". On final
+ * the crew act on what the cockpit shows, not on the cause, so a response is right for
+ * every failure that looks the same there (several failures can share one), and each
+ * examable failure has exactly one right response. A response right for none is a
+ * distractor.
+ */
+export interface InFlightResponse {
+  id: string
+  /** What the crew see on final when this is the right response; for a distractor, why it is never right. */
+  seen: string
+  /** The response, in plain words. */
+  text: string
+  /** The failures it is the right response to, on final. */
+  rightFor: readonly FailureId[]
+  claims: readonly string[]
+}
+
 export interface ExamPlan {
   seed: number
   /** The failure hidden in the journey. */
@@ -72,8 +90,10 @@ export interface ExamPlan {
   phase: PhaseId
   /** "What failed?": four failures, one of them the hidden one. */
   whatOptions: FailureId[]
-  /** "What do the crew and ATC do?": the responses of four failures, one the hidden one's. */
-  actionOptions: FailureId[]
+  /** "What do the crew and ATC do?": four distinct responses (InFlightResponse ids), exactly one right. */
+  actionOptions: string[]
+  /** The right response for the hidden failure, one of actionOptions. */
+  action: string
 }
 
 /** Failures an exam can hide: each shows on the panels during the final approach. */
@@ -88,14 +108,31 @@ function shuffled<T>(xs: readonly T[], rand: () => number): T[] {
   return a
 }
 
-/** The exam for a seed, from the failures the scenario offers. */
-export function examPlan(seed: number, offered: readonly FailureDef[]): ExamPlan {
+/** The response that is right for a failure on final; throws unless exactly one is. */
+export function rightResponse(failure: FailureId, responses: readonly InFlightResponse[]): InFlightResponse {
+  const right = responses.filter((r) => r.rightFor.includes(failure))
+  if (right.length !== 1) throw new Error(`${failure}: ${right.length} right responses on final, not one`)
+  return right[0]
+}
+
+/**
+ * The exam for a seed, from the failures the scenario offers and its in-flight responses.
+ * The hidden failure and the "What failed?" options depend on the seed only, so an
+ * instructor's `?seed=` link hides the same failure for everyone. "What do the crew and
+ * ATC do?" offers the hidden failure's one right response and three others that are not
+ * right for it, so exactly one option is right.
+ */
+export function examPlan(seed: number, offered: readonly FailureDef[], responses: readonly InFlightResponse[]): ExamPlan {
   const pool = EXAMABLE.filter((id) => offered.some((f) => f.id === id))
   if (pool.length < 4) throw new Error('an exam needs at least four failures')
   const rand = mulberry32(seed)
   const failure = pool[Math.floor(rand() * pool.length)]
-  const pick = () => shuffled([failure, ...shuffled(pool.filter((id) => id !== failure), rand).slice(0, 3)], rand)
-  return { seed, failure, phase: 'final', whatOptions: pick(), actionOptions: pick() }
+  const whatOptions = shuffled([failure, ...shuffled(pool.filter((id) => id !== failure), rand).slice(0, 3)], rand)
+  const action = rightResponse(failure, responses).id
+  const wrong = responses.filter((r) => r.id !== action).map((r) => r.id)
+  if (wrong.length < 3) throw new Error('the exam needs at least three wrong responses')
+  const actionOptions = shuffled([action, ...shuffled(wrong, rand).slice(0, 3)], rand)
+  return { seed, failure, phase: 'final', whatOptions, actionOptions, action }
 }
 
 export interface ExamResult {
@@ -105,9 +142,10 @@ export interface ExamResult {
   actionRight: boolean
 }
 
-export function gradeExam(plan: ExamPlan, what: FailureId | null, action: FailureId | null): ExamResult {
+/** Marks the exam: `action` is the id of the chosen InFlightResponse. */
+export function gradeExam(plan: ExamPlan, what: FailureId | null, action: string | null): ExamResult {
   const whatRight = what === plan.failure
-  const actionRight = action === plan.failure
+  const actionRight = action === plan.action
   return { correct: Number(whatRight) + Number(actionRight), max: 2, whatRight, actionRight }
 }
 

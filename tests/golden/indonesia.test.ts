@@ -212,6 +212,27 @@ const GOLDEN_CHANGES: { why: string; apply: (g: Golden, now: Golden) => void }[]
     why: 'iono.storm: the storm failure no longer says the ionosphere gets "thicker" (a storm can lower the electron content as well as raise it); it says the delay changes fast and unevenly over a wide area.',
     apply: (g) => void (g.failures = 'c926214afde04f965224225a1dcf30c901c2a7834ee5262f86af2ce52795984f'),
   },
+  // The validation of October 2026 (reference documents in docs/SBAS_Reference_Docs).
+  {
+    why: 'The view model says whether LAB201 is on the ground from the aircraft (onGround), not from altitude above sea level < 100 ft: over the Bali threshold, airborne at about 100 ft, the text said "on the ground". Rule: onGround is the fresh flag; a text that said "on the ground" while the fresh flag is false is taken from the fresh record, and every other text stays as recorded.',
+    apply: (g, now) => {
+      for (const [id, p] of Object.entries(g.phases)) {
+        const fresh = now.phases[id]
+        const onGround = fresh.model.onGround as boolean
+        p.model.onGround = onGround
+        if (!onGround) p.text = p.text.map((t, i) => (t.includes('LAB201 on the ground') ? fresh.text[i] : t))
+      }
+    },
+  },
+  {
+    why: 'The descent applied the non-precision approach limits (HAL 556 m) from the top of descent at FL330. EGNOS SoL SDD v3.6 Table 7 (Annex 10 Table 3.7.2.4-1) gives that row to the initial and intermediate approach; the descent now goes en route, terminal on the arrival, then the approach row from the IF. Rule: at the start of the descent (top of descent) the operation is continental en route and the texts name its HAL.',
+    apply: (g) => {
+      const op = OPERATIONS.enroute
+      const d = g.phases.descent
+      d.model.op = round({ id: op.id, name: op.name, halM: op.halM, valM: op.valM, ttaS: op.ttaS, source: op.source })
+      d.text = d.text.map((t) => t.replace(/Non-precision approach \(LNAV\) limits HAL [^,]+,/, `${op.name} limits HAL ${formatMetres(op.halM)},`))
+    },
+  },
 ]
 
 describe('the AirNav Indonesia scenario is unchanged', () => {

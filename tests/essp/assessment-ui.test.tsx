@@ -11,6 +11,8 @@ import { sanitizeAssessment, useAssessment } from '@/page/essp/assessmentStore'
 import { useExamLock } from '@/page/essp/examLock'
 import { QUESTIONS } from '@/scenarios/essp/questions'
 import { FAILURES } from '@/journey/failures'
+import { rightResponse } from '@/assessment/assessment'
+import { IN_FLIGHT_RESPONSES } from '@/scenarios/essp/examResponses'
 import { resetPageLmsSession, type Scorm12Api } from '@/lms/scorm'
 
 const calls: string[] = []
@@ -72,13 +74,14 @@ describe('the assessment panel', () => {
     const on = FAILURES.filter((f) => e.state.failures[f.id])
     expect(on).toHaveLength(1)
     expect(useExamLock.getState().locked).toBe(true)
-    // Answer right: the failure that is on, and its response.
+    // Answer right: the failure that is on, and the response to what it shows on final.
     fireEvent.click(screen.getByRole('radio', { name: on[0].label }))
-    fireEvent.click(screen.getByRole('radio', { name: on[0].crewAtc }))
+    fireEvent.click(screen.getByRole('radio', { name: rightResponse(on[0].id, IN_FLIGHT_RESPONSES).text }))
     fireEvent.click(screen.getByRole('button', { name: 'Hand in the exam' }))
     expect(FAILURES.some((f) => e.state.failures[f.id])).toBe(false)
     expect(useExamLock.getState().locked).toBe(false)
     expect(screen.getByText(/Exam: 2 \/ 2/)).toBeTruthy()
+    expect(screen.getByText(`The right response on final: ${rightResponse(on[0].id, IN_FLIGHT_RESPONSES).text}`)).toBeTruthy()
     expect(screen.getByText(/Incomplete: do the quiz and the exam/)).toBeTruthy()
   })
 
@@ -92,7 +95,7 @@ describe('the assessment panel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start the exam' }))
     const f = FAILURES.find((x) => e.state.failures[x.id])!
     fireEvent.click(screen.getByRole('radio', { name: f.label }))
-    fireEvent.click(screen.getByRole('radio', { name: f.crewAtc }))
+    fireEvent.click(screen.getByRole('radio', { name: rightResponse(f.id, IN_FLIGHT_RESPONSES).text }))
     fireEvent.click(screen.getByRole('button', { name: 'Hand in the exam' }))
     expect(calls).toContain('cmi.core.score.raw=100')
     expect(calls).toContain('cmi.core.lesson_status=passed')
@@ -146,6 +149,9 @@ describe('saved assessment progress', () => {
   it('keeps only well-formed fields', () => {
     expect(sanitizeAssessment({ quizAnswers: [1, 'x', -1, 2.5, 3], quizChecked: 'yes', lastExam: { seed: 5, what: 'storm', action: 'nope' } })).toEqual({ quizAnswers: [1, null, null, null, 3] })
     expect(sanitizeAssessment({ lastExam: { seed: 5, what: 'storm', action: null }, quizChecked: true })).toEqual({ quizChecked: true, lastExam: { seed: 5, what: 'storm', action: null } })
+    expect(sanitizeAssessment({ lastExam: { seed: 5, what: 'storm', action: 'reportLpvLoss' } })).toEqual({ lastExam: { seed: 5, what: 'storm', action: 'reportLpvLoss' } })
+    // Saved before the responses had their own ids: the action was a failure id, which would now be graded differently.
+    expect(sanitizeAssessment({ lastExam: { seed: 5, what: 'storm', action: 'storm' } })).toEqual({})
     expect(sanitizeAssessment('garbage')).toEqual({})
   })
 })

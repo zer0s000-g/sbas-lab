@@ -18,6 +18,7 @@ import { alarmBroadcastS } from '@/core/messages'
 import { conditionsFor, FAILURES, NO_FAILURES, NO_TIMES, OFFLINE_SET } from '@/journey/failures'
 import { ACTIVE_SCENARIO } from '@/scenarios/id'
 import { SCENARIO } from '@/scenarios/active'
+import { EGNOS_RIMS } from '@/scenarios/essp/rimsNetwork'
 
 interface Sample {
   t: number
@@ -122,9 +123,24 @@ describe('EGNOS as the scenario shows it', () => {
     expect(MASTER.kind).toBe('mcc')
     for (const g of GEO_SATS) expect(STATIONS.some((s) => s.kind === 'gus' && s.geoId === g.id)).toBe(true)
     // The RIMS shown are in the current 38-site network (SoL SDD v3.6 Figure 3): no Alexandria or Kourou, and the
-    // Finnish site is Lappeenranta.
-    expect(RIMS_STATIONS.map((s) => s.code).sort()).toEqual(['ATH', 'AZO', 'KUU', 'LAP', 'LIS', 'MAD', 'PAR', 'SPC', 'TLS'])
+    // Finnish site is Lappeenranta. Codes as the figure labels them (Lisbon LSB, Azores ACR, La Palma LPI).
+    expect(RIMS_STATIONS.map((s) => s.code).sort()).toEqual(['ACR', 'ATH', 'KUU', 'LAP', 'LPI', 'LSB', 'MAD', 'PAR', 'TLS'])
     expect(STATIONS.filter((s) => s.kind === 'gus').every((s) => s.code === 'NLES')).toBe(true)
+  })
+  it('labels every RIMS with its SoL SDD v3.6 Figure 3 code, the same code as the service-area map', () => {
+    // EGNOS SoL SDD v3.6 §3.3.2.1, Figure 3 (PDF p. 20): the 38 RIMS sites, transcribed from the figure.
+    const sddFigure3 = [
+      'LYR', 'JME', 'TRO', 'KIR', 'KUU', 'RKK', 'EGI', 'TRD', 'GVL', 'LAP', 'ALB', 'GLG', 'CRK', 'SWA', 'BRN', 'WRS', 'PAR', 'ZUR', 'SDC',
+      'TLS', 'PDM', 'ROM', 'SOF', 'GOL', 'ACR', 'LSB', 'MLG', 'CTN', 'ATH', 'HFA', 'MAD', 'AGA', 'DJA', 'LPI', 'CNR', 'NOU', 'HBK', 'MON',
+    ]
+    expect(new Set(sddFigure3).size).toBe(38)
+    expect(RIMS_STATIONS.map((s) => s.code).filter((c) => !sddFigure3.includes(c))).toEqual([])
+    const serviceMapCode = new Map(EGNOS_RIMS.map((r) => [r.name, r.id]))
+    const mismatches = RIMS_STATIONS.filter((s) => serviceMapCode.has(s.name) && serviceMapCode.get(s.name) !== s.code).map(
+      (s) => `${s.name}: journey ${s.code}, service map ${serviceMapCode.get(s.name)}`,
+    )
+    expect(mismatches).toEqual([])
+    for (const id of OFFLINE_SET) expect(STATIONS.some((s) => s.id === id)).toBe(true)
   })
   it('the IGPs stay inside the band where DO-229 spaces them 5° apart (up to 55°)', () => {
     expect(IGP_BOX.lat1).toBeLessThanOrEqual(55)
@@ -214,10 +230,20 @@ describe('failures over Europe', () => {
     expect(later.sbasPaFix?.used ?? []).not.toContain(victim)
     expect(alarmBroadcastS(fault.startS) + 1 - fault.startS).toBeLessThanOrEqual(LPV200.ttaS)
   })
+  it('with both GEOs lost no later alarm reaches the aircraft', () => {
+    const x = finals(nominal)[5]
+    const victim = x.snap.sbasPaFix!.used[0]
+    const c = { ...NOMINAL, geoLostFromS: x.t - 1, fault: { satId: victim, startS: x.t, jumpM: 40 } }
+    const later = snapshot(x.t + LPV200.ttaS, pos(x), c)
+    expect(later.service.geosTracked).toBe(0)
+    expect(later.alarmedSats).not.toContain(victim)
+  })
   it('losing both GEOs: vertical guidance times out, then GPS alone with LNAV', () => {
     const x = finals(nominal)[3]
     const c = { ...NOMINAL, geoLostFromS: x.t }
-    expect(approachMode(snapshot(x.t + 5, pos(x), c)).mode).toBe('LPV')
+    // Vertical guidance survives three lost messages and goes with the fourth (Annex 10 App B 3.5.8.1.2.7).
+    expect(approachMode(snapshot(x.t + 3, pos(x), c)).mode).toBe('LPV')
+    expect(approachMode(snapshot(x.t + 4, pos(x), c)).mode).toBe('LNAV')
     expect(approachMode(snapshot(x.t + 13, pos(x), c)).mode).toBe('LNAV')
     expect(snapshot(x.t + 30, pos(x), c).sbasFix).toBeNull()
     // After the full time-out the receiver is on GPS alone, and RAIM still supports LNAV,

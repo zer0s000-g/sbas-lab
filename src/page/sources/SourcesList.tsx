@@ -64,7 +64,9 @@ function ClaimCard({ c }: { c: Claim }) {
       {c.aiCheck && (
         <div className="mt-1.5 rounded-[4px] border border-hud-line p-2 text-[12px] leading-4">
           <p className="hud-label normal-case text-signal">
-            Checked by an AI model ({c.aiCheck.model}), {c.aiCheck.on}: {VERDICT[c.aiCheck.verdict]}. Not a human sign-off.
+            {c.aiCheck.checked.some((k) => k.read)
+              ? `Checked by an AI model (${c.aiCheck.model}), ${c.aiCheck.on}: ${VERDICT[c.aiCheck.verdict]}. Not a human sign-off.`
+              : `An AI model (${c.aiCheck.model}) gave a view from its own knowledge, ${c.aiCheck.on}, without reading the sources. Not a check, and not a human sign-off.`}
           </p>
           <p className="mt-1 text-foreground/85">{c.aiCheck.rationale}</p>
         </div>
