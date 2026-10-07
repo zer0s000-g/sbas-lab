@@ -14,7 +14,8 @@ import * as THREE from 'three'
 import { hash2, valueNoise } from '@/core/random'
 import { SCENARIO } from '@/scenarios/active'
 import { AIRPORT_LIST, runwayToLocalNm } from '@/core/region'
-import { M_PER_FT } from '@/core/units'
+import { runwayExtentM } from '@/core/sites'
+import { M_PER_FT, M_PER_NM } from '@/core/units'
 import { anyAirfieldFlat, seaHeightMap, terrainGridFt, type NmRect } from '../terrain'
 import { FLIGHT_UNIT_M, toFlight } from '../scales'
 
@@ -31,7 +32,8 @@ const snap = (v: number) => Math.floor(v / CELL_NM) * CELL_NM
 
 /** The fine patch around each airport: 12 NM square, centred on the runway, snapped to the corridor grid. */
 export const TERRAIN_PATCHES: readonly (NmRect & { id: string })[] = AIRPORT_LIST.map((ap) => {
-  const [ce, cn] = runwayToLocalNm(ap, ap.runwayLengthM / 2, ap.terminalSide * ((ap.parallelOffsetM ? Math.abs(ap.parallelOffsetM) : 0) / 2 + 400))
+  const { startM, endM } = runwayExtentM(ap)
+  const [ce, cn] = runwayToLocalNm(ap, (startM + endM) / 2, ap.terminalSide * ((ap.parallelOffsetM ? Math.abs(ap.parallelOffsetM) : 0) / 2 + 400))
   const e0 = snap(ce - (PATCH_CELLS * CELL_NM) / 2)
   const n0 = snap(cn - (PATCH_CELLS * CELL_NM) / 2)
   return { id: ap.id, e0, e1: e0 + PATCH_CELLS * CELL_NM, n0, n1: n0 + PATCH_CELLS * CELL_NM }
@@ -43,7 +45,7 @@ export function forestK(e: number, n: number, hFt: number) {
   return Math.min(1, Math.max(0, (hFt - 250) / 900 + (patch - 0.5) * 1.3))
 }
 
-const U = 1852 / FLIGHT_UNIT_M
+const U = M_PER_NM / FLIGHT_UNIT_M
 const SKIRT_FT = 400
 /** The grids never go deeper than this (the sea hides everything below). */
 const FLOOR_FT = -150

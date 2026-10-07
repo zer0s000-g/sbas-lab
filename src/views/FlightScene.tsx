@@ -14,10 +14,10 @@ import * as THREE from 'three'
 import type { ThemeTokens } from '@/hooks/useThemeTokens'
 import { DEPARTURE, DESTINATION, nearestAirport } from '@/core/region'
 import { GEO_SATS, geoLabel } from '@/core/orbits'
-import { DEG, M_PER_FT } from '@/core/units'
+import { DEG, ktToMs, M_PER_FT } from '@/core/units'
 import { operationFor } from '@/core/operations'
-import { navStatus, approachMode } from '@/core/sbasWorld'
 import { stageAt } from '@/journey/director'
+import { journeyNavFix } from '@/journey/navFix'
 import { getJourney, useJourneyState } from '@/journey/store'
 import { useReducedMotion } from '@/stores/prefs'
 import { Callout3D } from '@/stage/Callout3D'
@@ -166,7 +166,7 @@ function FlightScene({ t, quality }: { t: ThemeTokens; quality: Quality }) {
       plane.current.rotation.set(0, -(a.headingDeg - 90) * DEG, 0)
       // Nose up in the climb, down on the descent, easing into each new attitude while the
       // world moves (held when it is frozen; at once with reduced motion or on opening).
-      const target = Math.atan2((a.vsFpm * M_PER_FT) / 60, Math.max((a.gsKt * 1852) / 3600, 1))
+      const target = Math.atan2((a.vsFpm * M_PER_FT) / 60, Math.max(ktToMs(a.gsKt), 1))
       if (!Number.isFinite(pitch.current) || reduced) pitch.current = target
       else if (engine.tick !== pitchTick.current) pitch.current += (target - pitch.current) * (1 - Math.exp(-Math.min(dt, 0.1) / PITCH_TAU_S))
       pitchTick.current = engine.tick
@@ -176,12 +176,11 @@ function FlightScene({ t, quality }: { t: ThemeTokens; quality: Quality }) {
     const agl = a.altFt - fieldFt
     lab201.gear = a.onGround || agl < (a.vsFpm < 0 ? 2500 : 400)
     lab201.landing = a.altFt < 10000 && (!a.onGround || a.gsKt > 30)
-    // The fix the story shows: GPS alone until the first correction, then SBAS.
-    const stage = stageAt(engine.state.phase, a.wp)
-    const op = operationFor(stage)
+    // The fix the story shows (the same as the readouts): GPS alone until the first
+    // correction, then the one the stage's limits or the approach mode pick.
+    const nav = journeyNavFix(engine)
+    const { fix, op } = nav
     if (op !== shownOp.current) setOp((shownOp.current = op))
-    let fix = snap.abas
-    if (engine.sbasShown) fix = stage === 'final' ? approachMode(snap).fix : op ? navStatus(snap, op).fix : (snap.sbasFix ?? snap.abas)
     if (pl.current) {
       pl.current.visible = !!fix && Number.isFinite(fix.hplM)
       if (fix && Number.isFinite(fix.hplM)) {
@@ -211,7 +210,8 @@ function FlightScene({ t, quality }: { t: ThemeTokens; quality: Quality }) {
       if (f) m.position.set(mToFlight(f.errorEnu[0]) * ERROR_MARKER_SCALE, mToFlight(f.errorEnu[2]) * ERROR_MARKER_SCALE, -mToFlight(f.errorEnu[1]) * ERROR_MARKER_SCALE)
     }
     place(abasMark.current, snap.abas, true)
-    place(sbasMark.current, snap.sbasFix, engine.sbasShown)
+    // The filled dot is the SBAS fix navigated with (on final the LPV fix the readouts report).
+    place(sbasMark.current, nav.source === 'sbas' ? fix : snap.sbasFix, engine.sbasShown)
     // Signal rays toward the satellites (true directions).
     const used = fix?.used
     let k = 0

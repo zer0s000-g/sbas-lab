@@ -69,3 +69,31 @@ describe('outages in a scenario without a Break panel', () => {
     expect(e.state.failures.jamming).toBe(false)
   })
 })
+
+describe(`LAB201 on the controller's scope (${SCENARIO.id})`, () => {
+  it('draws LAB201 while it descends inside the scope (D-6)', () => {
+    const e = new JourneyEngine({ guidedStops: false, running: false })
+    e.jumpTo('final')
+    render(<AtcPanel engine={e} />)
+    expect(screen.getByRole('img', { name: /Approach scope around/ }).getAttribute('aria-label')).toMatch(/LAB201 \d+ ft/)
+  })
+
+  it('no illustrative arrival comes within 3 NM and 1000 ft of LAB201 while it is on the scope (illustrative spacing)', async () => {
+    const { journeyIndex, TICK_S } = await import('@/journey/phases')
+    const { trafficAt } = await import('@/core/traffic')
+    const { ATC_TRAFFIC_SPEC: spec } = await import('@/page/atc/spec')
+    const idx = journeyIndex()
+    const T = spec.threshold
+    const close: string[] = []
+    // From the top of descent until a minute after touchdown (LAB201 still on the runway).
+    for (let k = idx.startTick.descent; k < Math.min(idx.endTick, idx.touchdownTick + 600); k += 5) {
+      const s = idx.states[k]
+      if (Math.hypot(s.eastNm - T.eastNm, s.northNm - T.northNm) > 36) continue
+      for (const a of trafficAt(spec, k * TICK_S)) {
+        const d = Math.hypot(a.eastNm - s.eastNm, a.northNm - s.northNm)
+        if (d < 3 && Math.abs(a.altFt - s.altFt) < 1000) close.push(`${a.callsign} at ${(k * TICK_S).toFixed(0)} s: ${d.toFixed(2)} NM, ${Math.abs(a.altFt - s.altFt).toFixed(0)} ft`)
+      }
+    }
+    expect(close).toEqual([])
+  })
+})

@@ -64,3 +64,31 @@ describe('conversions at the edges', () => {
     expect(lerp(10, 20, 0.25)).toBe(12.5)
   })
 })
+
+describe('units are converted only with src/core/units (A-3)', () => {
+  it('no source file outside src/core/units.ts and the claims re-implements an NM, ft/NM or degree conversion', async () => {
+    const { readFileSync, readdirSync, statSync } = await import('node:fs')
+    const { join, relative } = await import('node:path')
+    const root = join(import.meta.dirname, '..', '..')
+    const files = (dir: string): string[] =>
+      readdirSync(dir).flatMap((n) => {
+        const p = join(dir, n)
+        return statSync(p).isDirectory() ? files(p) : /\.(ts|tsx)$/.test(n) ? [p] : []
+      })
+    // M_PER_NM, FT_PER_NM and DEG written out again.
+    const literals = [/[^\d.]1852[^\d]/, /6076\.\d/, /Math\.PI\s*\/\s*180/, /180\s*\/\s*Math\.PI/]
+    const hits: string[] = []
+    for (const f of files(join(root, 'src'))) {
+      const rel = relative(root, f)
+      if (rel === join('src', 'core', 'units.ts') || rel.startsWith(join('src', 'content', 'claims'))) continue
+      readFileSync(f, 'utf8')
+        .split('\n')
+        .forEach((line, i) => {
+          const t = line.trim()
+          if (t.startsWith('*') || t.startsWith('//')) return
+          if (literals.some((re) => re.test(line))) hits.push(`${rel}:${i + 1}`)
+        })
+    }
+    expect(hits).toEqual([])
+  })
+})

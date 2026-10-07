@@ -91,6 +91,8 @@ describe('the assessment panel', () => {
     render(<AssessmentPanel engine={e} />)
     answerQuiz()
     expect(calls).toContain('cmi.core.lesson_status=incomplete')
+    // An incomplete attempt carries no score (the LMS could compare it with the mastery score).
+    expect(calls.some((c) => c.startsWith('cmi.core.score.'))).toBe(false)
     fireEvent.click(screen.getByRole('radio', { name: 'Exam' }))
     fireEvent.click(screen.getByRole('button', { name: 'Start the exam' }))
     const f = FAILURES.find((x) => e.state.failures[x.id])!
@@ -108,6 +110,15 @@ describe('the assessment panel', () => {
     window.dispatchEvent(new Event('pagehide'))
     window.dispatchEvent(new Event('pagehide'))
     expect(calls.filter((c) => c === 'finish')).toHaveLength(1)
+  })
+
+  it('launched by the LMS for review: says so and leaves the LMS record as it is', () => {
+    ;(window as unknown as { API: Scorm12Api }).API = { ...api, LMSGetValue: (n: string) => (n === 'cmi.core.lesson_mode' ? 'review' : '') }
+    render(<AssessmentPanel engine={new JourneyEngine({ guidedStops: false, running: false })} />)
+    answerQuiz()
+    expect(calls.some((c) => c.startsWith('cmi.'))).toBe(false)
+    fireEvent.click(screen.getByRole('radio', { name: 'Result' }))
+    expect(screen.getByText(/Opened for review in your learning management system/)).toBeTruthy()
   })
 
   it('a running exam survives the panel being unmounted (a phone tab switch), still locked', () => {

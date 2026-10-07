@@ -41,14 +41,18 @@ export function satCode(id: string): number {
 export const SIGMA_CLOCK_M = 1.1
 export const SIGMA_ORBIT_M = 0.8
 
-/** Tropospheric mapping function (RTCA DO-229 tropospheric model). */
+/** Tropospheric mapping function (the one of the RTCA DO-229 tropospheric model; the zenith delay below is the page's own). */
 // TODO(expert-review): DO-229 Appendix A tropospheric model: m(E) = 1.001 / sqrt(0.002001 + sin²E), σ_tvu = 0.12 m.
 export function tropoMapping(elDeg: number): number {
   const s = Math.sin(Math.max(elDeg, 0) * DEG)
   return 1.001 / Math.sqrt(0.002001 + s * s)
 }
 export const SIGMA_TROPO_VERTICAL_M = 0.12
-/** Zenith tropospheric delay at sea level the receiver model assumes, m. */
+/**
+ * Zenith tropospheric delay at sea level the receiver model assumes, m: a fixed value
+ * scaled with height (exp(−h/7000 m)), a simplification of the DO-229 model, whose
+ * zenith delay depends on latitude, season and height.
+ */
 export const TROPO_ZENITH_MODEL_M = 2.4
 
 /** Airborne multipath σ, m, by elevation. */

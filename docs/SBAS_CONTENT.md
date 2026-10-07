@@ -79,8 +79,9 @@ correction to everyone, plus "don't trust the east bell" when one is broken.
   08:00 WIB, arrives about 10:40 WITA. SBAS is used in every phase.
 - **Real.** Geography (Natural Earth), airports and runways (AIP Indonesia AD 2), the
   Michibiki GEOs QZS-3 (127°E, PRN 137) and QZS-6 (90.5°E, PRN 129) that broadcast MSAS
-  (JCAB, EGNOS Workshop 2025). Japan's QZS-7 (175°W, PRN 139) is too far east for western
-  Indonesia and is not used.
+  (JCAB, EGNOS Workshop 2025); both are operational, QZS-6 since October 2025 (JCAB, ITF/8
+  IP/05, May 2026). Japan's QZS-7 (PRN 139, awaiting launch; the gps.gov PRN list gives it a
+  slot at 175°W) would be too far east for western Indonesia and is not used.
 - **Hypothetical.** Indonesia has no operational SBAS, and MSAS serves Japan (Fukuoka FIR).
   The page imagines an Indonesian service and says so: the service, its ground sites, the
   route's waypoints and the LPV procedure (an illustrative RNP RWY 09, not a published one).

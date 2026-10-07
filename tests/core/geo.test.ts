@@ -16,6 +16,21 @@ describe('geodetic, ECEF and local frames', () => {
       expect(back.hM).toBeCloseTo(p.hM, 3)
     }
   })
+  it('the poles round-trip too, and a point on the polar axis gets its true height', () => {
+    for (const p of [
+      { latDeg: 90, lonDeg: 0, hM: 1000 },
+      { latDeg: -90, lonDeg: 0, hM: 0 },
+      { latDeg: 89.999999, lonDeg: 30, hM: 36_000e3 },
+      { latDeg: 0, lonDeg: 90, hM: 35_786e3 },
+    ]) {
+      const back = ecefToGeodetic(geodeticToEcef(p))!
+      expect(back.latDeg).toBeCloseTo(p.latDeg, 9)
+      expect(back.hM).toBeCloseTo(p.hM, 3)
+    }
+    // WGS-84 polar radius b = a(1 − f) = 6 356 752.314 m.
+    expect(ecefToGeodetic([0, 0, 6_356_752.314245 + 500])!.hM).toBeCloseTo(500, 2)
+    expect(ecefToGeodetic([0, 0, -(6_356_752.314245 + 500)])!.latDeg).toBeCloseTo(-90, 9)
+  })
   it('the equator at 0° longitude sits at the equatorial radius on the x axis', () => {
     const [x, y, z] = geodeticToEcef({ latDeg: 0, lonDeg: 0, hM: 0 })
     expect(x).toBeCloseTo(WGS84_A_M, 3)

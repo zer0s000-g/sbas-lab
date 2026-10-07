@@ -41,7 +41,7 @@ export const OPERATIONS_CLAIMS: readonly Claim[] = [
     topic: 'Operations and ATM',
     scenarios: BOTH,
     text: 'SBAS LNAV/VNAV alert limits: HAL 556 m, VAL 50 m.',
-    refs: [{ source: 'rtca-do229' }, { source: 'faa-waas-ps-2008' }, { source: 'icao-doc9613', section: 'Vol II, RNP APCH, 5.3.3.3.1.2 a) Note' }],
+    refs: [{ source: 'rtca-do229' }, { source: 'faa-waas-ps-2008', section: '§3.2, Table 3.2-1 (p. 19)' }, { source: 'faa-waas-pan92', section: 'Table 1-1' }, { source: 'icao-doc9613', section: 'Vol II, RNP APCH, 5.3.3.3.1.2 a) Note' }],
     status: 'to-confirm',
     value: [555.6, 50],
     unit: 'm',

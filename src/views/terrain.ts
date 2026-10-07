@@ -9,6 +9,7 @@
  */
 import { valueNoise } from '@/core/random'
 import { AIRPORT_LIST, localNmToRunway, localOf, runwayToLocalNm, type Airport } from '@/core/region'
+import { runwayExtentM } from '@/core/sites'
 import { DEG, M_PER_FT, M_PER_NM } from '@/core/units'
 import { SCENARIO } from '@/scenarios/active'
 import { CoastIndex, decodeRings, projectRings } from './geo/coast'
@@ -63,7 +64,8 @@ export interface Airfield {
 }
 
 const airfield = (ap: Airport): Airfield => {
-  const L = ap.runwayLengthM
+  // The runway's ends along the runway frame (a displaced threshold puts the start before a = 0).
+  const { startM: s0, endM: s1 } = runwayExtentM(ap)
   const t = ap.terminalSide
   const P = ap.parallelOffsetM
   // A parallel runway on the terminal side (Jakarta): the terminal side reaches past it.
@@ -76,8 +78,8 @@ const airfield = (ap: Airport): Airfield => {
   const r1 = t < 0 ? away : far
   return {
     airport: ap,
-    level: { a0: -1400, a1: L + 1400, r0, r1 },
-    fill: { a0: -350, a1: L + 1200, r0: t < 0 ? -(far - 300) : -fillAway, r1: t < 0 ? fillAway : far - 300 },
+    level: { a0: s0 - 1400, a1: s1 + 1400, r0, r1 },
+    fill: { a0: s0 - 350, a1: s1 + 1200, r0: t < 0 ? -(far - 300) : -fillAway, r1: t < 0 ? fillAway : far - 300 },
   }
 }
 

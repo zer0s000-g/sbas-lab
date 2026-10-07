@@ -107,13 +107,15 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
 
   // Report to the LMS, when the page runs inside one (one session per page load).
   const lms = useRef<LmsSession | null>(null)
-  const [lmsState, setLmsState] = useState<'none' | 'connected' | 'reported' | 'error'>('none')
+  const [lmsState, setLmsState] = useState<'none' | 'connected' | 'reported' | 'review' | 'error'>('none')
   useEffect(() => {
     lms.current = pageLmsSession()
-    if (lms.current) setLmsState('connected')
+    if (lms.current) setLmsState(lms.current.start() && !lms.current.recording ? 'review' : 'connected')
   }, [])
   useEffect(() => {
     if (!lms.current || (!quiz && !exam)) return
+    // Launched for review, browsing or no credit: the LMS record is left as it is.
+    if (lms.current.start() && !lms.current.recording) return setLmsState('review')
     setLmsState(lms.current.report({ raw: total.raw, max: total.max, status: total.status }) ? 'reported' : 'error')
   }, [quiz?.correct, exam?.correct, total.raw, total.max, total.status]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -275,7 +277,7 @@ export function AssessmentPanel({ engine, index = '11' }: { engine: JourneyEngin
             <p>Exam: not taken yet.</p>
           )}
           <p className="hud-label normal-case" aria-live="polite">
-            {lmsState === 'none' ? 'Not launched from a learning management system: results stay in this browser.' : lmsState === 'error' ? 'The learning management system did not accept the result.' : lmsState === 'reported' ? 'Result sent to your learning management system (SCORM).' : 'Connected to your learning management system (SCORM).'}
+            {lmsState === 'none' ? 'Not launched from a learning management system: results stay in this browser.' : lmsState === 'error' ? 'The learning management system did not accept the result.' : lmsState === 'reported' ? 'Result sent to your learning management system (SCORM).' : lmsState === 'review' ? 'Opened for review in your learning management system (SCORM): this attempt does not change your recorded result.' : 'Connected to your learning management system (SCORM).'}
           </p>
           <details className="mt-1">
             <summary className="hud-label cursor-pointer">Learning objectives</summary>

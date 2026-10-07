@@ -3,6 +3,7 @@ import { GEO_SATS } from '@/core/orbits'
 import { DEPARTURE, DESTINATION, STATIONS } from '@/core/region'
 import { makeFasDataBlock } from '@/core/approach'
 import { EWA_FACTS } from '@/scenarios/essp/provision'
+import { SBAS_SYSTEMS } from '@/content/sbasSystems'
 import type { Claim } from './types'
 
 const ESSP = ['essp'] as const
@@ -48,6 +49,13 @@ export const EGNOS_CLAIMS: readonly Claim[] = [
     text: 'The EGNOS ground segment: 38 Ranging and Integrity Monitoring Stations (RIMS), two Mission Control Centres (MCC), two Navigation Land Earth Stations (NLES) for each GEO that uplink to the GEOs, and the EGNOS Wide Area Network (EWAN) (SoL SDD v3.6 §3.3.2).',
     refs: [{ source: 'egnos-sol-sdd', section: '§3.3.2, §3.3.2.1, Figure 3' }],
     status: 'sourced',
+    value: [38, 2],
+    unit: 'RIMS, MCCs (as the SBAS worldwide card shows them)',
+    actual: () => {
+      const g = SBAS_SYSTEMS.find((x) => x.id === 'egnos')!.ground
+      return [g.reference ?? 0, g.master ?? 0]
+    },
+    code: 'src/content/sbasSystems.ts',
   },
   {
     id: 'egnos.mcc-sites',
@@ -244,11 +252,24 @@ export const EGNOS_CLAIMS: readonly Claim[] = [
     id: 'scenario.qzs6-status',
     topic: 'Scenario data',
     scenarios: IDN,
-    text: 'QZS-6 (PRN 129), launched on 2 February 2025, was under test in late 2025; its SBAS service date and the L5 (DFMC) broadcast of QZS-3 and QZS-6 are to confirm.',
-    refs: [{ source: 'jcab-ews2025' }],
+    text: 'QZS-6 (PRN 129), launched on 2 February 2025, has broadcast the MSAS SBAS service since October 2025, together with QZS-3; both are operational (JCAB, May 2026). The L5 (DFMC) broadcast of QZS-3 and QZS-6 that the scenario shows is to confirm.',
+    refs: [{ source: 'icao-apac-itf8-japan', section: '§1, §2' }, { source: 'jcab-ews2025' }],
     status: 'to-confirm',
     code: 'src/scenarios/indonesia/geos.ts',
-    todo: 'QZS-6 (PRN 129) was launched on 2 Feb 2025',
+    todo: 'the L5 (DFMC) broadcast of QZS-3 and QZS-6',
+  },
+  {
+    id: 'scenario.indonesia-ground',
+    topic: 'Scenario data',
+    scenarios: IDN,
+    text: 'The Indonesian SBAS ground segment is hypothetical, at illustrative sites in real cities, not real facilities: 16 reference stations (RIMS) from Banda Aceh to Merauke, a master control centre in Jakarta with a backup in Makassar (as MSAS has two master control stations), and 2 uplink stations, one for each GEO (as each MSAS PRN has its own uplink).',
+    refs: [{ source: 'icao-doc9849', section: '§4.3.1.1' }, { source: 'jcab-ews2025', section: 'slides 3–6 (MSAS: two MCS)' }, { source: 'icao-apac-ip15', section: 'one uplink per PRN' }],
+    status: 'to-confirm',
+    value: [16, 2, 2],
+    unit: 'RIMS, master control centres, uplink stations',
+    actual: () => (['rims', 'mcc', 'gus'] as const).map((k) => STATIONS.filter((s) => s.kind === k).length),
+    code: 'src/scenarios/indonesia/region.ts STATIONS',
+    note: 'Hypothetical by design: Indonesia has no SBAS. The number and places of the sites are the page’s choice, to spread a network across the archipelago; the page labels each one "illustrative site, not a real facility".',
   },
   {
     id: 'scenario.indonesia-provider-id',

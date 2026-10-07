@@ -23,7 +23,7 @@ const STATION_STEP_S = 300
 const IGP_BOX = { lat0: 20, lat1: 75, lon0: -40, lon1: 50 }
 /** The EUREF stations: city, and the ID the page shows. */
 const STATION_NAMES = {
-  TLMF00FRA: 'Toulouse', VLFR00ITA: 'Villefranche-sur-Mer', MLVL00FRA: 'Marne-la-Vallée', ACOR00ESP: 'A Coruña', VALE00ESP: 'Valencia', IZAN00ESP: 'Izaña, Tenerife',
+  TLMF00FRA: 'Toulouse', VLFR00ITA: 'Villafranca di Verona', MLVL00FRA: 'Marne-la-Vallée', ACOR00ESP: 'A Coruña', VALE00ESP: 'Valencia', IZAN00ESP: 'Izaña, Tenerife',
   TUC200GRC: 'Chania, Crete', KUU200FIN: 'Kuusamo', KEV200FIN: 'Kevo', WTZS00DEU: 'Wettzell', ASGA00CYP: 'Nicosia', MAH100IRL: 'Malin Head', LAMP00ITA: 'Lampedusa', COST00ROU: 'Constanța', ARGI00FRO: 'Argir, Faroe Islands',
 }
 
@@ -36,7 +36,7 @@ const sm = await load('/src/core/serviceMap.ts')
 const { ecefToGeodetic } = await load('/src/core/geo.ts')
 const { EGNOS_RIMS } = await load('/src/scenarios/essp/rimsNetwork.ts')
 const { REGION } = await load('/src/core/region.ts')
-const { parseEms, emptyState, decodeMessage, applyMessage, bitsFromHex } = await load('/src/core/sbasDecode.ts')
+const { parseEms, emptyState, decodeMessage, applyMessage, bitsFromHex, crcOk } = await load('/src/core/sbasDecode.ts')
 
 const tag = `${DAY.year}${String(DAY.doy).padStart(3, '0')}0000`
 const nav = parseNav(gunzipSync(readFileSync(join(CACHE, `BRDC00IGS_R_${tag}_01D_MN.rnx.gz`))).toString())
@@ -72,7 +72,8 @@ function groundAt(secOfDay) {
   // Feed every message up to this second (EMS times are GPS time of day here, see the EMS ICD).
   while (emsIdx < ems.length && ems[emsIdx].secOfDay <= secOfDay) {
     const bits = bitsFromHex(ems[emsIdx].hex)
-    if (bits) applyMessage(decoder, decodeMessage(bits), ems[emsIdx].secOfDay)
+    // A message whose CRC fails is discarded, as a receiver does (and as src/replay/recording.ts does).
+    if (bits && crcOk(bits)) applyMessage(decoder, decodeMessage(bits), ems[emsIdx].secOfDay)
     emsIdx++
   }
   return { sats, ground: sm.groundFromDecoder(decoder, secOfDay) }

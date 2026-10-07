@@ -226,11 +226,14 @@ Sheet with every term.
 
 Every view says what is not to scale:
 - space: "Earth and orbits to scale · satellites drawn far larger than life · time ×N"
-  (or "world frozen");
-- flight: "Coast, runways and aircraft to scale · terrain and route simplified · signal
-  directions true, distances not · errors ×10";
-- network: "Map of Indonesia to scale · ground sites illustrative · hypothetical Indonesian
-  SBAS".
+  (or "world frozen"); in AirNav Indonesia, before the time, "ground sites and uplinks:
+  illustrative site, not a real facility";
+- flight: "Coast, runways in use and aircraft to scale · terrain, airports and route
+  simplified · signal directions true, distances not · errors ×10" (only the runways
+  LAB201 uses and a parallel one are drawn; the flat local map is within 1 % of true
+  scale along the route);
+- network: "Map of Indonesia to scale · each ground site: illustrative site, not a real
+  facility · hypothetical Indonesian SBAS".
 
 Story device: until the first correction arrives (end of the broadcast phase) the page
 shows LAB201 navigating with GPS alone, and says that a real SBAS receiver uses SBAS from

@@ -27,6 +27,7 @@ import { OPERATIONS } from '@/core/operations'
 import { K_H_NPA, K_H_PA, PBIAS } from '@/core/receiver'
 import { lateralFullScaleM } from '@/core/approach'
 import { formatMetres } from '@/lib/format'
+import { GIVEI_NOT_MONITORED, gridCell, igpKey } from '@/core/iono'
 
 const round = (v: unknown): unknown => {
   if (typeof v === 'number') return Number.isFinite(v) ? Number(v.toPrecision(12)) : String(v)
@@ -232,6 +233,45 @@ const GOLDEN_CHANGES: { why: string; apply: (g: Golden, now: Golden) => void }[]
       d.model.op = round({ id: op.id, name: op.name, halM: op.halM, valM: op.valM, ttaS: op.ttaS, source: op.source })
       d.text = d.text.map((t) => t.replace(/Non-precision approach \(LNAV\) limits HAL [^,]+,/, `${op.name} limits HAL ${formatMetres(op.halM)},`))
     },
+  },
+  {
+    why: 'Airport layouts now carry the runway\'s two ends (startM, endM) so a displaced landing threshold (Nice 04L, 93 m) is drawn inside its runway. Neither Indonesian runway has one (startM 0, endM the runway length), so nothing drawn changes. Rule: every layout has startM 0 and endM = lengthM, and without those two fields the layouts hash exactly as recorded.',
+    apply: (g, now) => {
+      const unchanged = AIRPORTS.every((l) => l.startM === 0 && l.endM === l.lengthM) && hash(AIRPORTS.map(({ startM: _s, endM: _e, ...l }) => l)) === g.airports
+      if (unchanged) g.airports = now.airports
+    },
+  },
+  {
+    why: 'iono.interpolateGrid (validation B-6): when one of the four IGPs around a pierce point is not monitored, the receiver now interpolates over the other three if the pierce point lies in their triangle (Annex 10 Vol I App B 3.5.5.5.3–3.5.5.5.4), instead of dropping the grid correction. At the gate and on the taxi a low satellite (G01) gains a grid correction and joins the L1 SBAS solution for vertical guidance (l1Pa). Rule: l1Pa keeps every recorded satellite and may only gain satellites whose pierce point, in the fresh snapshot, lies in a cell with exactly three monitored IGPs; then its DOPs are the fresh ones, each no larger than recorded (adding a satellite cannot raise a DOP). Its errors and protection levels are already taken by the iono.dip-equator rule.',
+    apply: (g, now) => {
+      type F = { used: string[]; hdop: number; vdop: number; pdop: number } | null
+      const e = new JourneyEngine({ guidedStops: false, running: false })
+      for (const [id, p] of Object.entries(g.phases)) {
+        const m = p.model as { l1Pa: F }
+        const n = (now.phases[id].model as { l1Pa: F }).l1Pa
+        if (!m.l1Pa || !n || !m.l1Pa.used.every((x) => n.used.includes(x))) continue
+        const added = n.used.filter((x) => !m.l1Pa!.used.includes(x))
+        if (!added.length) continue
+        e.jumpTo(id as Parameters<typeof e.jumpTo>[0])
+        const snap = e.snapshot()
+        const threePoint = added.every((sat) => {
+          const pp = snap.sats.find((v) => v.id === sat)?.pp
+          const cell = pp && gridCell(pp.latDeg, pp.lonDeg)
+          if (!cell) return false
+          const monitored = [[0, 0], [0, 1], [1, 0], [1, 1]].filter(([dy, dx]) => {
+            const igp = snap.ground.grid.get(igpKey(cell.lat0 + dy * cell.dLat, cell.lon0 + dx * cell.dLon))
+            return igp && igp.givei < GIVEI_NOT_MONITORED
+          })
+          return monitored.length === 3
+        })
+        const lower = (['hdop', 'vdop', 'pdop'] as const).every((k) => n[k] <= m.l1Pa![k])
+        if (threePoint && lower) m.l1Pa = { ...m.l1Pa, used: n.used, hdop: n.hdop, vdop: n.vdop, pdop: n.pdop }
+      }
+    },
+  },
+  {
+    why: 'Every narration phase now lists the claims behind it (src/content/claims), as the ESSP-SAS story does, and the final phase hedges dual-frequency SBAS as dfmc.equatorial-apv does ("it is expected to make LPV available where single-frequency SBAS cannot provide it"). Nothing else in the narration changes.',
+    apply: (g) => void (g.narration = 'f521888a6a6ee218a34c37dbda920669b5ff776ea948beb1f725627335e4ccd6'),
   },
 ]
 

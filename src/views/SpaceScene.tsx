@@ -19,6 +19,7 @@ import { globeDetail } from './geo/scenarioCoast'
 
 import { DEG, WGS84_A_M, WGS84_OMEGA_E_RAD_S } from '@/core/units'
 import { getJourney, useJourneyState } from '@/journey/store'
+import { journeyNavFix } from '@/journey/navFix'
 import { useReducedMotion } from '@/stores/prefs'
 import { Callout3D } from '@/stage/Callout3D'
 import { Wire3D, type WireHandle } from '@/stage/Wire3D'
@@ -272,8 +273,8 @@ function SpaceScene({ t, quality }: { t: ThemeTokens; quality: Quality }) {
     sunDir(tS, engine.conditions().startLocalHour, earthMat.uniforms.uSun.value)
     if (ringGroup.current) ringGroup.current.rotation.y = -WGS84_OMEGA_E_RAD_S * tS
     acRef.current?.position.set(...ac)
-    const nav = engine.sbasShown ? (snap.sbasFix ?? snap.abas) : snap.abas
-    const used = nav?.used
+    // The satellites the aircraft navigates with: the same fix as the sky plot and panels.
+    const used = journeyNavFix(engine).fix?.used
     tracked.clear()
     for (const s of snap.sats) tracked.set(s.id, s.tracked)
     const focus = focusSatId(engine)

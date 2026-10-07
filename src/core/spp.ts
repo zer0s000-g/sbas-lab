@@ -1,7 +1,9 @@
 /**
  * GPS-alone single-point positioning from real L1 C/A pseudoranges: broadcast orbits
- * and clocks (./ephemeris), the Klobuchar ionospheric model, the DO-229 tropospheric
- * model (./errors), Earth-rotation correction, and an iterated weighted least-squares
+ * and clocks (./ephemeris), the Klobuchar ionospheric model, the page's tropospheric
+ * model (./errors: a fixed 2.4 m zenith delay scaled with height, mapped to the line of
+ * sight with the DO-229 mapping function; not the full DO-229 model, whose zenith delay
+ * depends on latitude and season), Earth-rotation correction, and an iterated weighted least-squares
  * fix for position and receiver clock. Pure. This is what a GPS-only receiver at a
  * reference station computes; its error against the surveyed position is the real
  * GPS-alone accuracy the service-area maps show next to their protection levels.
@@ -10,7 +12,7 @@ import { ecefToEnu, ecefToGeodetic, lookAngles, norm, sub, type Geodetic, type V
 import { klobucharM, pickEphemeris, sagnac, satState } from './ephemeris'
 import { WEEK_S, type GpsEphemeris, type Klobuchar } from './rinex'
 import { tropoModelM } from './errors'
-import { C_M_S } from './units'
+import { C_M_S, DEG } from './units'
 import { invert } from './linalg'
 
 export interface SppResult {
@@ -63,7 +65,7 @@ export function solveSpp(tAbsS: number, c1: ReadonlyMap<number, number>, ephs: r
         const sod = (((tAbsS % WEEK_S) % 86400) + 86400) % 86400
         iono = klob ? klobucharM(klob, geo.latDeg, geo.lonDeg, look.azDeg, look.elDeg, sod) : 0
         tropo = tropoModelM(look.elDeg, geo.hM)
-        wt = Math.sin(look.elDeg * (Math.PI / 180)) ** 2
+        wt = Math.sin(look.elDeg * DEG) ** 2
         los.push({ prn, los: look.los, elDeg: look.elDeg, azDeg: look.azDeg })
       }
       const predicted = range + x[3] - C_M_S * st.clockS + iono + tropo

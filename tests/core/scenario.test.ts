@@ -157,3 +157,25 @@ describe('failures', () => {
     expect(s.abas!.vplM).toBeNull()
   })
 })
+
+describe('the hypothetical Indonesian sites are labelled on screen (E-5)', () => {
+  it('the network map and the space view say "illustrative site, not a real facility"', async () => {
+    const { SCENARIO: S } = await import('@/scenarios/active')
+    const { ILLUSTRATIVE_SITE } = await import('@/core/region')
+    const { NETWORK_HONESTY, spaceHonesty } = await import('@/views/scales')
+    if (S.id !== 'indonesia') return
+    expect(ILLUSTRATIVE_SITE).toBe('illustrative site, not a real facility')
+    expect(NETWORK_HONESTY).toContain(ILLUSTRATIVE_SITE)
+    expect(spaceHonesty(16, false)).toContain(ILLUSTRATIVE_SITE)
+    expect(spaceHonesty(1, true)).toMatch(/not a real facility · world frozen$/)
+  })
+})
+
+describe('the flight view says only the runways in use are to scale (E-6)', () => {
+  it('Jakarta is drawn with two of its three runways, and the label does not claim all of them', async () => {
+    const { FLIGHT_HONESTY } = await import('@/views/scales')
+    const { DEPARTURE_LAYOUT } = await import('@/views/airports')
+    expect(DEPARTURE_LAYOUT.extraRunways.length).toBeLessThanOrEqual(1)
+    expect(FLIGHT_HONESTY).toMatch(/^Coast, runways in use and aircraft to scale · terrain, airports and route simplified/)
+  })
+})

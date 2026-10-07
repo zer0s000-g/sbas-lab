@@ -22,8 +22,9 @@ export const ecefToSpace = ([x, y, z]: Vec3): V3 => [x / SPACE_UNIT_M, z / SPACE
 /** Satellite glyphs are drawn this size (scene units): hundreds of kilometres across, so not to scale. */
 export const SAT_GLYPH_U = 0.045
 
+const SPACE_SITES = SCENARIO.texts.spaceHonestySites ? ` · ${SCENARIO.texts.spaceHonestySites}` : ''
 export const spaceHonesty = (speed: number, frozen: boolean) =>
-  `Earth and orbits to scale · satellites drawn far larger than life · ${frozen ? 'world frozen' : `time ×${speed}`}`
+  `Earth and orbits to scale · satellites drawn far larger than life${SPACE_SITES} · ${frozen ? 'world frozen' : `time ×${speed}`}`
 
 // ---------------------------------------------------------------------------
 // Flight view
@@ -40,5 +41,10 @@ export const ERROR_MARKER_SCALE = 10
 /** Signal rays point the true way to each satellite but stop at this distance, units (the satellites are 20 000 km away). */
 export const SKY_DOME_U = 60
 
-export const FLIGHT_HONESTY = `Coast, runways and aircraft to scale · terrain and route simplified · signal directions true, distances not · errors ×${ERROR_MARKER_SCALE}`
+/**
+ * The flight view's honesty label. Only the runways LAB201 uses (and a parallel one) are
+ * drawn, with a simplified layout around them (Jakarta's third runway, 06/24, is not), so
+ * the label says "runways in use" and "airports simplified".
+ */
+export const FLIGHT_HONESTY = `Coast, runways in use and aircraft to scale · terrain, airports and route simplified · signal directions true, distances not · errors ×${ERROR_MARKER_SCALE}`
 export const NETWORK_HONESTY = SCENARIO.texts.networkHonesty

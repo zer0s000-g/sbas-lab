@@ -9,7 +9,7 @@
  * The streams, callsigns and equipage are illustrative, labelled so on screen; what each
  * aircraft can fly comes from the same SBAS world as LAB201 (sbasWorld.snapshot).
  */
-import { DEG } from './units'
+import { DEG, FT_PER_NM } from './units'
 
 export type Equipage = 'sbas' | 'gps' | 'conventional'
 
@@ -29,8 +29,9 @@ export interface TrafficSpec {
   finalCourseDeg: number
   /** Where streams join the final, NM before the threshold. */
   joinNm: number
-  /** Glide path angle, °. */
+  /** Glide path angle, °, and threshold crossing height, ft: the destination's FAS data block. */
   gpaDeg: number
+  tchFt: number
   streams: readonly ArrivalStream[]
   aircraft: readonly { callsign: string; stream: string; equip: Equipage; offsetS: number }[]
   /** Each aircraft lands and comes back every cycle, s. */
@@ -53,7 +54,19 @@ export interface TrafficAircraft {
 
 const SPEED_KT = { arrival: 220, final: 140 }
 const ENTRY_ALT_FT = 9000
-const JOIN_ALT_FT = 3000
+/**
+ * Each arrival reaches the join this far below the glide path (rounded down to a whole
+ * hundred feet), holds that altitude and captures the path from below, as LAB201 does
+ * (core/flight). Illustrative.
+ */
+const JOIN_BELOW_PATH_FT = 100
+
+/** Glide path altitude at a distance before the threshold, ft (the FAS data block's TCH and angle). */
+export const trafficGlidePathFt = (spec: TrafficSpec, toGoNm: number) =>
+  spec.threshold.elevationFt + spec.tchFt + Math.max(toGoNm, 0) * FT_PER_NM * Math.tan(spec.gpaDeg * DEG)
+
+/** The altitude each arrival levels at before the join, ft: below the glide path there. */
+export const joinAltFt = (spec: TrafficSpec) => Math.floor((trafficGlidePathFt(spec, spec.joinNm) - JOIN_BELOW_PATH_FT) / 100) * 100
 
 interface Leg {
   from: [number, number]
@@ -88,6 +101,7 @@ export function trafficAt(spec: TrafficSpec, tS: number): TrafficAircraft[] {
     let tH = local
     let flownNm = 0
     const total = legs.reduce((s, l) => s + l.lengthNm, 0)
+    const joinFt = joinAltFt(spec)
     for (const leg of legs) {
       const legH = leg.lengthNm / leg.kt
       if (tH <= legH) {
@@ -95,9 +109,8 @@ export function trafficAt(spec: TrafficSpec, tS: number): TrafficAircraft[] {
         const e = leg.from[0] + (leg.to[0] - leg.from[0]) * f
         const n = leg.from[1] + (leg.to[1] - leg.from[1]) * f
         const toGo = total - flownNm - tH * leg.kt
-        const altFt = leg.final
-          ? spec.threshold.elevationFt + 50 + (toGo * 6076.12 * Math.tan(spec.gpaDeg * DEG))
-          : JOIN_ALT_FT + (ENTRY_ALT_FT - JOIN_ALT_FT) * (1 - f)
+        // On final: level at the join altitude until the glide path comes down to it, then on the path.
+        const altFt = leg.final ? Math.min(joinFt, trafficGlidePathFt(spec, toGo)) : joinFt + (ENTRY_ALT_FT - joinFt) * (1 - f)
         out.push({
           callsign: a.callsign,
           equip: a.equip,

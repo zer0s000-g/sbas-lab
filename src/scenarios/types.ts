@@ -96,6 +96,8 @@ export interface ScenarioDef {
     stops: Readonly<Record<StopId, { title: string; body: string }>>
     footer: string
     networkHonesty: string
+    /** Added to the space view's honesty label when the ground sites it draws need one (design.md §6). */
+    spaceHonestySites?: string
     describeSpace: string
     describeNetwork: string
     /** Where the flight view is looking, away from the airports. */

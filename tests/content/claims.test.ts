@@ -8,6 +8,7 @@ import { join, relative } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { CLAIMS, claim, claimsFor, STATUS_LABEL } from '@/content/claims'
 import { AI_CHECKED_IDS } from '@/content/claims/aiChecks'
+import { claimFingerprint } from '@/content/claims/fingerprint'
 import { renderClaimsCsv, renderExpertReview } from '@/content/claims/report'
 import { SOURCES } from '@/content/sources'
 import { ACTIVE_SCENARIO } from '@/scenarios/id'
@@ -103,10 +104,42 @@ describe('the claims registry', () => {
     }
   })
 
-  it('the ESSP-SAS story cites claims in every phase and for every failure', () => {
-    const s = SCENARIOS.essp
-    for (const [phase, n] of Object.entries(s.narration)) expect(n.claims?.length, phase).toBeGreaterThan(0)
-    for (const f of s.failures.list) expect(f.claims?.length, f.id).toBeGreaterThan(0)
+  it('both stories cite claims in every phase and for every failure', () => {
+    for (const [id, s] of Object.entries(SCENARIOS)) {
+      for (const [phase, n] of Object.entries(s.narration)) expect(n.claims?.length, `${id} ${phase}`).toBeGreaterThan(0)
+      for (const f of s.failures.list) expect(f.claims?.length, `${id} ${f.id}`).toBeGreaterThan(0)
+    }
+    // The hypothetical Indonesian ground segment and the GEO height both stories show have their claims.
+    expect(SCENARIOS.indonesia.narration.reference.claims).toContain('scenario.indonesia-ground')
+    for (const s of Object.values(SCENARIOS)) {
+      expect(s.narration.uplink.now).toContain('35 786 km')
+      expect(s.narration.uplink.claims).toContain('gnss.geo-altitude')
+    }
+  })
+
+  it('every AI check matches the claim as it is now (re-check the claim, then update its textHash)', () => {
+    for (const c of CLAIMS.filter((x) => x.aiCheck)) {
+      const now = claimFingerprint(c)
+      expect(c.aiCheck!.textHash, `${c.id}: its text or value changed since the AI check (now ${now}); check it again against its sources (rationale, checked, on) and set textHash: '${now}', or remove the entry`).toBe(now)
+    }
+  })
+
+  it('claim texts and values are written out in the registry, so a binding to the code can fail', () => {
+    const dir = join(ROOT, 'src', 'content', 'claims')
+    for (const f of readdirSync(dir).filter((x) => !['aiChecks.ts', 'fingerprint.ts', 'index.ts', 'report.ts', 'types.ts'].includes(x))) {
+      const lines = readFileSync(join(dir, f), 'utf8').split('\n')
+      for (const [i, l] of lines.entries()) {
+        expect(/^\s*text: `/.test(l), `${f}:${i + 1} builds its text from the code`).toBe(false)
+        if (/^\s*value:/.test(l)) expect(l, `${f}:${i + 1} computes its value; write the value the source gives`).toMatch(/^\s*value: (\[[-0-9., _e]*\]|[-0-9._e]+|'[^']*'),?\s*$/)
+      }
+    }
+  })
+
+  it('claims that state a value the code holds bind it', () => {
+    for (const id of ['sbas.alarm-latency', 'sbas.decision-height', 'servicemap.method', 'egnos.ground-segment', 'scenario.indonesia-ground', 'gnss.geo-altitude', 'training.curricula', 'atc.conventional-approach']) {
+      const c = claim(id)!
+      expect(c.value !== undefined && typeof c.actual === 'function', id).toBe(true)
+    }
   })
 
   it('the departure row follows EGNOS SoL SDD v3.6 Table 7 (HAL 556 m) and no longer says ICAO gives none', () => {

@@ -31,7 +31,8 @@ const airport = (a: Omit<Airport, 'thresholdEastNm' | 'thresholdNorthNm'>) => ma
 
 // TODO(expert-review): LFBO 14L and LFMN 04L thresholds, true courses and elevations are taken from OurAirports
 // (public domain), which reproduces AIP France AD 2; confirm against the current AIRAC AIP. LFMN 04L: the landing
-// threshold is displaced 305 ft (93 m) from the runway end; the 2570 m length is the published runway length.
+// threshold is displaced 305 ft (93 m) from the runway end; the 2570 m length is the published runway length,
+// end to end, so the runway is drawn from 93 m before the threshold to 2477 m past it.
 // The runways in use are chosen for the story.
 /**
  * Toulouse-Blagnac: LAB201 departs from runway 14L (true course 143.1°, 3000 m). The
@@ -70,6 +71,9 @@ export const DESTINATION: Airport = airport({
   runwayCourseDeg: 45.0,
   runway: '04L',
   runwayLengthM: 2570,
+  // The threshold above is the displaced landing threshold, 93 m in from the runway end
+  // (OurAirports' 04L end point lies 93 m before it on the runway course).
+  thresholdDisplacedM: 93,
   runwayWidthM: 45,
   parallelOffsetM: 312,
   parallelRunway: '04R',

@@ -1,6 +1,6 @@
 /** Claims about GPS and positioning, shared by both scenarios. */
 import { C_M_S, GPS_L1_HZ, GPS_L5_HZ, GPS_MU_M3_S2, WGS84_A_M, WGS84_F, WGS84_OMEGA_E_RAD_S } from '@/core/units'
-import { GPS_ALTITUDE_M, GPS_INCLINATION_DEG, GPS_PLANES, GPS_SLOTS_PER_PLANE } from '@/core/orbits'
+import { GEO_ALTITUDE_M, GPS_ALTITUDE_M, GPS_INCLINATION_DEG, GPS_PLANES, GPS_SLOTS_PER_PLANE } from '@/core/orbits'
 import { SIGMA_CLOCK_M, SIGMA_ORBIT_M, SIGMA_NOISE_M, SIGMA_TROPO_VERTICAL_M } from '@/core/errors'
 import type { Claim } from './types'
 
@@ -27,6 +27,19 @@ export const GNSS_CLAIMS: readonly Claim[] = [
     unit: 'satellites, planes, km, degrees',
     actual: () => [GPS_PLANES * GPS_SLOTS_PER_PLANE, GPS_PLANES, GPS_ALTITUDE_M / 1000, GPS_INCLINATION_DEG],
     code: 'src/core/orbits.ts',
+  },
+  {
+    id: 'gnss.geo-altitude',
+    topic: 'GNSS',
+    scenarios: BOTH,
+    text: 'A geostationary (GEO) satellite flies 35 786 km above the equator, where one orbit takes exactly as long as one turn of the Earth, so it stays over the same spot. The model computes the height from the Earth’s gravitational constant and rotation rate; the GPS SPS Performance Standard rounds it to about 36 000 km.',
+    refs: [{ source: 'gps-sps-ps-2020', section: 'Appendix A.3.3.3 (space service volume)' }, { source: 'is-gps-200', section: 'Table 20-IV (μ)' }, { source: 'nima-tr8350', section: 'Table 3.1 (ω)' }],
+    status: 'sourced',
+    value: 35_786,
+    unit: 'km',
+    tolerance: 1e-5,
+    actual: () => GEO_ALTITUDE_M / 1000,
+    code: 'src/core/orbits.ts GEO_ALTITUDE_M',
   },
   {
     id: 'gnss.slot-phasing',
@@ -104,7 +117,7 @@ export const GNSS_CLAIMS: readonly Claim[] = [
     id: 'gnss.earth-rotation',
     topic: 'GNSS',
     scenarios: BOTH,
-    text: 'The Earth rotates at 7.292115 × 10⁻⁵ rad/s (WGS-84), the value the model uses. GPS receivers use the IS-GPS-200 value, 7.2921151467 × 10⁻⁵ rad/s, when they compute positions from the broadcast ephemeris; for the model’s idealised orbits the difference is negligible (less than a millimetre).',
+    text: 'The Earth rotates at 7.292115 × 10⁻⁵ rad/s (WGS-84), the value the model uses. GPS receivers use the IS-GPS-200 value, 7.2921151467 × 10⁻⁵ rad/s, when they compute positions from the broadcast ephemeris; for the model’s idealised orbits the difference is small: about 0.6 m in the GEO orbit radius and at most 0.14 m per hour of the journey in a GPS satellite’s position, far below the range errors the page shows.',
     refs: [{ source: 'nima-tr8350' }, { source: 'is-gps-200' }],
     status: 'to-confirm',
     value: 7.292115e-5,

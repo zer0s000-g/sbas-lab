@@ -99,7 +99,7 @@ export const SOURCES: Readonly<Record<SourceId, SourceDoc>> = {
   'eurocae-ed259': { id: 'eurocae-ed259', title: 'ED-259, MOPS for Galileo/GPS/SBAS L1/L5 (DFMC) airborne equipment', edition: 'February 2019 (or later revision; to confirm)', publisher: 'EUROCAE', access: 'not-reached' },
   'nima-tr8350': { id: 'nima-tr8350', title: 'Department of Defense World Geodetic System 1984, TR8350.2', edition: 'Third Edition, amended', publisher: 'NIMA (now NGA)', access: 'not-reached' },
   'is-gps-200': { id: 'is-gps-200', title: 'Interface Specification IS-GPS-200, NAVSTAR GPS Space Segment/Navigation User Interfaces', edition: 'IS-GPS-200N', publisher: 'US Space Force', access: 'read' },
-  'gps-gov-prn': { id: 'gps-gov-prn', title: 'GPS L1 C/A PRN code assignments', edition: 'January 2026 edition', publisher: 'gps.gov', url: 'https://www.gps.gov/technical/prn-codes/', access: 'via-search' },
+  'gps-gov-prn': { id: 'gps-gov-prn', title: 'GPS L1 C/A PRN code assignments', edition: 'January 2026 edition', publisher: 'gps.gov', url: 'https://www.gps.gov/sites/default/files/2026-02/L1CA-PRN-code-assignments-2026-Jan_2.pdf', access: 'read', note: 'Lists each SBAS PRN with its satellite and orbital slot; it still gives ASTRA 5B (PRN 123) at 31.5°E, the slot it left in 2023 (EGNOS Service Notice 33: 23.5°E).' },
   'egnos-sol-sdd': {
     id: 'egnos-sol-sdd',
     title: 'EGNOS Safety of Life (SoL) Service Definition Document',
@@ -155,7 +155,7 @@ export const SOURCES: Readonly<Record<SourceId, SourceDoc>> = {
     access: 'read',
   },
   'faa-cgsic-2026': { id: 'faa-cgsic-2026', title: 'FAA Navigation Programs (D. Lawrence, CGSIC briefing)', edition: 'April 2026', publisher: 'FAA', url: 'https://www.gps.gov/sites/default/files/2026-04/Lawrence%20CGSIC%20Apr%202026%20FAA%20Navigation%20Programs_Final.pdf', access: 'read' },
-  'faa-waas-ps-2008': { id: 'faa-waas-ps-2008', title: 'Global Positioning System Wide Area Augmentation System (WAAS) Performance Standard', edition: '1st Edition, 31 October 2008', publisher: 'FAA', url: 'https://gssc.esa.int/navipedia/index.php/WAAS_Performances', access: 'via-search', note: 'Read through the table ESA Navipedia reproduces from it.' },
+  'faa-waas-ps-2008': { id: 'faa-waas-ps-2008', title: 'Global Positioning System Wide Area Augmentation System (WAAS) Performance Standard', edition: '1st Edition, 31 October 2008', publisher: 'FAA', url: 'https://gssc.esa.int/navipedia/index.php/WAAS_Performances', access: 'read', note: 'Read in full from the local copy (docs/SBAS_Reference_Docs); the URL is ESA Navipedia’s reproduction of its table, read first.' },
   'icao-doc9613': { id: 'icao-doc9613', title: 'Performance-based Navigation (PBN) Manual, Doc 9613', edition: 'Fifth Edition, 2023', publisher: 'ICAO', access: 'read' },
   'igrf-14': {
     id: 'igrf-14',

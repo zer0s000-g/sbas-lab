@@ -6,6 +6,7 @@
  */
 import { M_PER_FT, M_PER_NM, DEG } from './units'
 import { DESTINATION } from './region'
+import { runwayExtentM, type Airport } from './sites'
 import { OPERATIONS, type OperationId } from './operations'
 import { isFiniteNumber } from './guard'
 import { SCENARIO } from '@/scenarios/active'
@@ -119,9 +120,10 @@ export const GARP_BEYOND_FPAP_M = 305
 
 /**
  * Distance from the landing threshold to the GARP, m. The page puts the FPAP at the far
- * end of the runway (ΔLength offset 0), so it is the runway length plus 305 m.
+ * end of the runway (ΔLength offset 0), so it is the runway length from the threshold
+ * (less any displacement of the threshold from the runway end: Nice 04L, 93 m) plus 305 m.
  */
-export const ltpToGarpM = (runwayLengthM: number = DESTINATION.runwayLengthM) => runwayLengthM + GARP_BEYOND_FPAP_M
+export const ltpToGarpM = (ap: Pick<Airport, 'runwayLengthM' | 'thresholdDisplacedM'> = DESTINATION) => runwayExtentM(ap).endM + GARP_BEYOND_FPAP_M
 
 /** The cap on the lateral full scale, m. */
 // TODO(expert-review): LPV lateral full scale is limited to ±1 NM here (not in Annex 10 or Doc 8168 Vol II; RTCA DO-229 to confirm).

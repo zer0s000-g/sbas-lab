@@ -4,13 +4,15 @@
  * picture calls for.
  */
 import { describe, expect, it } from 'vitest'
-import { expectedInstructions, trafficAt, type TrafficSpec } from '@/core/traffic'
+import { expectedInstructions, joinAltFt, trafficAt, trafficGlidePathFt, type TrafficSpec } from '@/core/traffic'
+import { FT_PER_NM } from '@/core/units'
 
 const SPEC: TrafficSpec = {
   threshold: { eastNm: 0, northNm: 0, elevationFt: 12 },
   finalCourseDeg: 44,
   joinNm: 8,
   gpaDeg: 3,
+  tchFt: 50,
   streams: [
     { id: 'w', name: 'WEST', fromBearingDeg: 250, entryNm: 35 },
     { id: 's', name: 'SOUTH', fromBearingDeg: 180, entryNm: 35 },
@@ -40,6 +42,27 @@ describe('arrival traffic', () => {
     expect(onFinal).not.toBeNull()
     expect(onFinal!.altFt).toBeCloseTo(12 + 50 + onFinal!.toGoNm * 318.4, -1)
     expect(onFinal!.trackDeg).toBeCloseTo(44, 0)
+  })
+
+  it('joins the glide path continuously, capturing it from below (D-5)', () => {
+    // The glide path from the FAS values: threshold elevation + TCH + distance × tan(GPA).
+    expect(trafficGlidePathFt(SPEC, 5)).toBeCloseTo(12 + 50 + 5 * FT_PER_NM * Math.tan((3 * Math.PI) / 180), 9)
+    const join = joinAltFt(SPEC)
+    expect(join).toBeLessThan(trafficGlidePathFt(SPEC, SPEC.joinNm))
+    expect(join % 100).toBe(0)
+    let prev: number | null = null
+    let worstDrop = 0
+    let above = 0
+    for (let t = 0; t < SPEC.cycleS; t += 0.5) {
+      const a = trafficAt(SPEC, t).find((x) => x.callsign === 'AAA1')
+      if (a && prev !== null) worstDrop = Math.min(worstDrop, a.altFt - prev)
+      // Never above the glide path once on final.
+      if (a?.onFinal && a.altFt > Math.round(trafficGlidePathFt(SPEC, a.toGoNm)) + 0.5) above++
+      prev = a ? a.altFt : null
+    }
+    // 220 kt on a steady descent from 9000 ft, then the 3° path at 140 kt: under about 20 ft a half-second.
+    expect(worstDrop).toBeGreaterThan(-20)
+    expect(above).toBe(0)
   })
 
   it('removes an aircraft between landing and its next entry', () => {

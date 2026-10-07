@@ -4,6 +4,9 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { PhaseTimeline } from '@/hud/PhaseTimeline'
 import { MissionClock } from '@/hud/MissionClock'
+import { AGED_NOTE, StatusPanel } from '@/page/panels'
+import { viewModel } from '@/page/model'
+import { JourneyEngine } from '@/journey/engine'
 
 afterEach(cleanup)
 
@@ -52,5 +55,25 @@ describe('MissionClock', () => {
     rerender(<MissionClock getTimeS={() => Number.NaN} speed={Number.NaN} running={false} />)
     expect(screen.getByRole('timer').textContent).not.toMatch(/NaN/)
     expect(screen.getByRole('timer').getAttribute('aria-label')).toMatch(/paused$/)
+  })
+})
+
+describe('StatusPanel', () => {
+  // design.md §6: a simplification is labelled on screen. The page does not degrade the
+  // protection levels as the last corrections age (claim sbas.protection-levels).
+  it('labels the missing degradation while no SBAS message arrives, and only then', () => {
+    const e = new JourneyEngine({ guidedStops: false, running: true })
+    e.jumpTo('final', { running: true })
+    const fresh = viewModel(e)
+    expect(fresh.messageAgeS).toBe(0)
+    render(<StatusPanel m={fresh} />)
+    expect(screen.queryByText(AGED_NOTE)).toBeNull()
+    cleanup()
+    e.setFailure('geoLost', true)
+    for (let i = 0; i < 40 && viewModel(e).messageAgeS < 2; i++) e.advance(0.1)
+    const aged = viewModel(e)
+    expect(aged.messageAgeS).toBeGreaterThan(0)
+    render(<StatusPanel m={aged} />)
+    expect(screen.getByText(AGED_NOTE)).toBeTruthy()
   })
 })

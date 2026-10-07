@@ -17,7 +17,7 @@ Entries are paraphrased, not quoted. Values that need a specification beyond Doc
 
 | Claim | Source | Code |
 |---|---|---|
-| MSAS V3: GEOs QZS-3 at 127°E (PRN 137, in operation), QZS-6 at 90.5°E (PRN 129, launched 2 Feb 2025, under test), QZS-7 at 175°W (PRN 139, planned); 2 MCS (Hitachi-ota, Kobe), 15 GMS, 13 IMS, 3 uplink stations (Hitachi-ota, Tanegashima, Miyakojima); LPV200 design goal | JCAB / JRANSA, "MSAS (Michibiki Satellite-based Augmentation Service)", EGNOS Workshop 2025, Berlin, slides 3–6 | `orbits.ts` `GEO_SATS`, `region.ts` ground segment layout |
+| MSAS V3: GEOs QZS-3 at 127°E (PRN 137, operational), QZS-6 at 90.5°E (PRN 129, launched 2 Feb 2025, MSAS SBAS service since October 2025, operational), QZS-7 (PRN 139, awaiting launch; the gps.gov PRN list gives it a slot at 175°W); 2 MCS (Hitachi-ota, Kobe), 15 GMS, 13 IMS, 3 uplink stations (Hitachi-ota, Tanegashima, Miyakojima); LPV200 design goal, first LPV200 procedures planned for 2027 | JCAB / JRANSA, "MSAS (Michibiki Satellite-based Augmentation Service)", EGNOS Workshop 2025, Berlin, slides 3–6; JCAB, ICAO APAC GBAS/SBAS ITF/8 IP/05 (May 2026), §1–2 | `orbits.ts` `GEO_SATS`, `region.ts` ground segment layout |
 | Each QZS-3 PRN is uplinked from an independent station, for continuity if one uplink fails | ICAO APAC CNS SG/24 IP15 (Japan), 2020 | `region.ts` one GUS per GEO |
 | SBAS PRN assignments 129, 137, 139 to MSAS | GPS L1 C/A PRN code assignment list (gps.gov) | `orbits.ts` |
 | Regions near the magnetic equator challenge SBAS vertical guidance | JCAB EGNOS Workshop 2025, slide 7; Doc 9849 §5.2.1.5 | `iono.ts`, narration |
@@ -69,8 +69,8 @@ Entries are paraphrased, not quoted. Values that need a specification beyond Doc
 | Ionospheric effects have negligible impact on en route to NPA | §5.2.1.1 | scenario test "L1 still gives en-route and terminal integrity" |
 | The GPS broadcast model halves the ionospheric error; SBAS reduces it to a few metres and bounds it | §5.2.1.6 | `iono.ts` `broadcastModelSlantL1` |
 | DFMC: the ionosphere-free combination removes the ionospheric delay but amplifies noise by about 2.6 | §4.3.1.4.1, §5.2.1.6 | `errors.ts` `IF_NOISE_FACTOR` |
-| Dual-frequency SBAS makes APV possible in equatorial States | §6.8.2 | scenario test "DFMC gives LPV" |
-| DFMC services are planned (WAAS about 2026, EGNOS from 2028) | §4.3.4.5 | honesty label (planned) |
+| Dual-frequency SBAS is expected to make APV possible, with high availability, in equatorial States | §6.8.2 | scenario test "DFMC gives LPV" |
+| DFMC services are planned, not yet operational (WAAS in stages from about 2026 to about 2028; the EGNOS v3 DFMC service in the early 2030s) | §4.3.4.5; FAA CGSIC briefing (April 2026); EUSPA roadmap (Industry Days 2026) | honesty label (planned) |
 
 ## Operations and ATM
 
@@ -78,7 +78,7 @@ Entries are paraphrased, not quoted. Values that need a specification beyond Doc
 |---|---|---|
 | GNSS gives guidance for every phase of flight and enables PBN, ADS-B and ADS-C | §1.4.1.1 | page narrative |
 | SBAS supports RNP APCH to LPV and LP minima | §1.4.2.2 | final phase |
-| ADS-B broadcasts the GNSS position; its integrity is linked to GNSS alert limits | §1.4.3, §2.2.4.6 | cruise phase |
+| ADS-B broadcasts the GNSS position with an integrity indicator (NIC) taken from the receiver's horizontal protection level; the ground system checks it against what the surveillance service needs | §1.4.3, §2.2.4.6 | cruise phase |
 | States must verify SBAS performance and issue NOTAMs for degradations, using a service volume model | §4.3.3.4.1 | gate phase |
 | On GNSS loss: IRS, DME, VOR/DME, ILS and procedural methods (ATC) | §7.13.2 | jamming failure |
 | ICAO space weather advisories cover TEC and scintillation | §7.13.3 | "Go deeper" |
@@ -92,6 +92,6 @@ Definition Document v3.6, EU Implementing Decision 2017/1406 (ground infrastruct
 EUSPA's announcement of the ESSP contract (2022), ESSP's EWA presentation (March 2024) and
 service provision report (NOTAM proposals), the EUROCONTROL FAS data block tool (provider
 IDs), OurAirports (runways, to confirm against AIP France), the EGNOS Toolkit's EMS
-recording (EUPL v1.1) and RTKLIB (reference decoder). The build could not reach the
-EGNOS, EUSPA, ESA, EUR-Lex or ICAO websites directly: those facts were read through
-search results quoting them and are marked for review.
+recording (EUPL v1.1) and RTKLIB (reference decoder). Most of these documents were read
+directly; the few known only through search results quoting them are marked "via-search"
+in `src/content/sources.ts`, and every claim keeps its review status in the registry.

@@ -150,16 +150,25 @@ export class JourneyEngine {
 
   /** The SBAS world at the current tick (cached until the tick or the failures change). */
   snapshot(): Snapshot {
-    const key = `${this.tickN}|${JSON.stringify(this.s.failures)}|${JSON.stringify(this.s.times)}`
+    return this.snapshotWith(this.s.failures, this.s.times)
+  }
+
+  private snapshotWith(failures: FailureState, times: FailureTimes): Snapshot {
+    const key = `${this.tickN}|${JSON.stringify(failures)}|${JSON.stringify(times)}`
     if (this.cache?.key === key) return this.cache.snap
     const a = this.aircraft
-    const snap = sbasSnapshot(this.worldS, localToGeodetic(REGION, a.eastNm, a.northNm, a.altFt * M_PER_FT), this.conditions())
+    const snap = sbasSnapshot(this.worldS, localToGeodetic(REGION, a.eastNm, a.northNm, a.altFt * M_PER_FT), conditionsFor(failures, times))
     this.cache = { key, snap }
     return snap
   }
 
+  /** Play. At the end of the journey, Play flies it again from the gate (never "running" with nothing moving). */
   play() {
     if (this.s.stop) return this.continueFromStop()
+    if (this.s.done) {
+      this.jumpTo('gate', { running: true })
+      return
+    }
     if (!this.s.running) this.set({ running: true })
   }
 
@@ -194,7 +203,7 @@ export class JourneyEngine {
     if (this.s.failures[id] === on) return
     const failures = { ...this.s.failures, [id]: on }
     const times = { ...this.s.times }
-    if (id === 'clockJump') Object.assign(times, on ? this.clockJumpNow() : { clockJumpSat: null, clockJumpS: null })
+    if (id === 'clockJump') Object.assign(times, on ? this.clockJumpNow(times) : { clockJumpSat: null, clockJumpS: null })
     if (id === 'geoLost') times.geoLostS = on ? this.worldS : null
     this.set({ failures, times })
   }
@@ -202,15 +211,22 @@ export class JourneyEngine {
   /**
    * A clock jump starting now: it hits a satellite LAB201 is using, or, with no fix (all
    * signals jammed), one above its horizon, so the failure is never switched on without effect.
+   * The satellite is chosen with no clock jump in force (`times` are the other timed
+   * failures as they stand now), so the choice depends only on the moment, never on an
+   * earlier clock jump: a jump to a phase gives the same satellite however it was reached.
    */
-  private clockJumpNow(): Pick<FailureTimes, 'clockJumpSat' | 'clockJumpS'> {
-    const s = this.snapshot()
+  private clockJumpNow(times: FailureTimes): Pick<FailureTimes, 'clockJumpSat' | 'clockJumpS'> {
+    const s = this.snapshotWith(this.s.failures, { ...times, clockJumpSat: null, clockJumpS: null })
     const sat = s.dfmc?.used[0] ?? s.abas?.used[0] ?? s.sats.find((v) => v.kind === 'gps' && v.visible)?.id ?? null
     return { clockJumpSat: sat, clockJumpS: sat ? this.worldS : null }
   }
 
-  /** Jump to the start of a phase. The result equals playing up to it. */
-  jumpTo(phase: PhaseId) {
+  /**
+   * Jump to the start of a phase. The result equals playing up to it. One change of state,
+   * so the session log sees the new phase, its stop and its time together (a stop left by
+   * a jump is not a "continue").
+   */
+  jumpTo(phase: PhaseId, extra: Partial<Pick<JourneyState, 'running'>> = {}) {
     const target = PHASE_INDEX.get(phase)!
     // Stops before the target count as seen; stops at or after it are armed again.
     const fired = STOPS.filter((st) => PHASE_INDEX.get(st.phase)! < target).map((st) => st.id)
@@ -221,9 +237,8 @@ export class JourneyEngine {
     // world times, so after a jump back they would otherwise lie in the future).
     const times = { ...this.s.times }
     if (this.s.failures.geoLost) times.geoLostS = this.worldS
-    if (this.s.failures.clockJump) Object.assign(times, this.clockJumpNow())
-    this.set({ stop: null, fired, done: false, times })
-    this.enter(phase)
+    if (this.s.failures.clockJump) Object.assign(times, this.clockJumpNow(times))
+    this.set({ ...extra, ...this.entryPatch(phase, fired), done: false, times })
   }
 
   /** Back to the gate: clears the journey position, the stops and the timed failures. Settings stay. */
@@ -239,13 +254,14 @@ export class JourneyEngine {
 
   private enter(phase: PhaseId) {
     this.signal = 0
-    const patch: Partial<JourneyState> = { phase }
+    this.set(this.entryPatch(phase, this.s.fired))
+  }
+
+  /** Entering a phase: the phase, and its guided stop if it has one not yet seen. */
+  private entryPatch(phase: PhaseId, fired: readonly StopId[]): Pick<JourneyState, 'phase' | 'stop' | 'fired'> {
     const stop = stopOnEntry(phase)
-    if (stop && this.s.guidedStops && !this.s.fired.includes(stop)) {
-      patch.stop = stop
-      patch.fired = [...this.s.fired, stop]
-    }
-    this.set(patch)
+    if (stop && this.s.guidedStops && !fired.includes(stop)) return { phase, stop, fired: [...fired, stop] }
+    return { phase, stop: null, fired }
   }
 
   private fire(stop: StopId): boolean {

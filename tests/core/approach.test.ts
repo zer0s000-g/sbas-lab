@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { runwayExtentM } from '@/core/sites'
 import { crc32q, deviations, fasCrc, fasValid, GARP_BEYOND_FPAP_M, LATERAL_FS_CAP_M, lateralFullScaleM, ltpToGarpM, makeFasDataBlock, type FasDataBlock } from '@/core/approach'
 import { DESTINATION, runwayToLocalNm } from '@/core/region'
 import { glidePathAltFt } from '@/core/flight'
@@ -55,6 +56,11 @@ describe('approach deviations', () => {
     expect(deg).toBeLessThan(2.2)
     // The ±1 NM limit (to confirm against DO-229).
     expect(lateralFullScaleM(b.courseWidthM, 200 * 1852)).toBe(LATERAL_FS_CAP_M)
+  })
+  it('a displaced threshold moves the far runway end (FPAP) and the GARP closer to it', () => {
+    expect(runwayExtentM({ runwayLengthM: 2570, thresholdDisplacedM: 93 })).toEqual({ startM: -93, endM: 2477 })
+    expect(runwayExtentM({ runwayLengthM: 3000 })).toEqual({ startM: 0, endM: 3000 })
+    expect(ltpToGarpM({ runwayLengthM: 2570, thresholdDisplacedM: 93 })).toBe(2477 + GARP_BEYOND_FPAP_M)
   })
   it('the CDI uses that full scale: one full-scale deflection at 5 NM is the widened course width off the centreline', () => {
     const fs = lateralFullScaleM(b.courseWidthM, 5 * 1852)

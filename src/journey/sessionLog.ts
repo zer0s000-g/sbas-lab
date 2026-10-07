@@ -43,7 +43,11 @@ export function journeyEvents(prev: JourneyState, next: JourneyState): LogEvent[
   if (next.phase !== prev.phase) out.push({ kind: 'phase', phase: next.phase })
   for (const id of Object.keys(next.failures) as FailureId[]) if (next.failures[id] !== prev.failures[id]) out.push({ kind: 'failure', id, on: next.failures[id] })
   if (next.stop && next.stop !== prev.stop) out.push({ kind: 'stop', id: next.stop })
-  if (!next.stop && prev.stop) out.push({ kind: 'continue' })
+  // A "continue" is the learner leaving a stop where it stands; a stop left by a jump or a
+  // reset (a new phase) is not one.
+  if (!next.stop && prev.stop) {
+    if (next.phase === prev.phase) out.push({ kind: 'continue' })
+  }
   else if (next.running !== prev.running && !next.stop && !prev.stop) out.push({ kind: 'running', on: next.running })
   if (next.speedMode !== prev.speedMode) out.push({ kind: 'speed', mode: String(next.speedMode) })
   return out
@@ -73,15 +77,32 @@ export interface Debrief {
   wrong: number
 }
 
-/** The debrief of a session: response times to each failure, and the learner's actions. Pure. */
+/**
+ * The debrief of a session: response times to each failure, and the learner's actions. Pure.
+ * The response to a failure is the first learner action logged AFTER it, in the order of
+ * the log (journey time goes back on a jump, so it cannot order the entries). The response
+ * time is the journey time flown between the two: the forward steps of the clock from one
+ * entry to the next, a jump back counting as none.
+ */
 export function debrief(log: SessionLog): Debrief {
-  const actions = log.entries.filter((e) => e.event.kind === 'action').map((e) => ({ tS: e.tS, ...(e.event as Extract<LogEvent, { kind: 'action' }>) }))
+  const isAction = (e: LogEntry): e is LogEntry & { event: Extract<LogEvent, { kind: 'action' }> } => e.event.kind === 'action'
+  const actions = log.entries.filter(isAction).map((e) => ({ tS: e.tS, ...e.event }))
   const failures: Debrief['failures'] = []
-  for (const e of log.entries) {
-    if (e.event.kind !== 'failure' || !e.event.on) continue
-    const after = actions.find((a) => a.tS >= e.tS && a.area !== 'instructor')
-    failures.push({ id: e.event.id, onS: e.tS, firstActionS: after?.tS ?? null, firstAction: after?.what ?? null, responseS: after ? after.tS - e.tS : null })
-  }
+  log.entries.forEach((e, i) => {
+    if (e.event.kind !== 'failure' || !e.event.on) return
+    let flown = 0
+    let after: (LogEntry & { event: Extract<LogEvent, { kind: 'action' }> }) | null = null
+    for (let j = i + 1; j < log.entries.length; j++) {
+      const x = log.entries[j]
+      flown += Math.max(0, x.tS - log.entries[j - 1].tS)
+      if (isAction(x) && x.event.area !== 'instructor') {
+        after = x
+        break
+      }
+    }
+    const responseS = after ? Math.round(flown * 10) / 10 : null
+    failures.push({ id: e.event.id, onS: e.tS, firstActionS: after?.tS ?? null, firstAction: after?.event.what ?? null, responseS })
+  })
   return {
     failures,
     actions: actions.map(({ tS, area, what, correct }) => ({ tS, area, what, correct })),

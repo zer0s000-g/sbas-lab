@@ -20,6 +20,7 @@ export const TEXTS: ScenarioDef['texts'] = {
   footer:
     'The simulation is simplified to teach principles. Technical values follow ICAO Annex 10 Volume I, ICAO Doc 9849 and RTCA DO-229 where stated; every claim’s source and review status is listed under Sources, and they should be checked by a qualified GNSS/CNS engineer. EGNOS is the European SBAS; ESSP provides the EGNOS service under contract to EUSPA. The route, the LPV procedure at Nice and the uplink pairing shown are illustrative, not published data. This page is not published or endorsed by ESSP or EUSPA.',
   networkHonesty: 'Map of Europe · EGNOS sites named in public sources, at city level, not all of them · uplink pairing illustrative',
+  spaceHonestySites: 'ground sites at city level · uplink pairing illustrative',
   describeSpace: 'Space view: the Earth, the GPS constellation and the EGNOS GEOs SES-5 and Eutelsat 5 West B over Europe.',
   describeNetwork: 'Network map of Europe: EGNOS ground sites named in public sources (RIMS reference stations, the two mission control centres and the uplink stations) and the ionospheric grid.',
   describeClimb: 'over the Lauragais toward the Mediterranean',

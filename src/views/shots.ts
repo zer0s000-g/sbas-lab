@@ -102,7 +102,7 @@ function flightShot(e: JourneyEngine, intent: CameraIntent | CameraButton): Shot
     const side: V3 = [Math.cos(h), 0, Math.sin(h)]
     const l = nearestLayout(a.eastNm, a.northNm)
     const [ra, rr] = localNmToAirport(l.airport, a.eastNm, a.northNm)
-    const nearField = Math.abs(rr) < 2500 && ra > -3000 && ra < l.lengthM + 3000
+    const nearField = Math.abs(rr) < 2500 && ra > l.startM - 3000 && ra < l.endM + 3000
     const aglFt = a.altFt - l.airport.elevationFt
     if (intent === 'overview' && (a.onGround || (nearField && aglFt < 800))) {
       // The airport: from the runway side, along the apron, with LAB201 in front of the

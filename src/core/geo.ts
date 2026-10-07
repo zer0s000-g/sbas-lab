@@ -48,13 +48,15 @@ export function ecefToGeodetic([x, y, z]: Vec3): Geodetic | null {
   const p = Math.hypot(x, y)
   if (p < 1 && Math.abs(z) < 1) return null
   const lon = Math.atan2(y, x)
+  // Both steps stay well defined on the polar axis (p = 0), where p / cos(lat) does not:
+  // lat from tan(lat) = (z + e²·N·sin(lat)) / p, and h = p·cos(lat) + z·sin(lat) − a²/N.
   let lat = Math.atan2(z, p * (1 - WGS84_E2))
-  let h = 0
   for (let i = 0; i < 8; i++) {
     const n = primeVerticalRadius(lat)
-    h = p / Math.max(Math.cos(lat), 1e-12) - n
-    lat = Math.atan2(z, p * (1 - (WGS84_E2 * n) / (n + h)))
+    lat = Math.atan2(z + WGS84_E2 * n * Math.sin(lat), p)
   }
+  const s = Math.sin(lat)
+  const h = p * Math.cos(lat) + z * s - WGS84_A_M * Math.sqrt(1 - WGS84_E2 * s * s)
   return { latDeg: lat / DEG, lonDeg: lon / DEG, hM: h }
 }
 
@@ -97,9 +99,15 @@ export function lookAngles(receiver: Geodetic, satEcef: Vec3): LookAngles | null
 }
 
 /**
- * A small local plane around a region origin, in NM east and north, for the flight.
- * It converts with the radii of curvature at the origin: over the ~100 NM of this
- * journey the error is well under a metre, far below anything the page shows.
+ * A flat local plane around a region origin, in NM east and north, for the flight. It
+ * converts with the radii of curvature at the origin (an equirectangular map), so a
+ * point given by latitude and longitude (an airport, a waypoint, a site) maps to its
+ * true place and back, but lengths and bearings measured in the plane drift with the
+ * distance from the origin's latitude: east-west the scale is off by cos φ·N(φ) /
+ * (cos φ₀·N(φ₀)) − 1, about 0.3 % at Jakarta and Bali (about 530 NM apart, some 50 m in
+ * 10 NM) and under 0.1 % at Toulouse and Nice (about 285 NM apart; up to about 1 % at the
+ * route's southernmost point, over the Gulf of Lion). Small next to anything the flight view
+ * draws; the GNSS geometry itself is computed in ECEF, not in this plane.
  */
 export interface LocalFrame {
   origin: Geodetic

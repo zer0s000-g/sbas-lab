@@ -7,6 +7,7 @@ import {
   giveIndex,
   GIVEI_NOT_MONITORED,
   igpKey,
+  IONO_REFERENCE_SEED,
   interpolateGrid,
   isPostSunset,
   L1_M_PER_TECU,
@@ -113,12 +114,62 @@ describe('the ionospheric grid', () => {
     const night = estimateIgps(obs, at(21)).find((g) => g.latDeg === -5 && g.lonDeg === 90)!
     expect(night.givei).toBeGreaterThan(day.givei)
   })
-  it('interpolation returns the corner value at a corner and refuses a missing corner', () => {
+  it('the patterns follow the engine seed; the reference seed and no seed give the same draw', () => {
+    const c = { ...QUIET, tS: 0, scintillation: true }
+    const tecs = (seed?: number) => Array.from({ length: 50 }, (_, i) => verticalTec(-8, 100 + i * 0.7, { ...c, seed }))
+    expect(tecs(IONO_REFERENCE_SEED)).toEqual(tecs(undefined))
+    expect(tecs(7)).not.toEqual(tecs(IONO_REFERENCE_SEED))
+    expect(broadcastModelSlantL1(10, -2, 91, 0, IONO_REFERENCE_SEED)).toBe(broadcastModelSlantL1(10, -2, 91, 0))
+    expect(broadcastModelSlantL1(10, -2, 91, 0, 7)).not.toBe(broadcastModelSlantL1(10, -2, 91, 0))
+  })
+  it('interpolation returns the corner value at a corner and refuses a pierce point outside the three corners left', () => {
     const mk = (lat: number, lon: number, d: number): IgpEstimate => ({ latDeg: lat, lonDeg: lon, delayM: d, givei: 3 })
     const grid = new Map([mk(-5, 90, 4), mk(-5, 95, 4), mk(0, 90, 4), mk(0, 95, 8)].map((g) => [igpKey(g.latDeg, g.lonDeg), g]))
     expect(interpolateGrid(grid, { latDeg: -5, lonDeg: 90, obliquity: 1 })!.delayM).toBeCloseTo(4, 9)
     expect(interpolateGrid(grid, { latDeg: -2.5, lonDeg: 92.5, obliquity: 1 })!.delayM).toBeCloseTo(5, 9)
     grid.delete(igpKey(0, 95))
-    expect(interpolateGrid(grid, { latDeg: -2.5, lonDeg: 92.5, obliquity: 1 })).toBeNull()
+    // On the edge of the triangle that is left: three-point interpolation.
+    expect(interpolateGrid(grid, { latDeg: -2.5, lonDeg: 92.5, obliquity: 1 })!.delayM).toBeCloseTo(4, 9)
+    // Beyond it, towards the missing corner: no correction.
+    expect(interpolateGrid(grid, { latDeg: -1, lonDeg: 94, obliquity: 1 })).toBeNull()
+    // Two corners missing: no correction.
+    grid.delete(igpKey(-5, 90))
+    expect(interpolateGrid(grid, { latDeg: -4, lonDeg: 94, obliquity: 1 })).toBeNull()
+  })
+  // Annex 10 Vol I App B 3.5.5.5.3–3.5.5.5.4 (as read in the AI check): three-point interpolation.
+  it('with one corner not monitored or missing, a pierce point in the triangle of the other three gets the three-point interpolation', () => {
+    // A linear field d = 1 + 0.1·lat + 0.2·lon: any interpolation over a triangle reproduces it exactly.
+    const field = (lat: number, lon: number) => 1 + 0.1 * lat + 0.2 * lon
+    const corners: [number, number][] = [[40, 5], [40, 10], [45, 5], [45, 10]]
+    // For each corner left out: a point inside the triangle of the three others.
+    const inside: Record<string, [number, number]> = { '40,5': [44, 9], '40,10': [44, 6], '45,5': [41, 9], '45,10': [41, 6] }
+    for (const [lat, lon] of corners) {
+      const out = igpKey(lat, lon)
+      for (const missing of ['absent', 'not monitored'] as const) {
+        const grid = new Map<string, IgpEstimate>()
+        for (const [la, lo] of corners) {
+          const k = igpKey(la, lo)
+          if (k === out && missing === 'absent') continue
+          grid.set(k, { latDeg: la, lonDeg: lo, delayM: field(la, lo), givei: k === out ? GIVEI_NOT_MONITORED : 5 })
+        }
+        const [pLat, pLon] = inside[out]
+        const r = interpolateGrid(grid, { latDeg: pLat, lonDeg: pLon, obliquity: 1 })
+        expect(r, `${out} ${missing}`).not.toBeNull()
+        expect(r!.delayM, `${out} ${missing}`).toBeCloseTo(field(pLat, pLon), 9)
+        expect(Number.isFinite(r!.sigmaM)).toBe(true)
+        // The point mirrored across the cell's diagonal is outside that triangle.
+        expect(interpolateGrid(grid, { latDeg: 85 - pLat, lonDeg: 15 - pLon, obliquity: 1 }), `${out} mirrored`).toBeNull()
+      }
+    }
+  })
+  it('between 60° and 75° of latitude the cells are 5° × 10°, as the IGPs there are 10° apart in longitude', () => {
+    const mk = (lat: number, lon: number, d: number): IgpEstimate => ({ latDeg: lat, lonDeg: lon, delayM: d, givei: 5 })
+    const grid = new Map([mk(65, 10, 2), mk(65, 20, 4), mk(70, 10, 2), mk(70, 20, 4)].map((g) => [igpKey(g.latDeg, g.lonDeg), g]))
+    expect(interpolateGrid(grid, { latDeg: 67, lonDeg: 15, obliquity: 1 })!.delayM).toBeCloseTo(3, 9)
+    // South of 60° the same IGPs 10° apart do not make a cell.
+    const south = new Map([mk(45, 10, 2), mk(45, 20, 4), mk(50, 10, 2), mk(50, 20, 4)].map((g) => [igpKey(g.latDeg, g.lonDeg), g]))
+    expect(interpolateGrid(south, { latDeg: 47, lonDeg: 15, obliquity: 1 })).toBeNull()
+    // Beyond 75° (the polar IGPs) the page does not interpolate.
+    expect(interpolateGrid(grid, { latDeg: 78, lonDeg: 15, obliquity: 1 })).toBeNull()
   })
 })

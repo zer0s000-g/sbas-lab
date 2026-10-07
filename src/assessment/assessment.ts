@@ -153,6 +153,11 @@ export function gradeExam(plan: ExamPlan, what: FailureId | null, action: string
 export const PASS_MARK = 0.8
 
 export interface Overall {
+  /**
+   * Points so far, a part not done counting zero: a running total for the page. It is
+   * not a result until the status is final, so an LMS gets no score while incomplete
+   * (src/lms/scorm.ts, LmsSession.report).
+   */
   raw: number
   max: number
   /** raw / max, 0..1. */

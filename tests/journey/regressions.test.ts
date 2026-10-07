@@ -49,6 +49,32 @@ describe('timed failures', () => {
     expect(c.geoLostFromS).toBe(e.worldS)
     expect(e.snapshot().service.geosTracked).toBe(0)
   })
+  it('the satellite a clock jump hits after a jump depends only on the target, not on where it was switched on (F-1)', () => {
+    const a = new JourneyEngine({ guidedStops: false })
+    a.jumpTo('descent')
+    a.setFailure('clockJump', true)
+    a.jumpTo('final')
+    const b = new JourneyEngine({ guidedStops: false })
+    b.jumpTo('final')
+    b.setFailure('clockJump', true)
+    expect(a.tick).toBe(b.tick)
+    expect(a.state.times).toEqual(b.state.times)
+  })
+})
+
+describe('the end of the journey', () => {
+  it('Play at the end flies the journey again from the gate, never "running" with nothing moving (F-4)', () => {
+    const e = new JourneyEngine({ guidedStops: false })
+    e.setSpeed(60)
+    let guard = 0
+    while (!e.state.done && guard++ < 100_000) e.advance(0.1)
+    expect(e.state.done).toBe(true)
+    e.play()
+    expect(e.state.done).toBe(false)
+    expect(e.state.running).toBe(true)
+    expect(e.state.phase).toBe('gate')
+    expect(e.advance(0.1) + e.advance(0.1)).toBeGreaterThan(0)
+  })
 })
 
 describe('the approach', () => {

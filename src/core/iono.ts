@@ -36,7 +36,21 @@ export interface IonoConditions {
   storm: number
   /** Force the post-sunset bubbles and scintillation, whatever the hour (the "scintillation" failure). */
   scintillation: boolean
+  /**
+   * The engine's seed (Conditions.seed): it draws where the bubbles are, the texture of the
+   * electron content and which lines of sight lose lock. Absent: the reference draw.
+   */
+  seed?: number
 }
+
+/**
+ * The seed the illustrative patterns were first drawn with (the journey's NOMINAL.seed): with
+ * it, or with no seed, the patterns are the reference ones; any other seed draws others.
+ */
+export const IONO_REFERENCE_SEED = 201
+
+/** The hash seed of one pattern (`k` tells the patterns apart) for an engine seed. */
+const patternSeed = (k: number, seed: number | undefined) => (seed === undefined ? k : k + (Math.trunc(seed) - IONO_REFERENCE_SEED) * 7919)
 
 export const QUIET: Omit<IonoConditions, 'tS'> = { startLocalHour: START_LOCAL_HOUR, storm: 0, scintillation: false }
 
@@ -76,9 +90,9 @@ function bubbleSeason(localHour: number): number {
 
 /**
  * Depletion 0..1 at a pierce point: narrow bands elongated north–south along the
- * magnetic meridian, drifting slowly east.
+ * magnetic meridian, drifting slowly east. Where they are depends on the seed.
  */
-export function bubbleDepletion(latDeg: number, lonDeg: number, tS: number, strength: number): number {
+export function bubbleDepletion(latDeg: number, lonDeg: number, tS: number, strength: number, seed?: number): number {
   if (!(strength > 0)) return 0
   const magLat = magLatDeg(latDeg, lonDeg)
   // Confined to the low-latitude bands.
@@ -88,8 +102,8 @@ export function bubbleDepletion(latDeg: number, lonDeg: number, tS: number, stre
   const x = (lonDeg - drift) / 3.5
   const cell = Math.floor(x)
   const f = x - cell
-  const present = hash2(cell, 7, 11) > 0.35 ? 1 : 0
-  const centre = 0.3 + 0.4 * hash2(cell, 3, 5)
+  const present = hash2(cell, 7, patternSeed(11, seed)) > 0.35 ? 1 : 0
+  const centre = 0.3 + 0.4 * hash2(cell, 3, patternSeed(5, seed))
   const width = 0.6 / 3.5
   const across = Math.exp(-((f - centre) ** 2) / (2 * (width / 2) ** 2))
   return clamp(strength * present * across * latShape, 0, 1)
@@ -107,11 +121,11 @@ export function verticalTec(latDeg: number, lonDeg: number, c: IonoConditions): 
   const evening = h >= 17 && h <= 23.5 ? 1.35 : 1
   const anomaly = 0.8 + (band(15) + band(-15)) * 0.9 * evening
   // Gentle large-scale texture so neighbouring pierce points differ.
-  const texture = 0.9 + 0.2 * valueNoise(latDeg / 6, lonDeg / 6 + c.tS / 7200, 3)
+  const texture = 0.9 + 0.2 * valueNoise(latDeg / 6, lonDeg / 6 + c.tS / 7200, patternSeed(3, c.seed))
   let tec = (6 + 42 * day) * anomaly * texture
   tec *= 1 + 1.6 * clamp(c.storm, 0, 1)
   const bubbles = Math.max(bubbleSeason(h), c.scintillation ? 1 : 0)
-  tec *= 1 - 0.75 * bubbleDepletion(latDeg, lonDeg, c.tS, bubbles)
+  tec *= 1 - 0.75 * bubbleDepletion(latDeg, lonDeg, c.tS, bubbles, c.seed)
   return Math.max(0, tec)
 }
 
@@ -125,8 +139,8 @@ export const delayAt = (delayL1M: number, freqHz: number) => delayL1M * (GPS_L1_
  * The GPS broadcast (single-frequency ABAS) ionospheric correction. Doc 9849 §5.2.1.6:
  * the simple broadcast model reduces the ionospheric error by a factor of about two.
  */
-export function broadcastModelSlantL1(trueSlantL1M: number, latDeg: number, lonDeg: number, tS: number): number {
-  const wobble = 0.85 + 0.3 * valueNoise(latDeg / 9, lonDeg / 9 + tS / 5400, 17)
+export function broadcastModelSlantL1(trueSlantL1M: number, latDeg: number, lonDeg: number, tS: number, seed?: number): number {
+  const wobble = 0.85 + 0.3 * valueNoise(latDeg / 9, lonDeg / 9 + tS / 5400, patternSeed(17, seed))
   return 0.5 * trueSlantL1M * wobble
 }
 
@@ -163,12 +177,12 @@ export function scintillationLoss(satId: string, pp: PiercePoint | null, c: Iono
   const h = localSolarHour(c.tS, pp.lonDeg, c.startLocalHour)
   const strength = Math.max(bubbleSeason(h), c.scintillation ? 1 : 0)
   if (strength <= 0) return false
-  const depletion = bubbleDepletion(pp.latDeg, pp.lonDeg, c.tS, strength)
+  const depletion = bubbleDepletion(pp.latDeg, pp.lonDeg, c.tS, strength, c.seed)
   if (depletion < 0.25) return false
   // Losses are short and repeat: re-drawn every 20 s per satellite.
   let code = 0
   for (let i = 0; i < satId.length; i++) code = (code * 31 + satId.charCodeAt(i)) >>> 0
-  return hash2(code, Math.floor(c.tS / 20), 23) < depletion * 0.9
+  return hash2(code, Math.floor(c.tS / 20), patternSeed(23, c.seed)) < depletion * 0.9
 }
 
 // ---------------------------------------------------------------------------
@@ -281,28 +295,67 @@ export function estimateIgps(obs: readonly IonoObservation[], c: IonoConditions,
 }
 
 /**
- * Receiver interpolation of the grid at a pierce point (bilinear over the four IGPs
- * around it). Null when any of them is not monitored or missing: the satellite then
- * cannot be used for approaches with vertical guidance.
+ * The grid cell around a pierce point the receiver interpolates in: 5° × 5° up to 60° of
+ * latitude; between 60° and 75°, where the IGPs are 10° apart in longitude (IGP bands 9
+ * and 10, ./sbasDecode), 5° of latitude × 10° of longitude (Annex 10 Vol I App B
+ * 3.5.5.5.3–3.5.5.5.4 as read in the AI check, src/content/claims/aiChecks.ts). Null
+ * beyond 75°, where the page does not interpolate (the polar IGPs).
+ */
+export function gridCell(latDeg: number, lonDeg: number): { lat0: number; lon0: number; dLat: number; dLon: number } | null {
+  if (!Number.isFinite(latDeg) || !Number.isFinite(lonDeg) || Math.abs(latDeg) > 75) return null
+  const polarward = Math.abs(latDeg) > 60
+  const dLon = polarward ? 2 * IGP_SPACING_DEG : IGP_SPACING_DEG
+  let lat0 = Math.floor(latDeg / IGP_SPACING_DEG) * IGP_SPACING_DEG
+  // A pierce point on the cell's top edge (60°, 75°) stays in the cell below it.
+  if (!polarward) lat0 = clamp(lat0, -60, 60 - IGP_SPACING_DEG)
+  else lat0 = Math.min(lat0, 75 - IGP_SPACING_DEG)
+  const lon = ((((lonDeg + 180) % 360) + 360) % 360) - 180
+  return { lat0, lon0: Math.floor(lon / dLon) * dLon, dLat: IGP_SPACING_DEG, dLon }
+}
+
+const wrapLon = (lonDeg: number) => (lonDeg >= 180 ? lonDeg - 360 : lonDeg)
+
+/**
+ * Receiver interpolation of the grid at a pierce point, over the cell around it
+ * (gridCell): bilinear over its four IGPs when all four are monitored. When one of them is
+ * not monitored, or not in the grid, the receiver uses the three others if the pierce
+ * point lies in their triangle (three-point interpolation, Annex 10 Vol I App B
+ * 3.5.5.5.3–3.5.5.5.4 as read in the AI check). The variance is interpolated with the
+ * same weights. Null when no cell or triangle applies: the satellite then cannot be used
+ * for approaches with vertical guidance. Simplified: the receiver's further fall-back to
+ * 10° × 10° cells and the polar IGPs beyond 75° are not modelled.
  */
 export function interpolateGrid(grid: ReadonlyMap<string, IgpEstimate>, pp: PiercePoint): { delayM: number; sigmaM: number } | null {
-  const lat0 = Math.floor(pp.latDeg / IGP_SPACING_DEG) * IGP_SPACING_DEG
-  const lon0 = Math.floor(pp.lonDeg / IGP_SPACING_DEG) * IGP_SPACING_DEG
-  const corners = [
-    grid.get(igpKey(lat0, lon0)),
-    grid.get(igpKey(lat0, lon0 + IGP_SPACING_DEG)),
-    grid.get(igpKey(lat0 + IGP_SPACING_DEG, lon0)),
-    grid.get(igpKey(lat0 + IGP_SPACING_DEG, lon0 + IGP_SPACING_DEG)),
-  ]
-  if (corners.some((c) => !c || c.givei >= GIVEI_NOT_MONITORED)) return null
-  const x = (pp.lonDeg - lon0) / IGP_SPACING_DEG
-  const y = (pp.latDeg - lat0) / IGP_SPACING_DEG
-  const w = [(1 - x) * (1 - y), x * (1 - y), (1 - x) * y, x * y]
+  const cell = gridCell(pp.latDeg, pp.lonDeg)
+  if (!cell) return null
+  const { lat0, lon0, dLat, dLon } = cell
+  const at = (dy: number, dx: number) => {
+    const g = grid.get(igpKey(lat0 + dy * dLat, wrapLon(lon0 + dx * dLon)))
+    return g && g.givei < GIVEI_NOT_MONITORED ? g : null
+  }
+  const sw = at(0, 0)
+  const se = at(0, 1)
+  const nw = at(1, 0)
+  const ne = at(1, 1)
+  const lon = pp.lonDeg - Math.floor((pp.lonDeg - lon0 + 180) / 360) * 360
+  const x = (lon - lon0) / dLon
+  const y = (pp.latDeg - lat0) / dLat
+  const eps = 1e-12
+  // Weights per corner: four-point (bilinear), or the three-point weights of the triangle
+  // that is left (barycentric on the right-angled triangle, x and y measured in the cell).
+  let pts: [IgpEstimate | null, number][]
+  if (sw && se && nw && ne) pts = [[sw, (1 - x) * (1 - y)], [se, x * (1 - y)], [nw, (1 - x) * y], [ne, x * y]]
+  else if (sw && se && nw && !ne && x + y <= 1 + eps) pts = [[sw, 1 - x - y], [se, x], [nw, y]]
+  else if (sw && se && ne && !nw && x >= y - eps) pts = [[sw, 1 - x], [se, x - y], [ne, y]]
+  else if (sw && nw && ne && !se && y >= x - eps) pts = [[sw, 1 - y], [nw, y - x], [ne, x]]
+  else if (se && nw && ne && !sw && x + y >= 1 - eps) pts = [[se, 1 - y], [nw, 1 - x], [ne, x + y - 1]]
+  else return null
   let delay = 0
   let variance = 0
-  corners.forEach((c, i) => {
-    delay += w[i] * c!.delayM
-    variance += w[i] * sigmaGiveM(c!.givei) ** 2
-  })
+  for (const [g, w0] of pts) {
+    const w = Math.max(0, w0)
+    delay += w * g!.delayM
+    variance += w * sigmaGiveM(g!.givei) ** 2
+  }
   return { delayM: delay, sigmaM: Math.sqrt(variance) }
 }

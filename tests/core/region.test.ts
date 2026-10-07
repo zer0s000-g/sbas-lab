@@ -139,3 +139,19 @@ describe('time and the magnetic equator', () => {
     expect(Number.isFinite(dipEquatorLatDeg(359))).toBe(true)
   })
 })
+
+describe('the flat local frame (A-2)', () => {
+  it('is within 1 % of true scale east-west along the whole route, as the flight view label and geo.ts say', async () => {
+    const { geodeticToEcef, localToGeodetic: toGeo, norm, sub } = await import('@/core/geo')
+    const { ROUTE: route } = await import('@/core/flight')
+    const { M_PER_NM } = await import('@/core/units')
+    const { REGION: R, DEPARTURE: D, DESTINATION: A } = await import('@/core/region')
+    // True length of a 10 NM step east in the plane, from a point (a chord: < 1 cm off the arc).
+    const step = (e: number, n: number) => norm(sub(geodeticToEcef(toGeo(R, e + 10, n, 0)), geodeticToEcef(toGeo(R, e, n, 0)))) / (10 * M_PER_NM) - 1
+    const worst = Math.max(...route.map((w) => Math.abs(step(w.eastNm, w.northNm))))
+    expect(worst).toBeLessThan(0.01)
+    // The journey is hundreds of NM, not the ~100 NM the comment once said.
+    expect(Math.hypot(A.thresholdEastNm - D.thresholdEastNm, A.thresholdNorthNm - D.thresholdNorthNm)).toBeGreaterThan(250)
+    for (const ap of [D, A]) expect(Math.abs(step(ap.thresholdEastNm, ap.thresholdNorthNm))).toBeLessThan(0.0035)
+  })
+})

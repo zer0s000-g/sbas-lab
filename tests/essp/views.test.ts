@@ -147,3 +147,44 @@ describe('honesty', () => {
     expect(NETWORK_HONESTY).toMatch(/illustrative/)
   })
 })
+
+describe('every view navigates with the same fix (F-2)', () => {
+  test('on final (LPV) the orbit and flight views use the fix the sky plot and readouts report', async () => {
+    const { JourneyEngine } = await import('@/journey/engine')
+    const { journeyNavFix } = await import('@/journey/navFix')
+    const { viewModel } = await import('@/page/model')
+    const { approachMode } = await import('@/core/sbasWorld')
+    const e = new JourneyEngine({ guidedStops: false })
+    e.jumpTo('final')
+    const m = viewModel(e)
+    expect(m.mode).toBe('LPV')
+    const nav = journeyNavFix(e)
+    // The LPV fix (SBAS vertical guidance), not the en-route SBAS fix.
+    expect(nav.fix).toBe(approachMode(e.snapshot()).fix)
+    expect(nav.source).toBe('sbas')
+    expect(m.nav).toBe(nav.fix)
+    const used = [...(nav.fix?.used ?? [])].sort()
+    const skyPlot = m.sats.filter((s) => s.kind === 'gps' && s.state === 'used').map((s) => s.id).sort()
+    expect(used).toEqual(skyPlot)
+  })
+})
+
+describe('Nice 04L: the displaced landing threshold (D-4)', () => {
+  test('the FPAP is the far runway end, so the GARP is the runway length less the displacement, plus 305 m', async () => {
+    const { ltpToGarpM, GARP_BEYOND_FPAP_M } = await import('@/core/approach')
+    expect(DESTINATION.thresholdDisplacedM).toBe(93)
+    expect(ltpToGarpM()).toBe(2570 - 93 + GARP_BEYOND_FPAP_M)
+  })
+  test('the runway is drawn from its end, 93 m before the threshold, to 2477 m past it', () => {
+    const l = DESTINATION_LAYOUT
+    expect([l.startM, l.endM]).toEqual([-93, 2570 - 93])
+    expect(l.runway.a0).toBe(-93 - 60)
+    expect(l.runway.a1).toBe(2477 + 60)
+    // Green threshold lights at the landing threshold, red end lights at both runway ends.
+    const ends = l.lamps.filter((p) => p.kind === 'end').map((p) => Math.round(p.a))
+    expect(new Set(ends)).toEqual(new Set([-95, 2479]))
+    expect(l.lamps.filter((p) => p.kind === 'threshold' && Math.abs(p.r) < 30).every((p) => p.a === -2)).toBe(true)
+    // Toulouse 14L has no displaced threshold.
+    expect([DEPARTURE_LAYOUT.startM, DEPARTURE_LAYOUT.endM]).toEqual([0, DEPARTURE.runwayLengthM])
+  })
+})

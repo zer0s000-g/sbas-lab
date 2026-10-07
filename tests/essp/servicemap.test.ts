@@ -12,6 +12,7 @@ import { applyMessage, bitsFromHex, decodeMessage, emptyState, parseEms } from '
 import { EGNOS_RIMS } from '@/scenarios/essp/rimsNetwork'
 import { REGION } from '@/core/region'
 import { lookAngles } from '@/core/geo'
+import { TIMEOUTS_S } from '@/core/messages'
 import { decodeServiceMap, availabilityAt, SERVICE_MAP_OPS } from '@/page/essp/serviceMapData'
 
 const ROOT = join(import.meta.dirname, '..', '..')
@@ -80,6 +81,27 @@ describe('real EGNOS messages as the corrections source', () => {
     const stale = groundFromDecoder(s, last + 3600)
     expect(stale.udrei.size).toBe(0)
     expect(stale.grid.size).toBe(0)
+  })
+})
+
+describe('UDREI time-out', () => {
+  // UDREIs come in Message Types 2–6 and 24 (FAA WAAS PAN Report 92, Table 5-3): an MT6
+  // refreshes the UDREI and its time-out without a new fast correction.
+  const decoded = () => {
+    const s = emptyState()
+    applyMessage(s, { type: 1, maskBits: [5], iodp: 1 }, 0)
+    applyMessage(s, { type: 2, iodf: 1, iodp: 1, prc: Array(13).fill(0.5), udrei: Array(13).fill(4) }, 0)
+    return s
+  }
+  it('an MT6 received 5 s ago keeps the UDREI, although the correction is 15 s old', () => {
+    const s = decoded()
+    applyMessage(s, { type: 6, iodf: [1, 1, 1, 1], udrei: Array(51).fill(4) }, 10)
+    expect(groundFromDecoder(s, 15).udrei.get(5)).toBe(4)
+  })
+  it('without it the UDREI times out after messages.TIMEOUTS_S.udrei.PA', () => {
+    const s = decoded()
+    expect(groundFromDecoder(s, TIMEOUTS_S.udrei.PA).udrei.get(5)).toBe(4)
+    expect(groundFromDecoder(s, TIMEOUTS_S.udrei.PA + 1).udrei.has(5)).toBe(false)
   })
 })
 

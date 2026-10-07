@@ -217,8 +217,14 @@ export interface FastCorrection {
   prcM: number
   udrei: number
   iodf: number
-  /** Second of the recording it was received. */
+  /** Second of the recording the correction was received. */
   tS: number
+  /**
+   * Second of the recording the UDREI was last received: UDREIs come in Message Types 2–6
+   * and 24, so an MT6 refreshes the UDREI (and its time-out) without a new correction
+   * (FAA WAAS PAN Report 92, Table 5-3).
+   */
+  udreiTS: number
 }
 
 export interface GridPoint extends IgpPos {
@@ -276,7 +282,7 @@ export function applyMessage(s: DecoderState, m: Decoded, tS: number): void {
       for (let i = 0; i < 13; i++) {
         const slot = first + i
         if (slot >= s.maskBits.length) break
-        s.fast.set(slot, { prcM: m.prc[i], udrei: m.udrei[i], iodf: m.iodf, tS })
+        s.fast.set(slot, { prcM: m.prc[i], udrei: m.udrei[i], iodf: m.iodf, tS, udreiTS: tS })
       }
       return
     }
@@ -287,7 +293,7 @@ export function applyMessage(s: DecoderState, m: Decoded, tS: number): void {
         const iodf = m.iodf[Math.floor(slot / 13)]
         // IODF 3 marks an alarm: the UDREIs apply whatever IODF the corrections carry (DO-229).
         if (!f || (iodf !== 3 && f.iodf !== iodf)) continue
-        s.fast.set(slot, { ...f, udrei: m.udrei[slot] })
+        s.fast.set(slot, { ...f, udrei: m.udrei[slot], udreiTS: tS })
       }
       return
     case 7:
@@ -306,7 +312,7 @@ export function applyMessage(s: DecoderState, m: Decoded, tS: number): void {
       for (let i = 0; i < 6; i++) {
         const slot = 13 * m.block + i
         if (slot >= s.maskBits.length) break
-        s.fast.set(slot, { prcM: m.prc[i], udrei: m.udrei[i], iodf: m.iodf, tS })
+        s.fast.set(slot, { prcM: m.prc[i], udrei: m.udrei[i], iodf: m.iodf, tS, udreiTS: tS })
       }
       return
     }

@@ -234,6 +234,9 @@ export function BenefitCard({ m }: { m: ViewModel }) {
   )
 }
 
+/** Shown while no SBAS message arrives: the page's protection levels do not grow as the last corrections age. */
+export const AGED_NOTE = 'Simplified: until the time-out, the page keeps the protection levels of the last messages. A real receiver makes them grow as the corrections get older.'
+
 export function StatusPanel({ m }: { m: ViewModel }) {
   const n = m.nav
   const hal = m.op?.halM ?? null
@@ -264,6 +267,8 @@ export function StatusPanel({ m }: { m: ViewModel }) {
       )}
       <TelemetryRow label="GEO received" value={`${m.geosTracked} / ${GEO_SATS.length}`} tone={m.geosTracked === GEO_SATS.length ? 'ok' : m.geosTracked === 0 ? 'alert' : 'default'} />
       <TelemetryRow label="Service" value={serviceName(m.service)} tone="muted" />
+      {/* Honesty label (design.md §6, claim sbas.protection-levels): no degradation of aged corrections is modelled. */}
+      {m.messageAgeS > 0 && m.service !== 'off' ? <p className="mt-2 text-[12px] leading-4 text-muted-foreground">{AGED_NOTE}</p> : null}
       <p className="mt-2 text-[12px] leading-4 text-muted-foreground">{TX.statusNote}</p>
     </HudPanel>
   )

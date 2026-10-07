@@ -6,8 +6,8 @@
  */
 import type { SatDef } from '@/core/orbits'
 
-// TODO(expert-review): QZS-6 (PRN 129) was launched on 2 Feb 2025 and was still under test in late 2025 (JCAB); its
-// SBAS service-in date and the L5 (DFMC) broadcast of both satellites (the L5S signal, in R&D) need confirming.
+// TODO(expert-review): the L5 (DFMC) broadcast of QZS-3 and QZS-6 (the L5S signal, in R&D) needs confirming. QZS-6
+// (PRN 129), launched on 2 Feb 2025, has carried the MSAS SBAS service since October 2025 (JCAB, ITF/8 IP/05, May 2026).
 /** The two SBAS GEOs: Michibiki QZS-6 over the Indian Ocean and QZS-3 over Sulawesi's longitude. */
 export const GEOS: readonly SatDef[] = [
   { id: 'QZS-3', name: 'QZS-3 Michibiki', prn: 137, kind: 'geo', lonDeg: 127, l5: true },

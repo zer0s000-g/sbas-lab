@@ -19,6 +19,7 @@ import { estimateIgps, GIVEI_NOT_MONITORED, interpolateGrid, igpKey, piercePoint
 import { sigmaAirL1M, SIGMA_TROPO_VERTICAL_M, tropoMapping } from './errors'
 import { solveFix, type Measurement } from './receiver'
 import { slotSystem, type DecoderState } from './sbasDecode'
+import { TIMEOUTS_S } from './messages'
 
 export interface RealSat {
   prn: number
@@ -41,10 +42,17 @@ export interface ModelledGround {
   grid: Map<string, IgpEstimate>
 }
 
-/** The IGPs over a box at the 5° spacing the page uses. */
+/**
+ * The IGPs over a box, laid out as in the broadcast IGP bands (./sbasDecode): 5° apart up
+ * to 60° of latitude, 10° apart in longitude between 60° and 85° (bands 9 and 10).
+ */
 export function igpsOver(box: { lat0: number; lat1: number; lon0: number; lon1: number }): Igp[] {
   const out: Igp[] = []
-  for (let lat = box.lat0; lat <= box.lat1; lat += IGP_SPACING_DEG) for (let lon = box.lon0; lon <= box.lon1; lon += IGP_SPACING_DEG) out.push({ latDeg: lat, lonDeg: lon })
+  for (let lat = box.lat0; lat <= box.lat1; lat += IGP_SPACING_DEG)
+    for (let lon = box.lon0; lon <= box.lon1; lon += IGP_SPACING_DEG) {
+      if (Math.abs(lat) > 60 && lon % (2 * IGP_SPACING_DEG) !== 0) continue
+      out.push({ latDeg: lat, lonDeg: lon })
+    }
   return out
 }
 
@@ -150,16 +158,18 @@ export function unpackLevel(b: number): number | null {
 /**
  * The same picture from real SBAS messages: the decoder's state (./sbasDecode) at second
  * `nowS` turned into UDREIs by GPS PRN and an ionospheric grid. Data older than its
- * time-out is dropped (UDREI 12 s, the grid 600 s; messages.TIMEOUTS_S). The
- * degradation terms of Message Types 7 and 10 are not applied yet (claim
- * `servicemap.egnos-real`), and the grid is interpolated at 5° only.
+ * time-out for approaches with vertical guidance is dropped (messages.TIMEOUTS_S: the
+ * UDREI from when it was last received, in any of Message Types 2–6 and 24; the grid).
+ * The map uses only the UDREIs, not the correction values. Not applied yet (claim
+ * `servicemap.egnos-real`): the fast corrections' own time-out and degradation (Message
+ * Type 7) and the degradation parameters of Message Type 10.
  */
-export function groundFromDecoder(state: DecoderState, nowS: number, udreiTimeoutS = 12, gridTimeoutS = 600): ModelledGround {
+export function groundFromDecoder(state: DecoderState, nowS: number, udreiTimeoutS: number = TIMEOUTS_S.udrei.PA, gridTimeoutS: number = TIMEOUTS_S.iono.PA): ModelledGround {
   const udrei = new Map<number, number>()
   state.maskBits.forEach((bit, slot) => {
     const sys = slotSystem(bit)
     const f = state.fast.get(slot)
-    if (sys.system !== 'GPS' || !f || nowS - f.tS > udreiTimeoutS) return
+    if (sys.system !== 'GPS' || !f || nowS - f.udreiTS > udreiTimeoutS) return
     udrei.set(sys.prn, f.udrei)
   })
   const grid = new Map<string, IgpEstimate>()

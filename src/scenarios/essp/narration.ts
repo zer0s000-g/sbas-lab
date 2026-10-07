@@ -58,7 +58,7 @@ export const NARRATION: Readonly<Record<PhaseId, Narration>> = {
     now: 'Navigation land earth stations (NLES) send the messages up to the EGNOS satellites SES-5 (5°E) and Eutelsat 5 West B (5°W), 35 786 km above the equator. Each stays over the same spot on Earth. Which NLES feeds which satellite is drawn as an example.',
     benefit: 'Two GEOs reach every aircraft in the service area at once, and one can carry on if the other is lost.',
     source: 'Doc 9849 §4.3.1.2; EUSPA and EGNOS service notices',
-    claims: ['sbas.geo-broadcast', 'egnos.geos', 'egnos.nles-sites'],
+    claims: ['sbas.geo-broadcast', 'gnss.geo-altitude', 'egnos.geos', 'egnos.nles-sites'],
   },
   broadcast: {
     title: 'The first correction arrives',

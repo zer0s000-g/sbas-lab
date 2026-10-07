@@ -13,6 +13,7 @@
  * without three.js.
  */
 import { DEPARTURE, DESTINATION, localNmToRunway, nearestAirport, runwayToLocalNm, type Airport } from '@/core/region'
+import { runwayExtentM } from '@/core/sites'
 import { ROUTE, initialAircraft, stepFlight } from '@/core/flight'
 import { makeFasDataBlock } from '@/core/approach'
 
@@ -57,7 +58,10 @@ export interface Designator {
 
 export interface AirportLayout {
   airport: Airport
+  /** Published runway length, m, and the runway's ends along the runway frame (displaced threshold: startM < 0). */
   lengthM: number
+  startM: number
+  endM: number
   widthM: number
   /** Runway pavement, shoulders and blast pads: the runway in use, and a parallel runway if there is one. */
   runway: Rect
@@ -142,9 +146,13 @@ export function reciprocal(designator: string): string {
   return String(((num + 17) % 36) + 1).padStart(2, '0') + (swap[letter] ?? '')
 }
 
-/** Annex 14 runway markings for one landing direction (simplified), on a runway centred at `rc`. */
-function runwayMarkings(L: number, W: number, dir: 1 | -1, text: string, out: AirportLayout, rc = 0) {
-  const at = (d: number) => (dir === 1 ? d : L - d)
+/**
+ * Annex 14 runway markings for one landing direction (simplified), on a runway centred at
+ * `rc`, measured from that direction's threshold: at `thr` landing along a (dir +1), or
+ * against it (dir −1).
+ */
+function runwayMarkings(thr: number, W: number, dir: 1 | -1, text: string, out: AirportLayout, rc = 0) {
+  const at = (d: number) => thr + dir * d
   const span = (d0: number, d1: number, r0: number, r1: number): Rect => {
     const x = at(d0)
     const y = at(d1)
@@ -174,29 +182,43 @@ function runwayMarkings(L: number, W: number, dir: 1 | -1, text: string, out: Ai
     }
 }
 
-/** Pavement, edge and centre lines, markings both ways and edge lights of one runway centred at `rc`. */
-function runwayAt(out: AirportLayout, L: number, W: number, rc: number, designator: string) {
-  out.markings.push({ a0: 0, a1: L, r0: rc + W / 2 - 1.35, r1: rc + W / 2 - 0.45 }, { a0: 0, a1: L, r0: rc - W / 2 + 0.45, r1: rc - W / 2 + 1.35 })
-  for (let d = 69; d + 30 <= L - 69; d += 50) out.markings.push({ a0: d, a1: d + 30, r0: rc - 0.45, r1: rc + 0.45 })
-  runwayMarkings(L, W, 1, designator, out, rc)
-  runwayMarkings(L, W, -1, reciprocal(designator), out, rc)
-  for (let a = 0; a <= L + 0.1; a += 60) out.lamps.push({ a, r: rc + W / 2 + 1.5, kind: 'edge' }, { a, r: rc - W / 2 - 1.5, kind: 'edge' })
-  for (let r = -W / 2; r <= W / 2 + 0.1; r += 3) out.lamps.push({ a: -2, r: rc + r, kind: 'threshold' }, { a: L + 2, r: rc + r, kind: 'end' })
+/**
+ * Pavement, edge and centre lines, markings both ways and edge lights of one runway
+ * centred at `rc`, from its end at `s0` to its end at `s1`, landing threshold at `thr`
+ * (inside the runway when it is displaced: then a transverse bar marks it, simplified
+ * from the Annex 14 displaced-threshold marking, and the runway end gets its own red lights).
+ */
+function runwayAt(out: AirportLayout, s0: number, s1: number, thr: number, W: number, rc: number, designator: string) {
+  out.markings.push({ a0: s0, a1: s1, r0: rc + W / 2 - 1.35, r1: rc + W / 2 - 0.45 }, { a0: s0, a1: s1, r0: rc - W / 2 + 0.45, r1: rc - W / 2 + 1.35 })
+  for (let d = s0 + 69; d + 30 <= s1 - 69; d += 50) out.markings.push({ a0: d, a1: d + 30, r0: rc - 0.45, r1: rc + 0.45 })
+  runwayMarkings(thr, W, 1, designator, out, rc)
+  runwayMarkings(s1, W, -1, reciprocal(designator), out, rc)
+  if (thr > s0) out.markings.push({ a0: thr - 1.8, a1: thr, r0: rc - W / 2 + 1.35, r1: rc + W / 2 - 1.35 })
+  for (let a = s0; a <= s1 + 0.1; a += 60) out.lamps.push({ a, r: rc + W / 2 + 1.5, kind: 'edge' }, { a, r: rc - W / 2 - 1.5, kind: 'edge' })
+  for (let r = -W / 2; r <= W / 2 + 0.1; r += 3) {
+    out.lamps.push({ a: thr - 2, r: rc + r, kind: 'threshold' }, { a: s1 + 2, r: rc + r, kind: 'end' })
+    if (thr > s0) out.lamps.push({ a: s0 - 2, r: rc + r, kind: 'end' })
+  }
 }
 
 function build(ap: Airport, side: 1 | -1, taxiRoute: RA[], laneR: number, gate: RA, approachLights: boolean, gpaDeg: number, hold?: RA): AirportLayout {
   const L = ap.runwayLengthM
+  // The runway's two ends in the runway frame (a = 0 is the landing threshold, which may be displaced).
+  const { startM: s0, endM: s1 } = runwayExtentM(ap)
+  const mid = (s0 + s1) / 2
   const W = ap.runwayWidthM
   const P = ap.parallelOffsetM
   const out: AirportLayout = {
     airport: ap,
     lengthM: L,
+    startM: s0,
+    endM: s1,
     widthM: W,
-    runway: { a0: -60, a1: L + 60, r0: -W / 2, r1: W / 2 },
-    extraRunways: P !== null ? [{ a0: -60, a1: L + 60, r0: P - W / 2, r1: P + W / 2 }] : [],
+    runway: { a0: s0 - 60, a1: s1 + 60, r0: -W / 2, r1: W / 2 },
+    extraRunways: P !== null ? [{ a0: s0 - 60, a1: s1 + 60, r0: P - W / 2, r1: P + W / 2 }] : [],
     shoulders: [0, ...(P !== null ? [P] : [])].flatMap((rc): Rect[] => [
-      { a0: -60, a1: L + 60, r0: rc + W / 2, r1: rc + W / 2 + 7.5 },
-      { a0: -60, a1: L + 60, r0: rc - W / 2 - 7.5, r1: rc - W / 2 },
+      { a0: s0 - 60, a1: s1 + 60, r0: rc + W / 2, r1: rc + W / 2 + 7.5 },
+      { a0: s0 - 60, a1: s1 + 60, r0: rc - W / 2 - 7.5, r1: rc - W / 2 },
     ]),
     taxiways: [],
     aprons: [],
@@ -211,26 +233,26 @@ function build(ap: Airport, side: 1 | -1, taxiRoute: RA[], laneR: number, gate: 
     papi: [],
   }
   // Runways: edge lines, centreline, both landing directions and edge lights.
-  runwayAt(out, L, W, 0, ap.runway)
+  runwayAt(out, s0, s1, 0, W, 0, ap.runway)
   if (P !== null && ap.parallelRunway && Math.sign(P) !== side) {
     // A parallel runway on the side away from the terminal (Toulouse, Nice): crossings
     // from the runway in use at both ends and mid-way, with holding positions.
-    runwayAt(out, L, W, P, ap.parallelRunway)
-    const cross: RA[][] = [0, L / 2, L].map((a) => [
+    runwayAt(out, s0, s1, s0, W, P, ap.parallelRunway)
+    const cross: RA[][] = [s0, mid, s1].map((a) => [
       [a, 0],
       [a, P],
     ])
     out.taxiways.push(...cross)
     out.taxiLines.push(...cross.map(([p, q]): RA[] => [[p[0], Math.sign(P) * (W / 2 + 8)], [q[0], P - Math.sign(P) * (W / 2 + 8)]]))
   } else if (P !== null && ap.parallelRunway) {
-    runwayAt(out, L, W, P, ap.parallelRunway)
+    runwayAt(out, s0, s1, s0, W, P, ap.parallelRunway)
     // Its own parallel taxiway on the terminal side, with connectors at the ends and mid-way.
     const lane = P - side * Math.abs(laneR)
     const par: RA[] = [
-      [-20, lane],
-      [L + 20, lane],
+      [s0 - 20, lane],
+      [s1 + 20, lane],
     ]
-    const con: RA[][] = [0, L / 2, L].map((a) => [
+    const con: RA[][] = [s0, mid, s1].map((a) => [
       [a, lane],
       [a, P],
     ])
@@ -241,10 +263,10 @@ function build(ap: Airport, side: 1 | -1, taxiRoute: RA[], laneR: number, gate: 
   // Taxiways: LAB201's route, a full-length parallel taxiway on the terminal side and
   // connectors at both ends and mid-way.
   const parallel: RA[] = [
-    [-20, laneR],
-    [L + 20, laneR],
+    [s0 - 20, laneR],
+    [s1 + 20, laneR],
   ]
-  const connectors: RA[][] = [0, L / 2, L].map((a) => [
+  const connectors: RA[][] = [s0, mid, s1].map((a) => [
     [a, laneR],
     [a, 0],
   ])
@@ -252,7 +274,7 @@ function build(ap: Airport, side: 1 | -1, taxiRoute: RA[], laneR: number, gate: 
   out.taxiLines.push(taxiRoute, parallel, ...connectors.map(([p, q]): RA[] => [p, [q[0], side * (W / 2 + 8)]]))
   // Holding positions on every connector, 90 m from the runway centreline (Annex 14 code 4 instrument runway).
   if (hold) out.holdBars.push({ a0: hold[0] - TAXIWAY_WIDTH_M / 2, a1: hold[0] + TAXIWAY_WIDTH_M / 2, r0: hold[1] + side * 6 - 0.6, r1: hold[1] + side * 6 + 0.6 })
-  for (const a of [0, L / 2, L]) out.holdBars.push({ a0: a - TAXIWAY_WIDTH_M / 2, a1: a + TAXIWAY_WIDTH_M / 2, r0: side * 90 - 0.6, r1: side * 90 + 0.6 })
+  for (const a of [s0, mid, s1]) out.holdBars.push({ a0: a - TAXIWAY_WIDTH_M / 2, a1: a + TAXIWAY_WIDTH_M / 2, r0: side * 90 - 0.6, r1: side * 90 + 0.6 })
 
   // Apron in front of the terminal, around LAB201's stand.
   const near = Math.min(Math.abs(laneR), Math.abs(gate[1])) - 35
@@ -275,7 +297,7 @@ function build(ap: Airport, side: 1 | -1, taxiRoute: RA[], laneR: number, gate: 
   out.buildings.push({ ...span(towerA - 7, towerA + 7, front - 23, front - 9), h: 48, kind: 'cab' })
   for (const da of [520, 640]) out.buildings.push({ ...span(gate[0] + da, gate[0] + da + 95, front - 60, front + 15), h: 24, kind: 'hangar' })
   out.aprons.push(span(gate[0] + 500, gate[0] + 760, near, front - 60))
-  out.landside.push(span(gate[0] - 300, gate[0] + 300, front + 85, front + 150), span(-300, L + 300, front + 165, front + 177))
+  out.landside.push(span(gate[0] - 300, gate[0] + 300, front + 85, front + 150), span(s0 - 300, s1 + 300, front + 165, front + 177))
   for (let k = 0; k < 8; k++) {
     const a = gate[0] - 650 + k * 165
     out.buildings.push({ ...span(a, a + 60, front + 200, front + 245 + (k % 3) * 20), h: 9 + (k % 4) * 4, kind: 'block' })

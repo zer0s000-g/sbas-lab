@@ -4,7 +4,9 @@ import { usableForPa as mapUsableForPa } from '@/core/serviceMap'
 import { ALARM_LATENCY } from '@/core/messages'
 import { DESTINATION, RIMS_STATIONS } from '@/core/region'
 import { QUIET } from '@/core/iono'
-import { groundFor, NOMINAL, snapshot } from '@/core/sbasWorld'
+import { approachMode, groundFor, NOMINAL, snapshot, type Conditions, type Snapshot } from '@/core/sbasWorld'
+import { OPERATIONS } from '@/core/operations'
+import type { Fix } from '@/core/receiver'
 
 const base = { ...QUIET, seed: 201, offline: [] as string[], fault: null, tS: 600 }
 
@@ -61,5 +63,45 @@ describe('SBAS ground segment (Doc 9849 §4.3.1)', () => {
     expect(udreIndex(3)).toBeGreaterThan(udreIndex(1))
     expect(udreIndex(1e6)).toBe(UDREI_NOT_MONITORED)
     expect(sigmaUdreM(UDREI_DO_NOT_USE)).toBe(Infinity)
+  })
+})
+
+describe('the SBAS world seen from a receiver', () => {
+  it('with no GEO in view and no loss on record, nothing was received: no SBAS service and no SBAS fix', () => {
+    const s = snapshot(1000, { latDeg: 90, lonDeg: 0, hM: 0 }, NOMINAL)
+    expect(s.service.geosTracked).toBe(0)
+    expect(s.service.npaValid).toBe(false)
+    expect(s.service.paValid).toBe(false)
+    expect(s.sbasFix).toBeNull()
+    expect(s.sbasPaFix).toBeNull()
+  })
+
+  // FAA WAAS Performance Standard 2008 §2.3.2: on the final approach segment of an LPV
+  // approach, HPL > HAL gives a flag or LNAV-only guidance.
+  it('on final, an LPV approach that loses LPV reverts to LNAV, never LNAV/VNAV; before final it may arm LNAV/VNAV', () => {
+    const fix = (hplM: number, vplM: number | null): Fix => ({ mode: 'l1sbas', errorEnu: [0, 0, 0], horizontalErrorM: 0, verticalErrorM: 0, hdop: 1, vdop: 1, pdop: 1.4, hplM, vplM, used: ['G01', 'G02', 'G03', 'G04', 'G05'], excluded: [], alarm: false })
+    const s = { sbasPaFix: fix(45, 30), sbasFix: fix(46, 30), abas: null } as unknown as Snapshot
+    expect(approachMode(s, OPERATIONS.apv1).mode).toBe('LNAV')
+    expect(approachMode(s, OPERATIONS.apv1, true).mode).toBe('LNAV')
+    expect(approachMode(s, OPERATIONS.apv1, false).mode).toBe('LNAV/VNAV')
+    const none = { sbasPaFix: fix(45, 30), sbasFix: null, abas: null } as unknown as Snapshot
+    expect(approachMode(none, OPERATIONS.apv1).mode).toBe('NONE')
+  })
+
+  it('the seed passed into the engine draws which satellites lose lock to scintillation', () => {
+    const where = { latDeg: -7.5, lonDeg: 112, hM: 10_000 }
+    const lost = (seed: number) => {
+      const c: Conditions = { ...NOMINAL, seed, scintillation: true }
+      const out: string[] = []
+      for (let t = 0; t < 3600; t += 20) {
+        const s = snapshot(t, where, c)
+        out.push(s.sats.filter((v) => v.kind === 'gps' && v.visible && !v.tracked).map((v) => v.id).join(','))
+      }
+      return out
+    }
+    const a = lost(201)
+    expect(a.some((x) => x !== '')).toBe(true)
+    expect(lost(7)).not.toEqual(a)
+    expect(lost(201)).toEqual(a)
   })
 })

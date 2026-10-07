@@ -116,7 +116,7 @@ function groundAtLoss(c: Conditions): GroundSnapshot {
 
 /** The SBAS world seen from a receiver. `ground` may pass in `groundFor(tS, c)` when many receivers share one moment. */
 export function snapshot(tS: number, aircraft: Geodetic, c: Conditions, ground: GroundSnapshot = groundFor(tS, c)): Snapshot {
-  const iono = { tS, startLocalHour: c.startLocalHour, storm: c.storm, scintillation: c.scintillation }
+  const iono = { tS, startLocalHour: c.startLocalHour, storm: c.storm, scintillation: c.scintillation, seed: c.seed }
   const sats: SatView[] = []
   const abas: Measurement[] = []
   const l1: Measurement[] = []
@@ -152,7 +152,7 @@ export function snapshot(tS: number, aircraft: Geodetic, c: Conditions, ground: 
     view.parts = { clock: e.clockM, orbit: e.orbitM, iono: ionoL1, tropo: e.tropoM, multipath: e.mpNoiseL1M }
 
     // GPS alone: broadcast ionospheric model, bounded as Annex 10 bounds it for a receiver without SBAS ionospheric corrections.
-    const ionoBroadcast = broadcastModelSlantL1(ionoL1, pp.latDeg, pp.lonDeg, tS)
+    const ionoBroadcast = broadcastModelSlantL1(ionoL1, pp.latDeg, pp.lonDeg, tS, c.seed)
     const ionoAbasResid = ionoL1 - ionoBroadcast
     const sigIonoBroadcast = sigmaIonoNoSbasM(pp, ionoBroadcast)
     abas.push({
@@ -201,12 +201,15 @@ export function snapshot(tS: number, aircraft: Geodetic, c: Conditions, ground: 
   }
 
   const lostFor = geoLost ? tS - (c.geoLostFromS ?? tS) : 0
-  const anyGeo = geosTracked > 0 || lostFor < TIMEOUTS_S.udrei.NPA
+  // The aircraft holds SBAS data only if it has received it: a GEO is tracked now, or both
+  // were lost (the "GEO signal lost" failure) after it had been receiving them. With no GEO
+  // in view and no loss on record (e.g. beyond the GEOs' footprint) nothing was received.
+  const anyGeo = geosTracked > 0 || (geoLost && lostFor < TIMEOUTS_S.udrei.NPA)
   // Approaches with vertical guidance (HAL ≤ 40 m or VAL ≤ 50 m: LPV and LNAV/VNAV) lose
   // the UDREI data after four successive lost messages, well before its 12 s time-out.
   const paHoldS = Math.min(TIMEOUTS_S.udrei.PA, MESSAGES_LOST_PA * MESSAGE_PERIOD_S)
   const service: ServiceState = {
-    paValid: c.service !== 'off' && !c.jammed && (geosTracked > 0 || lostFor < paHoldS),
+    paValid: c.service !== 'off' && !c.jammed && (geosTracked > 0 || (geoLost && lostFor < paHoldS)),
     npaValid: c.service !== 'off' && !c.jammed && anyGeo,
     messageAgeS: geosTracked > 0 ? 0 : lostFor,
     geosTracked,
@@ -242,12 +245,19 @@ export function navStatus(s: Snapshot, op: Operation): NavStatus {
  * The approach mode the avionics annunciate: the highest level of service the signal
  * and the receiver support (Doc 9849 §4.3.2.5). LPV needs SBAS vertical guidance within
  * the procedure's alert limits (stored in the FAS data block, §4.3.3.2).
+ *
+ * On the final approach segment (`finalSegment`, the default) an LPV approach that loses
+ * LPV does not fall back to LNAV/VNAV: "a flag is displayed and the receiver will
+ * discontinue guidance or revert to LNAV-only guidance" (FAA WAAS Performance Standard
+ * 2008 §2.3.2). Before it, the avionics may arm LNAV/VNAV instead. Simplified: the mode is
+ * worked out from this moment alone, without remembering the mode armed before the
+ * final approach fix.
  */
-export function approachMode(s: Snapshot, lpvOp: Operation = OPERATIONS[SCENARIO.approach.op]): { mode: ApproachMode; fix: FixResult } {
+export function approachMode(s: Snapshot, lpvOp: Operation = OPERATIONS[SCENARIO.approach.op], finalSegment = true): { mode: ApproachMode; fix: FixResult } {
   const pa = s.sbasPaFix
   if (pa && pa.vplM !== null && pa.hplM <= lpvOp.halM && pa.vplM <= (lpvOp.valM ?? 0)) return { mode: 'LPV', fix: pa }
   const vnav = OPERATIONS.lnavvnav
-  if (pa && pa.vplM !== null && pa.hplM <= vnav.halM && pa.vplM <= (vnav.valM ?? 0)) return { mode: 'LNAV/VNAV', fix: pa }
+  if (!finalSegment && pa && pa.vplM !== null && pa.hplM <= vnav.halM && pa.vplM <= (vnav.valM ?? 0)) return { mode: 'LNAV/VNAV', fix: pa }
   const npa = OPERATIONS.npa
   if (s.sbasFix && s.sbasFix.hplM <= npa.halM) return { mode: 'LNAV', fix: s.sbasFix }
   if (s.abas && !s.abas.alarm && s.abas.hplM <= npa.halM) return { mode: 'LNAV', fix: s.abas }

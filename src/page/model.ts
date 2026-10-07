@@ -4,18 +4,19 @@
  */
 import { APPROACH_CHANNEL, DECISION_HEIGHT_FT, deviations, fasCrc, fasValid, makeFasDataBlock, type Deviations } from '@/core/approach'
 import { UDRE_TABLE_M } from '@/core/groundSegment'
-import { operationFor, OPERATIONS, withinLimits, type Operation } from '@/core/operations'
-import { approachMode, navStatus, type Snapshot } from '@/core/sbasWorld'
+import { OPERATIONS, withinLimits, type Operation } from '@/core/operations'
+import type { Snapshot } from '@/core/sbasWorld'
 import type { ApproachMode, Fix } from '@/core/receiver'
 import { scheduledMessage, messageType, type SbasSignal } from '@/core/messages'
 import { GEO_SATS } from '@/core/orbits'
 import { DEPARTURE, DESTINATION, REGION, zoneTime, type ZoneTime } from '@/core/region'
 import { localToGeodetic } from '@/core/geo'
 import { SCENARIO } from '@/scenarios/active'
-import { stageAt } from '@/journey/director'
+import { journeyNavFix } from '@/journey/navFix'
 import type { JourneyEngine } from '@/journey/engine'
 import { phaseDef, PHASE_INDEX, type PhaseId } from '@/journey/phases'
 import { formatMetres } from '@/lib/format'
+import { mToNm } from '@/core/units'
 
 const FAS = makeFasDataBlock()
 
@@ -135,7 +136,7 @@ function phaseDetail(phase: PhaseId, snap: Snapshot, dev: Deviations | null, sig
     const crc = fasCrc(FAS)
     return { kind: 'fas', channel: APPROACH_CHANNEL, runway: FAS.runway, gpaDeg: FAS.gpaDeg, tchFt: FAS.tchFt, halM: FAS.halM, valM: FAS.valM, crc: crc.toString(16).toUpperCase().padStart(8, '0'), valid: fasValid(FAS, crc) }
   }
-  if (phase === 'final' && dev) return { kind: 'final', heightFt: dev.heightAboveThresholdFt, daFt: DECISION_HEIGHT_FT, alongNm: dev.alongTrackM / 1852 }
+  if (phase === 'final' && dev) return { kind: 'final', heightFt: dev.heightAboveThresholdFt, daFt: DECISION_HEIGHT_FT, alongNm: mToNm(dev.alongTrackM) }
   return null
 }
 
@@ -158,27 +159,10 @@ export function viewModel(e: JourneyEngine): ViewModel {
   const phase = e.state.phase
   const def = phaseDef(phase)
   const a = e.aircraft
-  const stage = stageAt(phase, a.wp)
-  const op = operationFor(stage)
   const cond = e.conditions()
   const shown = e.sbasShown
-  const am = approachMode(snap)
-  let nav: Fix | null = snap.abas
-  let navSource: ViewModel['navSource'] = snap.abas ? 'abas' : 'none'
-  if (shown) {
-    if (stage === 'final') {
-      navSource = am.fix ? (am.fix === snap.abas ? 'abas' : 'sbas') : 'none'
-      // Without vertical guidance (LNAV or none) there is no VPL to show against the VAL.
-      nav = am.fix && (am.mode === 'LNAV' || am.mode === 'NONE') ? { ...am.fix, vplM: null } : am.fix
-    } else if (op) {
-      const ns = navStatus(snap, op)
-      nav = ns.fix
-      navSource = ns.source
-    } else {
-      nav = snap.sbasFix ?? snap.abas
-      navSource = snap.sbasFix ? 'sbas' : snap.abas ? 'abas' : 'none'
-    }
-  }
+  // The fix the aircraft navigates with: the same one the orbit and flight views draw.
+  const { fix: nav, source: navSource, stage, op, approach: am } = journeyNavFix(e)
   const used = new Set(nav?.used ?? [])
   const excluded = new Set([...(nav?.excluded ?? []), ...snap.alarmedSats])
   const sats: SatDot[] = snap.sats

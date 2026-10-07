@@ -2,7 +2,8 @@
 import { K_H_NPA, K_H_PA, K_V_PA, PBIAS } from '@/core/receiver'
 import { MASK_DEG, UDRE_TABLE_M, UDREI_DO_NOT_USE, UDREI_NOT_MONITORED, sigmaUdreM, usableForPa } from '@/core/groundSegment'
 import { GIVE_TABLE_M, GIVEI_NOT_MONITORED, IGP_SPACING_DEG, IONO_SHELL_HEIGHT_M, sigmaGiveM, tauVertNoSbasM } from '@/core/iono'
-import { DFMC_MESSAGE_BITS, MESSAGE_BITS, MESSAGE_PERIOD_S, MESSAGES_LOST_PA, TIMEOUTS_S } from '@/core/messages'
+import { ALARM_LATENCY, DFMC_MESSAGE_BITS, MESSAGE_BITS, MESSAGE_PERIOD_S, MESSAGES_LOST_PA, TIMEOUTS_S } from '@/core/messages'
+import { SCENARIOS } from '@/scenarios/active'
 import { APPROACH_CHANNEL, GARP_BEYOND_FPAP_M, crc32q } from '@/core/approach'
 import type { Claim } from './types'
 
@@ -108,7 +109,7 @@ export const SBAS_CLAIMS: readonly Claim[] = [
     topic: 'SBAS',
     scenarios: BOTH,
     text: 'The ionosphere is modelled as a thin shell 350 km above the Earth; pierce points and the obliquity factor follow from it.',
-    refs: [{ source: 'rtca-do229', section: 'Appendix A' }],
+    refs: [{ source: 'rtca-do229', section: 'Appendix A' }, { source: 'egnos-sol-sdd', section: 'Appendix C.1' }],
     status: 'to-confirm',
     value: 350_000,
     unit: 'm',
@@ -130,7 +131,7 @@ export const SBAS_CLAIMS: readonly Claim[] = [
     topic: 'SBAS',
     scenarios: BOTH,
     text: 'An SBAS GEO broadcasts one 250-bit message every second (250 bit/s, 500 symbols/s after forward error correction). On L1 a message is an 8-bit preamble, a 6-bit type, 212 data bits and a 24-bit CRC.',
-    refs: [{ source: 'icao-annex10', section: 'Appendix B' }, { source: 'rtca-do229' }],
+    refs: [{ source: 'icao-annex10', section: 'Appendix B' }, { source: 'egnos-sol-sdd', section: '§4.1.1' }, { source: 'rtca-do229' }],
     status: 'to-confirm',
     value: [250, 1, 8, 6, 212, 24],
     unit: 'bits, s, bits',
@@ -185,6 +186,9 @@ export const SBAS_CLAIMS: readonly Claim[] = [
     text: 'The page’s detection (2.5 s) and uplink (1.2 s) latencies are illustrative; the requirement is the time to alert.',
     refs: [D9849('Table 2-1')],
     status: 'to-confirm',
+    value: [2.5, 1.2],
+    unit: 's (detection, uplink)',
+    actual: () => [ALARM_LATENCY.detectS, ALARM_LATENCY.uplinkS],
     code: 'src/core/messages.ts',
     todo: 'detection and alarm latencies are illustrative',
   },
@@ -193,17 +197,18 @@ export const SBAS_CLAIMS: readonly Claim[] = [
     id: 'sbas.protection-levels',
     topic: 'SBAS',
     scenarios: BOTH,
-    text: 'The receiver combines UDRE, GIVE and its own error models into protection levels (HPL, VPL) and compares them with the alert limits (HAL, VAL).',
-    refs: [D9849('§4.3.2.4'), D9849('§2.2.4.3')],
+    text: 'The receiver combines UDRE, GIVE and its own error models into protection levels (HPL, VPL) and compares them with the alert limits (HAL, VAL). Simplified: when SBAS messages stop arriving, the page keeps the protection levels of the last messages until the time-out; a real receiver widens them as the corrections age (the degradation data of Message Types 7 and 10).',
+    refs: [D9849('§4.3.2.4'), D9849('§2.2.4.3'), { source: 'egnos-sol-sdd', section: '§4.1.2 Table 4' }],
     status: 'sourced',
     code: 'src/core/receiver.ts',
+    note: 'The simplification is labelled on screen in the SBAS status panel while the message age grows (page/panels.tsx StatusPanel). The degradation formulas (RTCA DO-229) were not available, so none is modelled.',
   },
   {
     id: 'sbas.k-factors',
     topic: 'SBAS',
     scenarios: BOTH,
     text: 'HPL = K_H·d_major and VPL = K_V·d_V, with K_H = 6.0 for approaches with vertical guidance and 6.18 otherwise, and K_V = 5.33.',
-    refs: [{ source: 'rtca-do229', section: 'Appendix J' }, { source: 'icao-annex10', section: 'Appendix B' }],
+    refs: [{ source: 'rtca-do229', section: 'Appendix J' }, { source: 'icao-annex10', section: 'Appendix B' }, { source: 'faa-waas-pan92', section: '§2.0, text on Figures 2-11 and 2-12 (p. 56): HPL/6.0, VPL/5.33' }],
     status: 'to-confirm',
     value: [6.0, 6.18, 5.33],
     actual: () => [K_H_PA, K_H_NPA, K_V_PA],
@@ -261,7 +266,16 @@ export const SBAS_CLAIMS: readonly Claim[] = [
     code: 'src/core/sbasWorld.ts',
     todo: 'DFRE is modelled with the same bound as UDRE',
   },
-  { id: 'sbas.mode-annunciation', topic: 'SBAS', scenarios: BOTH, text: 'The avionics annunciate the highest level of service the signal supports: LPV, LNAV/VNAV or LNAV.', refs: [D9849('§4.3.2.5')], status: 'sourced', code: 'src/core/sbasWorld.ts approachMode' },
+  {
+    id: 'sbas.mode-annunciation',
+    topic: 'SBAS',
+    scenarios: BOTH,
+    text: 'The avionics annunciate the highest level of service the signal supports: LPV, LNAV/VNAV or LNAV. On the final approach segment of an LPV approach, if LPV is lost the receiver shows a flag and stops guidance or reverts to LNAV only, not to LNAV/VNAV.',
+    refs: [D9849('§4.3.2.5'), { source: 'faa-waas-ps-2008', section: '§2.3.2' }],
+    status: 'sourced',
+    code: 'src/core/sbasWorld.ts approachMode',
+    note: 'The page works the mode out moment by moment: it does not remember the mode armed before the final approach fix.',
+  },
   { id: 'sbas.fas-crc', topic: 'SBAS', scenarios: BOTH, text: 'The final approach segment (FAS) data block defines the LPV final approach, and a CRC protects it.', refs: [D9849('§4.3.2.7')], status: 'sourced', code: 'src/core/approach.ts' },
   {
     id: 'sbas.fas-fields',
@@ -318,8 +332,11 @@ export const SBAS_CLAIMS: readonly Claim[] = [
     topic: 'SBAS',
     scenarios: BOTH,
     text: 'The decision height of each scenario’s LPV procedure is illustrative: 250 ft at Bali, 200 ft for the LPV-200 at Nice.',
-    refs: [D9849('§4.3.3.3')],
+    refs: [D9849('§4.3.3.3'), { source: 'egnos-sol-sdd', section: '§3.2.1 (APV: LPV minima as low as 250 ft; Category I, VAL 35 m: as low as 200 ft)' }],
     status: 'to-confirm',
+    value: [250, 200],
+    unit: 'ft (Bali, Nice)',
+    actual: () => [SCENARIOS.indonesia.approach.decisionHeightFt, SCENARIOS.essp.approach.decisionHeightFt],
     code: 'src/core/approach.ts',
     todo: 'the LPV decision height is procedure-specific',
   },

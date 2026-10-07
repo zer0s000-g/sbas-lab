@@ -76,4 +76,9 @@ export interface AiCheck {
   rationale: string
   /** What the model checked against; `read` when it read the document itself, not from memory. */
   checked: readonly { source: string; section?: string; read: boolean }[]
+  /**
+   * The fingerprint (./fingerprint) of the claim's text and value as checked. The claims
+   * test fails when the claim changes, until the check is redone and this is updated.
+   */
+  textHash: string
 }

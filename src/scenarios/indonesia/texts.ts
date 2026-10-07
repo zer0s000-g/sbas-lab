@@ -3,7 +3,7 @@
  * AirNav Indonesia scenario.
  */
 import type { ScenarioDef } from '../types'
-import { HYPOTHETICAL } from './region'
+import { HYPOTHETICAL, ILLUSTRATIVE_SITE } from './region'
 
 export const TEXTS: ScenarioDef['texts'] = {
   flightNote: `Real airports and Michibiki satellites. The SBAS service, its ground sites and the route are ${HYPOTHETICAL}.`,
@@ -21,7 +21,9 @@ export const TEXTS: ScenarioDef['texts'] = {
   },
   footer:
     'The simulation is simplified to teach principles. Technical values follow ICAO Annex 10 Volume I and RTCA DO-229 where stated and should be checked by a qualified GNSS/CNS engineer. Indonesia has no operational SBAS today: the SBAS service, its ground sites and the LPV procedure shown are hypothetical. QZS-3 and QZS-6 are real Japanese Michibiki satellites, shown here for illustration; MSAS, the SBAS they carry, serves Japan.',
-  networkHonesty: 'Map of Indonesia to scale · ground sites illustrative · hypothetical Indonesian SBAS',
+  // CLAUDE.md: each hypothetical ground site is labelled "illustrative site, not a real facility".
+  networkHonesty: `Map of Indonesia to scale · each ground site: ${ILLUSTRATIVE_SITE} · hypothetical Indonesian SBAS`,
+  spaceHonestySites: `ground sites and uplinks: ${ILLUSTRATIVE_SITE}`,
   describeSpace: 'Space view: the Earth, the GPS constellation and the Michibiki SBAS GEOs over Indonesia.',
   describeNetwork:
     'Network map of Indonesia: the hypothetical SBAS ground segment, with RIMS reference stations, master control centres, uplink stations and the ionospheric grid.',

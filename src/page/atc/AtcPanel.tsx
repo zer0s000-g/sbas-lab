@@ -9,24 +9,14 @@ import { localToGeodetic } from '@/core/geo'
 import { DESTINATION, REGION } from '@/core/region'
 import { approachMode, groundFor, snapshot } from '@/core/sbasWorld'
 import { OPERATIONS } from '@/core/operations'
-import { expectedInstructions, trafficAt, type AtcInstruction, type TrafficSpec } from '@/core/traffic'
-import { M_PER_FT } from '@/core/units'
+import { expectedInstructions, trafficAt, type AtcInstruction } from '@/core/traffic'
+import { DEG, M_PER_FT } from '@/core/units'
 import type { JourneyEngine } from '@/journey/engine'
 import { logAction } from '@/journey/sessionLog'
 import { SCENARIO } from '@/scenarios/active'
-import { SCENARIO_TRAFFIC } from '@/scenarios/traffic'
+import { viewModel } from '../model'
 import { useSources } from '../sources/store'
-
-const T = SCENARIO_TRAFFIC[SCENARIO.id]
-const SPEC: TrafficSpec = {
-  threshold: { eastNm: DESTINATION.thresholdEastNm, northNm: DESTINATION.thresholdNorthNm, elevationFt: DESTINATION.elevationFt },
-  finalCourseDeg: DESTINATION.runwayCourseDeg,
-  joinNm: T.joinNm,
-  gpaDeg: 3,
-  streams: T.streams,
-  aircraft: T.aircraft,
-  cycleS: T.cycleS,
-}
+import { ATC_TRAFFIC as T, ATC_TRAFFIC_SPEC as SPEC } from './spec'
 
 type Mode = 'LPV' | 'LNAV/VNAV' | 'LNAV' | 'NONE'
 interface Blip {
@@ -41,6 +31,28 @@ interface Blip {
   /** What the scope's data block says. */
   label: string
   flagged: boolean
+  /** LAB201, the flight the page follows. */
+  own?: boolean
+}
+
+const R_NM = 36
+
+const blip = (b: Omit<Blip, 'label' | 'flagged'>): Blip => ({
+  ...b,
+  label: b.equip === 'conventional' ? 'ILS' : b.mode === 'NONE' ? 'NO GNSS' : b.mode,
+  flagged: (b.equip === 'sbas' && b.mode !== 'LPV') || (b.equip === 'gps' && b.mode === 'NONE'),
+})
+
+/**
+ * LAB201 is the controller's traffic too: on the scope while it is airborne inside the
+ * scope's range, with the approach mode the page shows for it (SBAS avionics).
+ */
+function lab201(engine: JourneyEngine): Blip | null {
+  const a = engine.aircraft
+  const x = a.eastNm - SPEC.threshold.eastNm
+  const y = a.northNm - SPEC.threshold.northNm
+  if (a.onGround || !(Math.hypot(x, y) <= R_NM)) return null
+  return blip({ callsign: 'LAB201', equip: 'sbas', x, y, altFt: Math.round(a.altFt), trackDeg: a.headingDeg, mode: viewModel(engine).mode, own: true })
 }
 
 /** The picture at the engine's current time: each arrival and what its avionics support now. */
@@ -48,17 +60,18 @@ function picture(engine: JourneyEngine): Blip[] {
   const tS = engine.worldS
   const c = engine.conditions()
   const ground = groundFor(tS, c)
-  return trafficAt(SPEC, tS).map((a) => {
+  const traffic = trafficAt(SPEC, tS).map((a) => {
     let mode: Mode = 'NONE'
     if (a.equip !== 'conventional') {
       const snap = snapshot(tS, localToGeodetic(REGION, a.eastNm, a.northNm, a.altFt * M_PER_FT), c, ground)
-      if (a.equip === 'sbas') mode = approachMode(snap).mode
+      // On final an LPV approach that loses LPV reverts to LNAV, never LNAV/VNAV (sbasWorld.approachMode).
+      if (a.equip === 'sbas') mode = approachMode(snap, undefined, a.onFinal).mode
       else mode = snap.abas && !snap.abas.alarm && snap.abas.hplM <= OPERATIONS.npa.halM ? 'LNAV' : 'NONE'
     }
-    const label = a.equip === 'conventional' ? 'ILS' : mode === 'NONE' ? 'NO GNSS' : mode
-    const flagged = (a.equip === 'sbas' && mode !== 'LPV') || (a.equip === 'gps' && mode === 'NONE')
-    return { callsign: a.callsign, equip: a.equip, x: a.eastNm - SPEC.threshold.eastNm, y: a.northNm - SPEC.threshold.northNm, altFt: a.altFt, trackDeg: a.trackDeg, mode, label, flagged }
+    return blip({ callsign: a.callsign, equip: a.equip, x: a.eastNm - SPEC.threshold.eastNm, y: a.northNm - SPEC.threshold.northNm, altFt: a.altFt, trackDeg: a.trackDeg, mode })
   })
+  const own = lab201(engine)
+  return own ? [own, ...traffic] : traffic
 }
 
 /**
@@ -82,7 +95,6 @@ const SAY: Readonly<Record<AtcInstruction, { button: string; rt: string }>> = {
 const OUTAGES: readonly FailureId[] = (['jamming', 'sbasOff', 'geoLost'] as const).filter((id) => FAILURES.some((f) => f.id === id))
 const OWN_OUTAGES = SCENARIO.id !== 'essp'
 
-const R_NM = 36
 const W = 300
 const K = W / (2 * R_NM)
 const px = (nm: number) => W / 2 + nm * K
@@ -107,7 +119,7 @@ export function AtcPanel({ engine, index = '13' }: { engine: JourneyEngine; inde
   }
   const expected = useMemo(() => expectedInstructions(blips), [blips])
   const flagged = blips.filter((b) => b.flagged)
-  const back = (DESTINATION.runwayCourseDeg + 180) * (Math.PI / 180)
+  const back = (SPEC.finalCourseDeg + 180) * DEG
   const say = (what: AtcInstruction) => {
     const correct = expected.includes(what)
     setSaid({ what, correct, expected })
@@ -130,7 +142,7 @@ export function AtcPanel({ engine, index = '13' }: { engine: JourneyEngine; inde
           <line x1={px(0)} y1={py(0)} x2={px(Math.sin(back) * T.joinNm)} y2={py(Math.cos(back) * T.joinNm)} className="stroke-scope-trace" strokeDasharray="3 2" strokeWidth={1} />
           <line x1={px(0)} y1={py(0)} x2={px(-Math.sin(back) * 1.6)} y2={py(-Math.cos(back) * 1.6)} className="stroke-foreground" strokeWidth={2.4} />
           {T.streams.map((s) => {
-            const b = (s.fromBearingDeg * Math.PI) / 180
+            const b = s.fromBearingDeg * DEG
             return (
               <text key={s.id} x={px(Math.sin(b) * Math.min(R_NM - 1.5, s.entryNm + 1.8))} y={py(Math.cos(b) * Math.min(R_NM - 1.5, s.entryNm + 1.8))} textAnchor="middle" className="fill-scope-dim font-mono text-[8px]">
                 {s.name}
@@ -141,18 +153,21 @@ export function AtcPanel({ engine, index = '13' }: { engine: JourneyEngine; inde
             const x = px(b.x)
             const y = py(b.y)
             // The data block sits to the right of the track, clear of the aircraft's own path.
-            const t = (b.trackDeg * Math.PI) / 180
+            const t = b.trackDeg * DEG
             const dx = Math.cos(t)
             const dy = Math.sin(t)
-            const lx = x + dx * 14
-            const ly = y + dy * 14
+            // LAB201's ring takes a little more room.
+            const off = b.own ? 17 : 14
+            const lx = x + dx * off
+            const ly = y + dy * off
             const anchor = dx >= 0 ? 'start' : 'end'
             const tone = b.flagged ? 'fill-scope-alert' : 'fill-scope-blip'
             return (
               <g key={b.callsign}>
+                {b.own && <circle cx={x} cy={y} r={6.5} className="fill-none stroke-scope-trace-2" strokeWidth={1.2} />}
                 {b.equip === 'sbas' ? <rect x={x - 3} y={y - 3} width={6} height={6} className={tone} /> : b.equip === 'gps' ? <circle cx={x} cy={y} r={3.2} className={tone} /> : <path d={`M${x} ${y - 3.6}l3.6 3.6-3.6 3.6-3.6-3.6z`} className={tone} />}
                 <line x1={x + dx * 4} y1={y + dy * 4} x2={lx - dx * 2} y2={ly - dy * 2} className="stroke-scope-dim" strokeWidth={0.6} />
-                <text x={lx} y={ly - 2} textAnchor={anchor} className={cn('font-mono text-[8px]', b.flagged ? 'fill-scope-alert' : 'fill-scope-text')}>
+                <text x={lx} y={ly - 2} textAnchor={anchor} className={cn('font-mono text-[8px]', b.flagged ? 'fill-scope-alert' : b.own ? 'fill-scope-trace-2' : 'fill-scope-text')}>
                   {b.callsign} {String(Math.round(b.altFt / 100)).padStart(3, '0')}
                   <tspan x={lx} dy={9}>
                     {b.label}
@@ -163,7 +178,7 @@ export function AtcPanel({ engine, index = '13' }: { engine: JourneyEngine; inde
           })}
         </svg>
       </div>
-      <p className="mt-1 text-[11.5px] leading-4 text-muted-foreground">■ SBAS avionics · ● GPS-only avionics · ◆ no GNSS approach (ILS) · flagged in red: cannot fly its planned GNSS approach now. Range rings 10, 20, 30 NM.</p>
+      <p className="mt-1 text-[11.5px] leading-4 text-muted-foreground">■ SBAS avionics · ● GPS-only avionics · ◆ no GNSS approach (ILS) · ringed in amber: LAB201, the flight you follow · flagged in red: cannot fly its planned GNSS approach now. Range rings 10, 20, 30 NM.</p>
 
       {OWN_OUTAGES && (
         <Segmented
